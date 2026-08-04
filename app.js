@@ -4006,6 +4006,7 @@ function simpanUserData() {
       users[idx].area = area;
       saveUsersToDB(users);
       showNotif(`USER ${username} DIPERBARUI!`, 'info');
+       saveUsersToDB(users);
       tutupUserModal();
       loadUsersManagement();
       return;
@@ -4086,6 +4087,7 @@ function hapusUser(userId) {
 
     saveUsersToDB(users.filter(x => x.id !== userId));
     showNotif(`USER ${u.username} BERHASIL DIHAPUS!`, 'info');
+     saveUsersToDB(users);
     loadUsersManagement();
   });
 }
@@ -4499,8 +4501,10 @@ function simpanTokoBaru() {
   }
 
   showNotif(`BERHASIL DITAMBAHKAN!`, 'info');
+   saveUsersToDB(users);
   if (inputEl) inputEl.value = '';
   loadDaftarTokoModal();
+  
   loadForm();
   if (document.getElementById('userTableBody')) {
     loadUsersManagement();
