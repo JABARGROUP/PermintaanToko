@@ -1295,6 +1295,41 @@ input:focus, select:focus, textarea:focus {
   animation: fade .25s ease-out;
 }
 
+/* BEAUTIFUL THEME-MATCHED POPUP CLOSE BUTTON (X ONLY, WARNA MENGIKUTI TEMA) */
+.popupClose,
+.closeViewer,
+.chatClose,
+.popupHeader button,
+.popupHeader .popupClose,
+.detailHeader button {
+  background: transparent !important;
+  border: none !important;
+  color: var(--primary) !important;
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 0.95;
+}
+
+.popupClose:hover,
+.closeViewer:hover,
+.chatClose:hover,
+.popupHeader button:hover,
+.detailHeader button:hover {
+  transform: scale(1.25) rotate(90deg) !important;
+  color: var(--primary-hover) !important;
+  opacity: 1;
+}
+
 /* BALANCED & EQUAL WIDTH BUTTON CONTAINER FOR ALL POPUPS */
 .confirmButton {
   display: flex;

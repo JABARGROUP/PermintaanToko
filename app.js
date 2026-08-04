@@ -568,6 +568,7 @@ function toggleAdminReminderFeature() {
   const next = !current;
   appStorage.setItem(ADMIN_REMINDER_KEY, next ? 'true' : 'false');
   updateAdminReminderUI();
+  pushCentralCloudDB();
   showNotif(next ? 'REMINDER PENDING SERVICE & DM SEKARANG AKTIF (ON)!' : 'REMINDER PENDING SERVICE & DM NONAKTIF (OFF)!', 'info');
   if (next) {
     checkAndTriggerPendingReminders();
@@ -587,6 +588,7 @@ function simpanAdminReminderTime() {
   const val = input.value.trim();
   if (val) {
     appStorage.setItem(ADMIN_REMINDER_TIME_KEY, val);
+    pushCentralCloudDB();
     showNotif(`JADWAL JAM WA REMINDER DISIMPAN: ${val}!`, 'info');
   }
 }
@@ -722,7 +724,7 @@ function getActiveFirebaseConfig() {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed === 'object' && parsed.projectId) {
+      if (parsed && typeof parsed === 'object' && parsed.projectId && !parsed.projectId.includes('demo') && !parsed.projectId.includes('jabar')) {
         return parsed;
       }
     } catch (e) {}
@@ -742,9 +744,48 @@ function initFirebaseDB() {
 
       if (typeof firebase.firestore === 'function') {
         dbFirestore = firebase.firestore();
+
+        try {
+          dbFirestore.collection('requests').onSnapshot(snapshot => {
+            if (!snapshot.empty) {
+              const reqs = [];
+              snapshot.forEach(doc => reqs.push(doc.data()));
+              if (reqs.length > 0) {
+                appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(reqs));
+                if (typeof currentUser !== 'undefined' && currentUser) {
+                  if (typeof loadDashboard === 'function') loadDashboard();
+                  if (typeof loadRiwayat === 'function') loadRiwayat();
+                }
+              }
+            }
+
+            const dot = document.getElementById('firebaseOnlineDot');
+            if (dot) {
+              dot.style.background = '#10b981';
+              dot.style.boxShadow = '0 0 10px #10b981';
+              dot.title = `FIREBASE DATABASE ONLINE: TERHUBUNG (${activeConfig.projectId})`;
+            }
+          }, err => {
+            console.warn("[FIREBASE FIRESTORE SNAPSHOT ERR]:", err.message);
+          });
+        } catch (e) {}
       }
+
       if (typeof firebase.database === 'function') {
         dbRealtime = firebase.database();
+
+        try {
+          const connectedRef = dbRealtime.ref('.info/connected');
+          connectedRef.on('value', snap => {
+            const isConn = snap.val() === true;
+            const dot = document.getElementById('firebaseOnlineDot');
+            if (dot) {
+              dot.style.background = isConn ? '#10b981' : '#ef4444';
+              dot.style.boxShadow = isConn ? '0 0 10px #10b981' : '0 0 10px #ef4444';
+              dot.title = isConn ? `FIREBASE ONLINE: TERHUBUNG (${activeConfig.projectId})` : 'FIREBASE ONLINE: TERPUTUS';
+            }
+          });
+        } catch (e) {}
       }
 
       const statusBadge = document.getElementById('firebaseStatusBadge');
@@ -1095,6 +1136,7 @@ function simpanFonteToken() {
   const input = document.getElementById('fonteTokenInput');
   const token = input ? input.value.trim() : '';
   appStorage.setItem(FONTE_TOKEN_KEY, token);
+  pushCentralCloudDB();
   showNotif(token ? 'TOKEN WA FONTE BERHASIL DISIMPAN!' : 'TOKEN WA DIKOSONGKAN!', 'info');
 }
 
@@ -2687,8 +2729,9 @@ function lihatDetail(noSurat, fromDashboard = false) {
   if (!msgBox) return;
 
   let headerInfoHtml = `
-    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid var(--border-color); padding-bottom:10px; margin-bottom:14px; font-size:13px; color:var(--text-main);">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid var(--border-color); padding-bottom:10px; margin-bottom:14px; font-size:13px; color:var(--text-main); flex-wrap:wrap; gap:8px;">
       <div style="text-align:left;">NO SURAT : <span style="color:var(--primary); font-weight:bold;">${req.noSurat}</span></div>
+      <span style="user-select:none;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
       <div style="text-align:right;">TOKO : <span style="font-weight:bold;">${req.toko}</span></div>
     </div>
   `;
