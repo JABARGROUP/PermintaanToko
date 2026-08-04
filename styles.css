@@ -2400,3 +2400,31 @@ button.btnKembali {
   min-height: 0 !important;
 }
    
+/* ======================================================
+   MELEBARKAN AREA KONTEN DATA DI POPUP DETAIL (SISA 1MM)
+   ====================================================== */
+
+/* 1. Mengecilkan padding kiri & kanan menjadi sekitar 1mm (4px) khusus di popup detail */
+#popupDetail .popupContent {
+    padding-left: 4px !important; 
+    padding-right: 4px !important;
+}
+
+/* 2. Sedikit penyesuaian untuk info header di dalam popup agar tidak terlalu menempel ke tepi layar hp */
+#popupDetail .popupContent > div:first-child {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+}
+
+/* 3. Menyesuaikan area tombol aksi (Edit, Hapus, Approve, dll) di bagian bawah */
+#popupDetail .popupDetailActions {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    margin-top: 12px !important;
+}
+
+/* 4. Pastikan tabel bisa membentang 100% dan tetap bisa di-scroll horizontal jika teksnya panjang */
+.popupTableScroll {
+    width: 100% !important;
+    margin-top: 8px !important;
+}
