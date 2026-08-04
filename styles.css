@@ -2362,7 +2362,9 @@ button.btnKembali {
     display: grid !important;
     grid-template-columns: 1.2fr 2fr 2fr 1.2fr !important;
   }
-   /* 1. Pastikan tableWrap yang memegang kendali scroll horizontal */
+  
+}
+ /* 1. Pastikan tableWrap yang memegang kendali scroll horizontal */
 #detailDashboard .tableWrap {
   flex: 1 !important;
   display: flex !important;
@@ -2397,4 +2399,4 @@ button.btnKembali {
   width: 100% !important;
   min-height: 0 !important;
 }
-}
+   
