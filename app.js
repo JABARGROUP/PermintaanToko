@@ -133,15 +133,39 @@ function getAccessibleNotifications() {
   if (!currentUser) return [];
   const notifs = getSystemNotifications();
 
-  return notifs.filter(n => {
+  let filtered = notifs.filter(n => {
     const areaMatch = (n.targetArea === 'ALL' || currentUser.category === 'DM' || n.targetArea === currentUser.area);
     const roleMatch = (
       n.targetRoles.includes('ALL') ||
       n.targetRoles.includes(currentUser.category) ||
+      (currentUser.category === 'DM' && (n.targetRoles.includes('DM') || n.targetRoles.includes('ADMIN'))) ||
       (currentUser.category === 'TOKO' && n.targetRoles.includes('TOKO'))
     );
     return areaMatch && roleMatch;
   });
+
+  // UNTUK DM: SINTESIS OTOMATIS DARI TRANSAKSI APPROVE SERVICE YANG PENDING APPROVAL DM
+  if (currentUser.category === 'DM') {
+    const requests = getRequestsFromDB();
+    const serviceApprovedReqs = requests.filter(r => r.status === 'PENDING' && r.serviceApprove);
+    
+    serviceApprovedReqs.forEach(r => {
+      const exists = filtered.some(n => n.noSurat === r.noSurat);
+      if (!exists) {
+        filtered.unshift({
+          id: `NTF-DM-${r.noSurat}`,
+          targetRoles: ['DM'],
+          targetArea: 'ALL',
+          message: `PERMINTAAN #${r.noSurat} DARI ${r.toko} (${r.area}) TELAH DISETUJUI SERVICE. MOHON APPROVAL DM.`,
+          noSurat: r.noSurat,
+          time: r.createdAt || getFormattedDateDDMMYYYY(),
+          readBy: []
+        });
+      }
+    });
+  }
+
+  return filtered;
 }
 
 function updateNotifBellCounter() {
@@ -1735,8 +1759,9 @@ function loadDashboard() {
   }
 
   filteredData.forEach(r => {
+    const isWaitingDM = (r.status === 'PENDING' && r.serviceApprove);
     const div = document.createElement('div');
-    div.className = 'lastItem';
+    div.className = `lastItem ${isWaitingDM ? 'rowWaitingDmBlink' : ''}`;
     div.style.cursor = 'pointer';
     div.title = `KLIK BARIS INI UNTUK MEMBUKA PERMINTAAN #${r.noSurat}`;
     div.onclick = () => bukaDetailDariDashboard(r.noSurat);
@@ -2502,9 +2527,11 @@ function filterRiwayat() {
       aksi += `
         <button class="btnIcon btnPdf" onclick="bukaPdfModal('${r.noSurat}')" title="CETAK PDF"><span class="material-symbols-rounded">picture_as_pdf</span></button>
       `;
-    }
-
+    const isWaitingDM = (r.status === 'PENDING' && r.serviceApprove);
     const tr = document.createElement('tr');
+    if (isWaitingDM) {
+      tr.className = 'rowWaitingDmBlink';
+    }
     tr.innerHTML = `
       <td><div style="display:flex; gap:4px; align-items:center;">${aksi}</div></td>
       <td style="white-space:nowrap;">${formatDateDDMMYYYYString(r.tanggal)}</td>
@@ -3597,15 +3624,22 @@ function simpanTTD() {
       ttdMap['HODS'] = png;
     }
     appStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap));
+    
+    // SIMPAN PERSISTEN KE LOCAL STORAGE BERDASARKAN ID USER
+    if (currentUser && currentUser.id) {
+      appStorage.setItem(`LOCAL_TTD_${currentUser.id}`, png);
+    }
+    
     pushCentralCloudDB();
-    showNotif('TANDA TANGAN BERHASIL DISIMPAN!', 'info');
+    showNotif('TANDA TANGAN BERHASIL DISIMPAN DI LOKAL & CLOUD!', 'info');
     tutupTTD();
   });
 }
 
 function loadTTD() {
   const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-  const data = currentUser ? ttdMap[currentUser.fullName] : null;
+  const localTTD = currentUser ? appStorage.getItem(`LOCAL_TTD_${currentUser.id}`) : null;
+  const data = localTTD || (currentUser ? (ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap[currentUser.fullName]) : null);
   if (data && ctxTTD && canvasTTD) {
     const img = new Image();
     img.onload = () => {
@@ -3620,7 +3654,7 @@ let fastChatInterval = null;
 
 function bukaBantuan() {
   if (currentUser) {
-    isAdminChat = (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN') || (currentUser.category === 'SERVICE' && currentUser.area === 'TSM'));
+    isAdminChat = (currentUser.category === 'ADMIN' || currentUser.category === 'SERVICE' || currentUser.category === 'DM' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
   }
   
   const popup = document.getElementById('popupBantuan');
@@ -3742,7 +3776,7 @@ function loadChatAdmin(room) {
   body.innerHTML = '';
 
   roomChats.forEach(c => {
-    const isSelf = (c.pengirim === 'ADMIN');
+    const isSelf = (c.senderId === currentUser.id || c.senderUsername === currentUser.username || c.pengirim === 'ADMIN' || (currentUser && currentUser.category === 'SERVICE' && c.pengirim === 'SERVICE'));
     const div = document.createElement('div');
     div.className = isSelf ? 'chatUser' : 'chatAdmin';
     div.innerHTML = `
@@ -3757,7 +3791,7 @@ function loadChatAdmin(room) {
 
 function loadChatUser() {
   const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-  const userChats = allChats.filter(c => c.user === currentUser.username);
+  const userChats = allChats.filter(c => c.user === currentUser.username || c.room === ('ROOM_' + currentUser.username));
   const body = document.getElementById('chatBody');
   if (!body) return;
   body.innerHTML = '';
@@ -3778,7 +3812,7 @@ function loadChatUser() {
   }
 
   userChats.forEach(c => {
-    const isSelf = (c.pengirim === 'USER');
+    const isSelf = (c.senderId === currentUser.id || c.senderUsername === currentUser.username || c.pengirim === 'USER');
     const div = document.createElement('div');
     div.className = isSelf ? 'chatUser' : 'chatAdmin';
     div.innerHTML = `
@@ -3799,14 +3833,19 @@ function kirimPesanChat() {
 
   const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
   const rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
+  const senderId = currentUser.id;
+  const senderUsername = currentUser.username;
+  const timeStr = getFormattedDateDDMMYYYY() + ' ' + new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
 
   if (isAdminChat) {
     allChats.push({
       room: currentRoom,
       user: currentChatUser,
       pengirim: 'ADMIN',
+      senderId,
+      senderUsername,
       pesan,
-      tanggal: getFormattedDateDDMMYYYY() + ' ' + new Date().toLocaleTimeString('id-ID')
+      tanggal: timeStr
     });
     
     const rIdx = rooms.findIndex(x => x.room === currentRoom);
@@ -3827,8 +3866,10 @@ function kirimPesanChat() {
       room,
       user: currentUser.username,
       pengirim: 'USER',
+      senderId,
+      senderUsername,
       pesan,
-      tanggal: getFormattedDateDDMMYYYY() + ' ' + new Date().toLocaleTimeString('id-ID')
+      tanggal: timeStr
     });
     appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
 
@@ -4005,8 +4046,19 @@ function simpanUserData() {
       users[idx].category = category;
       users[idx].area = area;
       saveUsersToDB(users);
-      showNotif(`USER ${username} DIPERBARUI!`, 'info');
-       saveUsersToDB(users);
+
+      const docId = String(username).toUpperCase();
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('users').doc(docId).set(users[idx], { merge: true }).catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`users/${docId}`).set(users[idx]).catch(e => console.warn(e));
+      }
+      if (typeof pushCentralCloudDB === 'function') {
+        pushCentralCloudDB();
+      }
+
+      showNotif(`USER ${username} DIPERBARUI & DISINKRONKAN KE FIREBASE!`, 'info');
       tutupUserModal();
       loadUsersManagement();
       return;
@@ -4056,7 +4108,19 @@ function simpanUserData() {
 
   users.push(newUser);
   saveUsersToDB(users);
-  showNotif(`USER ${fullName} (${username}) BERHASIL DISIMPAN!`, 'success');
+
+  const docId = String(username).toUpperCase();
+  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+    dbFirestore.collection('users').doc(docId).set(newUser).catch(e => console.warn(e));
+  }
+  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+    dbRealtime.ref(`users/${docId}`).set(newUser).catch(e => console.warn(e));
+  }
+  if (typeof pushCentralCloudDB === 'function') {
+    pushCentralCloudDB();
+  }
+
+  showNotif(`USER ${fullName} (${username}) BERHASIL DISIMPAN & DISINKRONKAN KE FIREBASE!`, 'success');
 
   tutupUserModal();
   loadUsersManagement();
@@ -4087,7 +4151,6 @@ function hapusUser(userId) {
 
     saveUsersToDB(users.filter(x => x.id !== userId));
     showNotif(`USER ${u.username} BERHASIL DIHAPUS!`, 'info');
-     saveUsersToDB(users);
     loadUsersManagement();
   });
 }
@@ -4484,8 +4547,9 @@ function simpanTokoBaru() {
 
   const users = getUsersFromDB();
   const safeUsername = namaToko.replace(/[^A-Z0-9]/gi, '_').toUpperCase();
+  let newUserAcc = null;
   if (!users.some(u => u.username.toUpperCase() === safeUsername)) {
-    const newUserAcc = {
+    newUserAcc = {
       id: newId,
       username: safeUsername,
       password: '123',
@@ -4500,11 +4564,26 @@ function simpanTokoBaru() {
     saveUsersToDB(users);
   }
 
-  showNotif(`BERHASIL DITAMBAHKAN!`, 'info');
-   saveUsersToDB(users);
+  // SINKRONKAN LANGSUNG KE FIREBASE FIRESTORE & REALTIME DB
+  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+    dbFirestore.collection('stores').doc(newId).set(newStore).catch(e => console.warn(e));
+    if (newUserAcc) {
+      dbFirestore.collection('users').doc(safeUsername).set(newUserAcc).catch(e => console.warn(e));
+    }
+  }
+  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+    dbRealtime.ref(`stores/${newId}`).set(newStore).catch(e => console.warn(e));
+    if (newUserAcc) {
+      dbRealtime.ref(`users/${safeUsername}`).set(newUserAcc).catch(e => console.warn(e));
+    }
+  }
+  if (typeof pushCentralCloudDB === 'function') {
+    pushCentralCloudDB();
+  }
+
+  showNotif(`TOKO '${namaToko}' BERHASIL DITAMBAHKAN & DISINKRONKAN KE FIREBASE!`, 'info');
   if (inputEl) inputEl.value = '';
   loadDaftarTokoModal();
-  
   loadForm();
   if (document.getElementById('userTableBody')) {
     loadUsersManagement();
@@ -4533,7 +4612,21 @@ function hapusTokoCustom(id) {
     const updatedUsers = users.filter(u => u.id !== id && !(u.category === 'TOKO' && u.fullName.toUpperCase() === name.toUpperCase()));
     saveUsersToDB(updatedUsers);
 
-    showNotif(`BERHASIL DIHAPUS!`, 'info');
+    // HAPUS DOKUMEN LANGSUNG DARI FIREBASE ONLINE
+    const safeUsername = name.replace(/[^A-Z0-9]/gi, '_').toUpperCase();
+    if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+      dbFirestore.collection('stores').doc(id).delete().catch(e => console.warn(e));
+      dbFirestore.collection('users').doc(safeUsername).delete().catch(e => console.warn(e));
+    }
+    if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+      dbRealtime.ref(`stores/${id}`).remove().catch(e => console.warn(e));
+      dbRealtime.ref(`users/${safeUsername}`).remove().catch(e => console.warn(e));
+    }
+    if (typeof pushCentralCloudDB === 'function') {
+      pushCentralCloudDB();
+    }
+
+    showNotif(`TOKO '${name}' BERHASIL DIHAPUS DARI CACHE & FIREBASE!`, 'info');
     loadDaftarTokoModal();
     loadForm();
     if (document.getElementById('userTableBody')) {

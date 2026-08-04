@@ -1103,6 +1103,35 @@ input:focus, select:focus, textarea:focus {
 
 .lastItem:hover { background: var(--table-hover); }
 
+/* ANIMASI KEDIP-KEDIP ORANGE UNTUK BARIS DENGAN STATUS TUNGGU DM */
+@keyframes orangePulseBlink {
+  0% {
+    background-color: rgba(249, 115, 22, 0.18) !important;
+    border-color: #f97316 !important;
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.4) !important;
+  }
+  50% {
+    background-color: rgba(249, 115, 22, 0.48) !important;
+    border-color: #ea580c !important;
+    box-shadow: 0 0 18px rgba(249, 115, 22, 0.85) !important;
+  }
+  100% {
+    background-color: rgba(249, 115, 22, 0.18) !important;
+    border-color: #f97316 !important;
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.4) !important;
+  }
+}
+
+.rowWaitingDmBlink {
+  animation: orangePulseBlink 1.3s infinite ease-in-out !important;
+}
+
+.rowWaitingDmBlink td,
+.rowWaitingDmBlink div {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
 /* CENTER ALIGNED HEADERS FOR DASHBOARD & DETAIL POPUP */
 #dashboardRecentTitle,
 .box h3,
@@ -1113,19 +1142,48 @@ input:focus, select:focus, textarea:focus {
   text-align: center !important;
 }
 
-.detailTable2 th {
-  text-align: center !important;
+/* DETAIL DATA / RIWAYAT TABLE STYLING - EXACT MATCH WITH DASHBOARD TABLE BORDERS */
+.historyTable, .detailTable2, #tableMasterDb, #tableUserMgmt {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+}
+
+.historyTable th, #tableMasterDb th, #tableUserMgmt th {
   background: var(--bg-header) !important;
-  padding: 10px 12px !important;
+  color: var(--text-muted) !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 2px solid var(--table-border) !important;
+  padding: 10px 14px !important;
+  white-space: nowrap !important;
 }
 
-.detailTable2 td {
-  padding: 10px 12px !important;
-  border-bottom: 1px solid var(--table-border) !important;
+.historyTable th:last-child, #tableMasterDb th:last-child, #tableUserMgmt th:last-child {
+  border-right: none !important;
 }
 
-.detailTable2 tr {
-  margin-bottom: 3px !important;
+.historyTable td, #tableMasterDb td, #tableUserMgmt td {
+  padding: 10px 14px !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+.historyTable td:last-child, #tableMasterDb td:last-child, #tableUserMgmt td:last-child {
+  border-right: none !important;
+}
+
+.historyTable tr:last-child td, #tableMasterDb tr:last-child td, #tableUserMgmt tr:last-child td {
+  border-bottom: none !important;
+}
+
+.historyTable tbody tr:hover, #tableMasterDb tbody tr:hover, #tableUserMgmt tbody tr:hover {
+  background: var(--table-hover) !important;
 }
 
 /* DYNAMIC FORM GRID ROWS */
@@ -2362,69 +2420,4 @@ button.btnKembali {
     display: grid !important;
     grid-template-columns: 1.2fr 2fr 2fr 1.2fr !important;
   }
-  
-}
- /* 1. Pastikan tableWrap yang memegang kendali scroll horizontal */
-#detailDashboard .tableWrap {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-  overflow-x: auto !important; /* Wadah utama yang di-scroll kanan-kiri */
-  overflow-y: hidden !important;
-  border-radius: 10px;
-  min-height: 0 !important;
-}
-
-/* 2. Buat pembungkus dalam (jika ada) atau atur lebar header & item agar menyatu */
-.lastHeader, .lastItem {
-  display: grid;
-  grid-template-columns: 1.2fr 2fr 2fr 1.2fr;
-  align-items: center;
-  gap: 26px !important;
-  padding: 10px 14px;
-  font-size: 13px;
-  white-space: nowrap !important;
-  
-  /* UBAH BAGIAN INI: Gunakan min-width agar tidak memotong saat di-scroll */
-  min-width: max-content; /* Memaksa header & row mengikuti lebar konten terpanjang */
-  width: 100%;
-}
-
-/* 3. Matikan scroll horizontal bawaan di #lastData */
-#lastData {
-  flex: 1 !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important; /* Ubah ke hidden agar tidak buat scrollbar sendiri */
-  width: 100% !important;
-  min-height: 0 !important;
-}
-   
-/* ======================================================
-   MELEBARKAN AREA KONTEN DATA DI POPUP DETAIL (SISA 1MM)
-   ====================================================== */
-
-/* 1. Mengecilkan padding kiri & kanan menjadi sekitar 1mm (4px) khusus di popup detail */
-#popupDetail .popupContent {
-    padding-left: 4px !important; 
-    padding-right: 4px !important;
-}
-
-/* 2. Sedikit penyesuaian untuk info header di dalam popup agar tidak terlalu menempel ke tepi layar hp */
-#popupDetail .popupContent > div:first-child {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-}
-
-/* 3. Menyesuaikan area tombol aksi (Edit, Hapus, Approve, dll) di bagian bawah */
-#popupDetail .popupDetailActions {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-    margin-top: 12px !important;
-}
-
-/* 4. Pastikan tabel bisa membentang 100% dan tetap bisa di-scroll horizontal jika teksnya panjang */
-.popupTableScroll {
-    width: 100% !important;
-    margin-top: 8px !important;
 }
