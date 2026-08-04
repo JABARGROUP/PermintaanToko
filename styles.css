@@ -1047,8 +1047,9 @@ input:focus, select:focus, textarea:focus {
   display: grid;
   grid-template-columns: 1.2fr 2fr 2fr 1.2fr;
   align-items: center;
-  padding: 12px 14px;
-  min-width: 520px !important;
+  gap: 26px !important;
+  padding: 10px 14px;
+  min-width: 560px !important;
   width: 100%;
   font-size: 13px;
   white-space: nowrap !important;
@@ -1057,6 +1058,7 @@ input:focus, select:focus, textarea:focus {
 .lastHeader {
   background: var(--bg-header);
   color: var(--text-muted);
+  border: 1px solid var(--border-color);
   border-bottom: 2px solid var(--table-border);
   border-radius: 10px 10px 0 0;
   text-align: center !important;
@@ -1068,15 +1070,32 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding-right: 12px;
 }
 
-/* 1MM GAP BETWEEN DATA ROWS */
+.lastHeader > div:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+/* 1MM GAP BETWEEN DATA ROWS WITH THIN BORDER & 7MM GAP */
 .lastItem {
   margin-bottom: 3px !important;
-  border-bottom: 1px solid var(--table-border);
+  border: 1px solid var(--border-color);
   transition: background 0.2s;
   color: var(--text-main);
-  border-radius: 6px;
+  border-radius: 8px;
+}
+
+.lastItem > div {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding-right: 12px;
+}
+
+.lastItem > div:last-child {
+  border-right: none;
+  padding-right: 0;
 }
 
 .lastItem:hover { background: var(--table-hover); }
@@ -1445,6 +1464,27 @@ input:focus, select:focus, textarea:focus {
 .lastHeader, .lastItem, .detailTable2 td, .detailTable2 th {
   white-space: nowrap !important;
   word-break: keep-all !important;
+}
+
+.detailTable2 {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 12.5px !important;
+  margin-top: 10px !important;
+}
+
+.detailTable2 th,
+.detailTable2 td {
+  border: 1px solid var(--border-color) !important;
+  padding: 8px 26px !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+.detailTable2 th {
+  background: var(--bg-header) !important;
+  color: var(--text-muted) !important;
+  font-weight: 700 !important;
 }
 
 #lastData, #detailDashboard, .popupTableScroll {
@@ -2160,45 +2200,122 @@ input:focus, select:focus, textarea:focus {
     flex-direction: column !important;
 }
 
-/* DESKTOP / PC VIEW: COMPACT SLIGHTLY SMALLER UI FOR CLEAN ELEGANT LOOK */
+/* HARDWARE ACCELERATION FIX TO PREVENT MOBILE SCREEN FLICKERING ON SCROLL */
+#app,
+.page,
+.page.active,
+#dashboardPage,
+#detailDashboard,
+.tableWrap,
+#lastData,
+.lastItem,
+.lastHeader,
+.box {
+  -webkit-backface-visibility: hidden !important;
+  backface-visibility: hidden !important;
+  -webkit-transform: translate3d(0,0,0) !important;
+  transform: translate3d(0,0,0) !important;
+}
+
+.lastItem {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* DASHBOARD RECENT TITLE: 11PX (EXACTLY 2 POINTS SMALLER THAN 13PX DATA ROWS BELOW) */
+#dashboardRecentTitle {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  margin-bottom: 8px !important;
+  text-align: center !important;
+  color: var(--text-muted) !important;
+}
+
+/* BACK BUTTON THEME BACKGROUND COLOR MATCH */
+.btnBack,
+.btnKembali,
+#btnBack,
+#btnBackAdmin,
+.btnBatal,
+button.btnBack,
+button.btnKembali {
+  background: var(--bg-box) !important;
+  color: var(--primary) !important;
+  border: 1px solid var(--border-color) !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btnBack:hover,
+.btnKembali:hover,
+#btnBack:hover,
+#btnBackAdmin:hover,
+.btnBatal:hover {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+/* DESKTOP / PC VIEW: SUPER COMPACT & SHORT ICONS FOR STAT CARDS */
 @media(min-width: 769px) {
   .stats {
-    gap: 10px !important;
-    margin: 8px 0 12px 0 !important;
+    gap: 6px !important;
+    margin: 2px 0 6px 0 !important;
   }
 
   .cardStat {
-    padding: 10px 14px !important;
-    min-height: 82px !important;
-    border-radius: 14px !important;
+    padding: 3px 8px !important;
+    min-height: 38px !important;
+    max-height: 40px !important;
+    height: 38px !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+  }
+
+  .cardStat .cardTop {
+    align-items: center !important;
+    gap: 6px !important;
   }
 
   .cardStat .icon {
-    width: 38px !important;
-    height: 38px !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 6px !important;
   }
 
   .cardStat .icon .material-symbols-rounded {
-    font-size: 20px !important;
+    font-size: 13px !important;
   }
 
   .cardStat .judul {
-    font-size: 11px !important;
+    font-size: 9px !important;
     letter-spacing: 0.5px !important;
-    margin-bottom: 2px !important;
+    margin-bottom: 0px !important;
+    line-height: 1 !important;
   }
 
   .cardStat .angka {
-    font-size: 26px !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
   }
 
   .cardStat .bgWatermark {
-    font-size: 42px !important;
-    right: 6px !important;
+    font-size: 20px !important;
+    right: 4px !important;
+    bottom: 2px !important;
+    opacity: 0.1 !important;
+  }
+
+  .cardStat .statProgressBg {
+    height: 2px !important;
+    margin-top: 1px !important;
   }
 
   .box, .box.box-full {
-    padding: 12px 14px !important;
-    border-radius: 14px !important;
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
   }
 }

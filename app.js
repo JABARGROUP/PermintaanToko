@@ -443,6 +443,28 @@ function formatDateDDMMYYYYString(input) {
   return str;
 }
 
+function getRequestsFromDB() {
+  return JSON.parse(appStorage.getItem(REQUESTS_DB_KEY) || '[]');
+}
+
+function saveRequestsToDB(requests) {
+  appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
+  if (typeof pushCentralCloudDB === 'function') {
+    pushCentralCloudDB();
+  }
+}
+
+function getUsersFromDB() {
+  return JSON.parse(appStorage.getItem(USERS_DB_KEY) || '[]');
+}
+
+function saveUsersToDB(users) {
+  appStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
+  if (typeof pushCentralCloudDB === 'function') {
+    pushCentralCloudDB();
+  }
+}
+
 // APP INITIALIZATION
 document.addEventListener('DOMContentLoaded', async () => {
   try {
@@ -870,6 +892,11 @@ async function syncAllDataToCache() {
           if (cfg.adminReminder !== undefined) appStorage.setItem(ADMIN_REMINDER_KEY, String(cfg.adminReminder));
           if (cfg.adminReminderTime) appStorage.setItem(ADMIN_REMINDER_TIME_KEY, cfg.adminReminderTime);
           if (cfg.featurePhotos !== undefined) appStorage.setItem(FEATURE_PHOTOS_KEY, String(cfg.featurePhotos));
+          if (cfg.kodeUnitMap) {
+            const existingMap = JSON.parse(appStorage.getItem(KODE_UNIT_MAP_KEY) || '{}');
+            const mergedMap = { ...existingMap, ...cfg.kodeUnitMap };
+            appStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(mergedMap));
+          }
         }
       } catch (err) {
         console.warn("[FIREBASE SYNC NOTICE]:", err.message);
@@ -881,7 +908,6 @@ async function syncAllDataToCache() {
 }
 
 async function pushCentralCloudDB() {
-  showLoading();
   try {
     if (dbFirestore) {
       try {
@@ -909,7 +935,7 @@ async function pushCentralCloudDB() {
         });
         await userBatch.commit();
 
-        // 3. PUSH APP CONFIG, NOTIFICATIONS, CHAT MESSAGES, THEME, FONTE TOKEN (EXCEPT ACTIVE SESSION)
+        // 3. PUSH APP CONFIG, NOTIFICATIONS, CHAT MESSAGES, THEME, FONTE TOKEN, KODE UNIT MAP
         const notifs = getSystemNotifications();
         const chatMsgs = JSON.parse(appStorage.getItem(CHAT_MESSAGES_KEY) || '[]');
         const theme = appStorage.getItem(THEME_KEY) || 'dark-mode';
@@ -917,6 +943,7 @@ async function pushCentralCloudDB() {
         const adminReminder = getAdminReminderEnabled();
         const adminReminderTime = getAdminReminderTime();
         const featurePhotos = getFeaturePhotosEnabled();
+        const kodeUnitMap = getKodeUnitMap();
 
         await dbFirestore.collection('app_settings').doc('config').set({
           notifications: notifs,
@@ -926,6 +953,7 @@ async function pushCentralCloudDB() {
           adminReminder: adminReminder,
           adminReminderTime: adminReminderTime,
           featurePhotos: featurePhotos,
+          kodeUnitMap: kodeUnitMap,
           updatedAt: new Date().toISOString()
         }, { merge: true });
 
@@ -2240,9 +2268,26 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
         requests[idx].catatan = catatan;
         requests[idx].items = items;
         requests[idx].photos = [...currentPhotos];
+        
         saveRequestsToDB(requests);
-        showNotif(`PERMINTAAN #${editNoSurat} BERHASIL DIPERBARUI!`, 'success');
+
+        const docId = String(editNoSurat).replace(/[\/\.]/g, '_');
+        if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+          dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+        }
+        if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+          dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
+        }
+
+        if (typeof pushCentralCloudDB === 'function') {
+          pushCentralCloudDB();
+        }
+
+        showNotif(`PERMINTAAN #${editNoSurat} BERHASIL DIPERBARUI & DISINKRONKAN KE FIREBASE!`, 'success');
         bersihkanForm();
+        pindahHalaman('riwayatPage');
+        if (typeof loadRiwayat === 'function') loadRiwayat();
+        if (typeof loadDashboard === 'function') loadDashboard();
       }
     } else {
       const now = new Date();
@@ -2405,6 +2450,22 @@ function filterRiwayat() {
           <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'DM')" title="REJECT DM"><span class="material-symbols-rounded">cancel</span></button>
         `;
       }
+    }
+
+    const isOwner = currentUser && (r.userId === currentUser.id || r.createdBy === currentUser.fullName || r.createdBy === currentUser.username);
+    const canEdit = (r.status === 'PENDING' && !r.serviceApprove && isOwner) || (isAdminUser && r.status === 'PENDING');
+    const canDelete = (r.status === 'PENDING' && !r.serviceApprove && isOwner) || isAdminUser;
+
+    if (canEdit) {
+      aksi += `
+        <button class="btnIcon btnEdit" onclick="editPermintaan('${r.noSurat}')" title="EDIT PERMINTAAN"><span class="material-symbols-rounded">edit</span></button>
+      `;
+    }
+
+    if (canDelete) {
+      aksi += `
+        <button class="btnIcon btnDelete" onclick="hapusData('${r.noSurat}')" title="HAPUS PERMINTAAN"><span class="material-symbols-rounded">delete</span></button>
+      `;
     }
 
     aksi += `
@@ -2744,9 +2805,15 @@ function editPermintaan(noSurat) {
   if (btnSimpan) btnSimpan.textContent = 'SIMPAN PERUBAHAN';
 }
 
+function editData(noSurat) {
+  editPermintaan(noSurat);
+}
+window.editData = editData;
+window.editPermintaan = editPermintaan;
+
 function hapusData(noSurat) {
   showConfirm(`HAPUS PERMANEN DATA PERMINTAAN #${noSurat}?`, () => {
-    showLoading('MENGHAPUS...');
+    showLoading('MENGHAPUS DATA DARI FIREBASE ONLINE...');
     setTimeout(() => {
       hideLoading();
       const requests = getRequestsFromDB().filter(r => r.noSurat !== noSurat);
@@ -2756,13 +2823,27 @@ function hapusData(noSurat) {
       appStorage.setItem(DELETED_REQUESTS_KEY, JSON.stringify(delReqs));
 
       saveRequestsToDB(requests);
-      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS.`, 'info');
+
+      const docId = String(noSurat || '').replace(/[\/\.]/g, '_');
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('requests').doc(docId).delete().catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`requests/${docId}`).remove().catch(e => console.warn(e));
+      }
+
+      if (typeof pushCentralCloudDB === 'function') {
+        pushCentralCloudDB();
+      }
+
+      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS DARI FIREBASE ONLINE!`, 'info');
       loadRiwayat();
       loadDashboard();
       if (currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
     }, 300);
   });
 }
+window.hapusData = hapusData;
 
 function lihatDetail(noSurat, fromDashboard = false) {
   const requests = getRequestsFromDB();
@@ -4027,11 +4108,24 @@ function loadMasterDbTable() {
 
 function hapusDataMaster(noSurat) {
   showConfirm(`ADMIN: HAPUS PERMANEN DATA PERMINTAAN #${noSurat} DARI MASTER DATABASE?`, () => {
-    showLoading('MENGHAPUS DATA MASTER...');
+    showLoading('MENGHAPUS DATA MASTER DARI FIREBASE ONLINE...');
     setTimeout(() => {
       hideLoading();
       const requests = getRequestsFromDB().filter(r => r.noSurat !== noSurat);
       saveRequestsToDB(requests);
+
+      const docId = String(noSurat || '').replace(/[\/\.]/g, '_');
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('requests').doc(docId).delete().catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`requests/${docId}`).remove().catch(e => console.warn(e));
+      }
+
+      if (typeof pushCentralCloudDB === 'function') {
+        pushCentralCloudDB();
+      }
+
       showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS DARI MASTER DATABASE!`, 'info');
       loadMasterDbTable();
       loadRiwayat();
