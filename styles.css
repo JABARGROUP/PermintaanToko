@@ -1018,33 +1018,39 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-main) !important;
 }
 
-/* RECENT DATA LIST ON DASHBOARD - SYNCHRONOUS HORIZONTAL SCROLL FOR HEADER & ROWS */
+/* RECENT DATA LIST ON DASHBOARD - UNIFIED SINGLE SCROLL CONTAINER & UNIFIED BORDER FOR HEADER & DATA */
 #detailDashboard .tableWrap {
   flex: 1 !important;
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
+  overflow: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  border-radius: 10px;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  background: var(--bg-box) !important;
   min-height: 0 !important;
 }
 
 .lastHeader {
   flex-shrink: 0 !important;
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 5 !important;
+  position: static !important;
+  background: var(--bg-header) !important;
+  color: var(--text-muted) !important;
+  border: none !important;
+  border-bottom: 2px solid var(--table-border) !important;
+  border-radius: 0 !important;
+  text-align: center !important;
+  font-weight: 700 !important;
 }
 
 #lastData {
-  flex: 1 !important;
-  overflow-y: auto !important;
-  overflow-x: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
   width: 100% !important;
-  min-height: 0 !important;
-  -webkit-overflow-scrolling: touch !important;
+  overflow: visible !important;
+  height: auto !important;
+  flex: none !important;
 }
 
 .lastHeader, .lastItem {
@@ -1056,16 +1062,6 @@ input:focus, select:focus, textarea:focus {
   width: 100%;
   font-size: 13px;
   white-space: nowrap !important;
-}
-
-.lastHeader {
-  background: var(--bg-header);
-  color: var(--text-muted);
-  border: 1px solid var(--border-color);
-  border-bottom: 2px solid var(--table-border);
-  border-radius: 10px 10px 0 0;
-  text-align: center !important;
-  font-weight: 700 !important;
 }
 
 .lastHeader > div {
@@ -1082,13 +1078,18 @@ input:focus, select:focus, textarea:focus {
   padding-right: 0;
 }
 
-/* 1MM GAP BETWEEN DATA ROWS WITH THIN BORDER & 7MM GAP */
+/* UNIFIED DATA ROWS WITHIN DASHBOARD TABLE CONTAINER */
 .lastItem {
-  margin-bottom: 3px !important;
-  border: 1px solid var(--border-color);
+  margin-bottom: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  border-radius: 0 !important;
   transition: background 0.2s;
   color: var(--text-main);
-  border-radius: 8px;
+}
+
+#lastData .lastItem:last-child {
+  border-bottom: none !important;
 }
 
 .lastItem > div {
