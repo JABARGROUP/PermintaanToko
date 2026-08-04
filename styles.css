@@ -2331,4 +2331,28 @@ button.btnKembali {
     padding: 8px 10px !important;
     border-radius: 10px !important;
   }
+
+  /* FULL-WIDTH PC DASHBOARD RECENT DETAIL CARD (LEFT TO RIGHT FULL EDGE) */
+  #detailDashboard {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 14px 16px !important;
+    border-radius: 16px !important;
+    box-sizing: border-border-box !important;
+  }
+
+  #detailDashboard .tableWrap,
+  #detailDashboard .tableScrollInner {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .lastHeader, .lastItem {
+    width: 100% !important;
+    min-width: 100% !important;
+    grid-template-columns: 1.2fr 2fr 2fr 1.2fr !important;
+  }
 }

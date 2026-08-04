@@ -2321,7 +2321,20 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
       };
       requests.unshift(newRecord);
       saveRequestsToDB(requests);
-      showNotif(`PERMINTAAN #${noSurat} BERHASIL DISIMPAN!`, 'success');
+
+      const docId = String(noSurat).replace(/[\/\.]/g, '_');
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('requests').doc(docId).set(newRecord).catch(e => console.warn('[FIRESTORE SAVE NOTICE]:', e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`requests/${docId}`).set(newRecord).catch(e => console.warn('[REALTIME SAVE NOTICE]:', e));
+      }
+
+      if (typeof pushCentralCloudDB === 'function') {
+        pushCentralCloudDB();
+      }
+
+      showNotif(`PERMINTAAN #${noSurat} BERHASIL DISIMPAN & DISINKRONKAN KE FIREBASE!`, 'success');
       bersihkanForm();
 
       tambahNotifikasiSistem(['SERVICE'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI ${toko} (${currentUser.area}). MOHON SEGERA DIPERIKSA DI APLIKASI.`, noSurat);
@@ -2332,10 +2345,15 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
           kirimNotifikasiWA(srv.phone, `PERMINTAAN BARU #${noSurat} DARI ${toko} (${currentUser.area}). MOHON SEGERA DIPERIKSA DI APLIKASI.`);
         }
       });
-    }
 
-    pindahHalaman('inputPage');
-  }, 400);
+      pindahHalaman('riwayatPage');
+      if (typeof loadRiwayat === 'function') loadRiwayat();
+      if (typeof loadDashboard === 'function') loadDashboard();
+      if (currentUser && currentUser.category === 'SERVICE' && currentUser.area === 'TSM' && typeof loadMasterDbTable === 'function') {
+        loadMasterDbTable();
+      }
+    }
+  }, 200);
 }
 
 function bukaMenuRiwayat() {
