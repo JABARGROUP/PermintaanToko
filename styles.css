@@ -847,113 +847,111 @@ input:focus, select:focus, textarea:focus {
   letter-spacing: 0.5px;
 }
 
-/* MODERN ULTRA-PREMIUM DASHBOARD METRIC CARDS */
+/* MODERN ULTRA-PREMIUM COMPACT DASHBOARD METRIC CARDS */
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin: 16px 0 24px 0;
+  gap: 12px !important;
+  margin: 8px 0 12px 0 !important;
 }
 
 .cardStat {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 20px 20px 22px 20px;
-  border-radius: 22px;
+  justify-content: center;
+  padding: 10px 14px !important;
+  border-radius: 14px !important;
   color: #ffffff !important;
   cursor: pointer;
   overflow: hidden;
-  min-height: 124px;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  min-height: 66px !important;
+  height: 70px !important;
+  max-height: 74px !important;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
 .cardStat:hover {
-  transform: translateY(-6px) scale(1.02);
+  transform: translateY(-2px) scale(1.01);
 }
 
 .cardStat .cardTop {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px !important;
   position: relative;
   z-index: 2;
 }
 
 .cardStat .icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 10px !important;
   background: rgba(255, 255, 255, 0.22) !important;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
 .cardStat .icon .material-symbols-rounded {
-  font-size: 28px;
+  font-size: 20px !important;
   color: #ffffff !important;
 }
 
 .cardStat .cardText {
   display: flex;
   flex-direction: column;
+  justify-content: center;
 }
 
 .cardStat .judul {
-  font-size: 15px !important;
+  font-size: 11px !important;
   font-weight: 800 !important;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.95) !important;
-  margin-bottom: 4px;
+  margin-bottom: 2px !important;
+  line-height: 1 !important;
 }
 
 .cardStat .angka {
-  font-size: 40px !important;
+  font-size: 24px !important;
   font-weight: 900 !important;
-  line-height: 1;
+  line-height: 1.1 !important;
   color: #ffffff !important;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* WATERMARK ICON IN BACKGROUND RIGHT */
 .cardStat .bgWatermark {
   position: absolute;
   right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 90px;
-  color: rgba(255, 255, 255, 0.14) !important;
-  pointer-events: none;
+  bottom: -4px;
+  font-size: 38px !important;
+  color: rgba(255, 255, 255, 0.12) !important;
   z-index: 1;
-  user-select: none;
+  pointer-events: none;
 }
 
 /* BOTTOM PROGRESS ACCENT BAR */
 .cardStat .statProgressBg {
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.28);
-  border-radius: 4px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3.5px !important;
+  background: rgba(255, 255, 255, 0.2);
   overflow: hidden;
-  margin-top: 18px;
-  position: relative;
-  z-index: 2;
 }
 
 .cardStat .statProgressFill {
   height: 100%;
   background: #ffffff;
-  border-radius: 4px;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
-  transition: width 0.4s ease;
+  border-radius: 2px;
 }
 
 /* 4 RICH VIVID GRADIENT METRIC CARDS */
@@ -1018,7 +1016,7 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-main) !important;
 }
 
-/* RECENT DATA LIST ON DASHBOARD - UNIFIED SINGLE SCROLL CONTAINER & UNIFIED BORDER FOR HEADER & DATA */
+/* RECENT DATA LIST ON DASHBOARD - NO VERTICAL GRIDLINES & COMPACT ROW HEIGHT */
 #detailDashboard .tableWrap {
   flex: 1 !important;
   display: flex !important;
@@ -1057,10 +1055,10 @@ input:focus, select:focus, textarea:focus {
   display: grid;
   grid-template-columns: 1.2fr 2fr 2fr 1.2fr;
   align-items: center;
-  gap: 26px !important;
-  padding: 10px 14px;
+  gap: 16px !important;
+  padding: 8px 12px !important;
   width: 100%;
-  font-size: 13px;
+  font-size: 12.5px !important;
   white-space: nowrap !important;
 }
 
@@ -1069,16 +1067,18 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  padding-right: 12px;
+  border-right: none !important;
+  border-left: none !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+  box-sizing: border-box !important;
 }
 
 .lastHeader > div:last-child {
-  border-right: none;
-  padding-right: 0;
+  border-right: none !important;
 }
 
-/* UNIFIED DATA ROWS WITHIN DASHBOARD TABLE CONTAINER */
+/* UNIFIED DATA ROWS WITHIN DASHBOARD TABLE CONTAINER - HORIZONTAL DIVIDERS ONLY */
 .lastItem {
   margin-bottom: 0 !important;
   border: none !important;
@@ -1093,13 +1093,15 @@ input:focus, select:focus, textarea:focus {
 }
 
 .lastItem > div {
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  padding-right: 12px;
+  border-right: none !important;
+  border-left: none !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+  box-sizing: border-box !important;
 }
 
 .lastItem > div:last-child {
-  border-right: none;
-  padding-right: 0;
+  border-right: none !important;
 }
 
 .lastItem:hover { background: var(--table-hover); }
@@ -1485,7 +1487,7 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 14px;
 }
 
-/* DYNAMICALLY AUTOSIZING WIDE DETAIL POPUP BOX (1MM GAP ON EDGES FOR ALL POPUPS) */
+/* DYNAMICALLY AUTOSIZING WIDE DETAIL POPUP BOX & DATA CARDS (1MM GAP ON LEFT AND RIGHT EDGES) */
 .popupBox,
 .popupBoxDetail,
 .popupOverlay .popupBox,
@@ -1496,10 +1498,11 @@ input:focus, select:focus, textarea:focus {
 .ttdBox,
 #popupDetail .popupBox,
 #popupDetail .popupBoxDetail,
-#pdfModal .popupBox {
-  width: calc(100vw - 6px) !important;
-  max-width: calc(100vw - 6px) !important;
-  min-width: 300px;
+#pdfModal .popupBox,
+#detailDashboard,
+.box-full {
+  width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
   background: var(--bg-box);
   border-radius: 18px;
   box-shadow: 0 16px 40px rgba(0,0,0,.35);
@@ -1507,13 +1510,13 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-main);
   border: 1px solid var(--border-color);
   animation: fade .25s ease-out;
-  margin-left: 3px !important;
-  margin-right: 3px !important;
+  margin-left: 1mm !important;
+  margin-right: 1mm !important;
   box-sizing: border-box !important;
 }
 
 .popupOverlay {
-  padding: 8px 3px !important;
+  padding: 8px 1mm !important;
 }
 
 /* ENFORCE SINGLE LINE 1-ROW (NO WRAPTEXT) WITH HORIZONTAL SCROLL */
@@ -2313,19 +2316,29 @@ button.btnKembali {
   color: #ffffff !important;
 }
 
-/* DESKTOP / PC VIEW: SUPER COMPACT & SHORT ICONS FOR STAT CARDS */
+/* ALL TABLES ACROSS APP (PC & MOBILE HP): NO VERTICAL GRIDLINES, HORIZONTAL LINES ONLY */
+.historyTable th, .historyTable td,
+.lastHeader > div, .lastItem > div,
+.detailTable2 th, .detailTable2 td,
+#tableMasterDb th, #tableMasterDb td,
+#tableUserMgmt th, #tableUserMgmt td {
+  border-right: none !important;
+  border-left: none !important;
+}
+
+/* DESKTOP / PC VIEW (MIN-WIDTH 769PX): COMPACT ELEGANT SCALE & HEIGHT ADJUSTMENT */
 @media(min-width: 769px) {
   .stats {
-    gap: 6px !important;
-    margin: 2px 0 6px 0 !important;
+    gap: 12px !important;
+    margin: 8px 0 12px 0 !important;
   }
 
   .cardStat {
-    padding: 3px 8px !important;
-    min-height: 38px !important;
-    max-height: 40px !important;
-    height: 38px !important;
-    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    min-height: 66px !important;
+    height: 70px !important;
+    max-height: 74px !important;
+    border-radius: 14px !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
@@ -2333,66 +2346,77 @@ button.btnKembali {
 
   .cardStat .cardTop {
     align-items: center !important;
-    gap: 6px !important;
+    gap: 12px !important;
   }
 
   .cardStat .icon {
-    width: 20px !important;
-    height: 20px !important;
-    border-radius: 6px !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
   }
 
   .cardStat .icon .material-symbols-rounded {
-    font-size: 13px !important;
+    font-size: 20px !important;
   }
 
   .cardStat .judul {
-    font-size: 9px !important;
+    font-size: 11px !important;
     letter-spacing: 0.5px !important;
-    margin-bottom: 0px !important;
+    margin-bottom: 2px !important;
     line-height: 1 !important;
   }
 
   .cardStat .angka {
-    font-size: 14px !important;
+    font-size: 24px !important;
     line-height: 1 !important;
-    font-weight: 800 !important;
+    font-weight: 900 !important;
   }
 
   .cardStat .bgWatermark {
-    font-size: 20px !important;
-    right: 4px !important;
-    bottom: 2px !important;
-    opacity: 0.1 !important;
+    font-size: 38px !important;
+    right: 8px !important;
+    bottom: -4px !important;
+    opacity: 0.12 !important;
   }
 
-  .cardStat .statProgressBg {
-    height: 2px !important;
-    margin-top: 1px !important;
-  }
-
-  /* PC DASHBOARD PAGE & DETAIL CARD - 100% FULL WIDE LEBAR SEMULA */
-  .page, .page.active, #dashboardPage {
-    padding: 20px 24px !important;
+  /* PC PAGE CONTAINERS & ALIGNED DASHBOARD CARDS */
+  .page, .page.active, #dashboardPage, #riwayatPage, #masterDbPage, #userManagementPage {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
     width: 100% !important;
     max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
     box-sizing: border-box !important;
   }
 
-  .dashboardTop {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin-bottom: 16px !important;
-  }
-
+  .dashboardTop,
   #detailDashboard,
   .box, .box.box-full {
     width: 100% !important;
     max-width: 100% !important;
-    padding: 22px 24px !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
-    border-radius: 18px !important;
+    box-sizing: border-box !important;
+  }
+
+  #detailDashboard {
+    padding: 14px 14px !important;
+    border-radius: 16px !important;
+  }
+
+  #detailDashboard #dashboardRecentTitle {
+    padding: 0 !important;
+    margin-bottom: 10px !important;
+  }
+
+  #detailDashboard .tableWrap {
+    width: 100% !important;
+    margin: 0 !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 10px !important;
     box-sizing: border-box !important;
   }
 
@@ -2401,18 +2425,47 @@ button.btnKembali {
     flex: 1 !important;
   }
 
-  #detailDashboard .tableWrap {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
-    overflow-x: auto !important;
-  }
-
   .lastHeader, .lastItem {
     width: 100% !important;
     min-width: 100% !important;
-    padding: 12px 18px !important;
+    padding: 10px 14px !important;
+    font-size: 12.5px !important;
     display: grid !important;
     grid-template-columns: 1.2fr 2fr 2fr 1.2fr !important;
+    box-sizing: border-box !important;
   }
+}
+
+/* STRICT SYMMETRICAL ALIGNMENT FOR ALL PAGES, MODALS & CARDS */
+.page, .page.active {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#detailDashboard,
+.box,
+.box.box-full {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.popupBoxDetail,
+#popupDetail .popupBoxDetail,
+.popupBox,
+.popupOverlay .popupBox {
+  width: calc(100vw - 12px) !important;
+  max-width: calc(100vw - 12px) !important;
+  margin-left: 6px !important;
+  margin-right: 6px !important;
+  box-sizing: border-box !important;
+}
+
+.popupOverlay {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
 }
