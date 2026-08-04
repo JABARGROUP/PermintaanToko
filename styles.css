@@ -1786,28 +1786,56 @@ input:focus, select:focus, textarea:focus {
 
 @media(max-width: 480px) {
   .header h3 {
-    font-size: 18px;
+    font-size: 17px;
   }
 
   #namaUser {
-    font-size: 16px !important;
+    font-size: 15px !important;
   }
 
   .stats {
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 8px !important;
+    margin: 8px 0 8px 0 !important;
   }
 
   .cardStat {
-    padding: 12px 14px;
+    padding: 8px 10px !important;
+    min-height: 72px !important;
+    border-radius: 14px !important;
+  }
+
+  .cardStat .icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .cardStat .icon .material-symbols-rounded {
+    font-size: 20px !important;
+  }
+
+  .cardStat .cardTop {
+    gap: 8px !important;
   }
 
   .cardStat .judul {
-    font-size: 13px !important;
+    font-size: 11px !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 0 !important;
   }
 
   .cardStat .angka {
-    font-size: 30px !important;
+    font-size: 22px !important;
+  }
+
+  .cardStat .bgWatermark {
+    font-size: 48px !important;
+    right: 4px !important;
+  }
+
+  #detailDashboard {
+    min-height: calc(100vh - 275px) !important;
+    margin-bottom: 10px !important;
   }
 
   .login-card {

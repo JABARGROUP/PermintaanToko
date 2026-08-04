@@ -847,11 +847,37 @@ async function syncAllDataToCache() {
 async function pushCentralCloudDB() {
   showLoading();
   try {
+    if (dbFirestore) {
+      try {
+        const requests = getRequestsFromDB();
+        const batch = dbFirestore.batch();
+        requests.forEach(r => {
+          if (r && r.noSurat) {
+            const docId = r.noSurat.replace(/[\/\.]/g, '_');
+            const docRef = dbFirestore.collection('requests').doc(docId);
+            batch.set(docRef, r, { merge: true });
+          }
+        });
+        await batch.commit();
+      } catch (err) {
+        console.warn("[FIREBASE PUSH NOTICE]:", err.message);
+      }
+    }
+
+    if (dbRealtime) {
+      try {
+        const requests = getRequestsFromDB();
+        dbRealtime.ref('requests').set(requests);
+      } catch (err) {
+        console.warn("[FIREBASE REALTIME PUSH NOTICE]:", err.message);
+      }
+    }
+
     await syncAllDataToCache();
   } finally {
     setTimeout(() => {
       hideLoading();
-    }, 250);
+    }, 300);
   }
 }
 
@@ -4597,7 +4623,8 @@ function initAllDraggableButtons() {
     body:not(:has(#dashboardPage.active)) #notifBellBtn,
     body:not(:has(#dashboardPage.active)) .notif-bell-btn,
     body:not(:has(#dashboardPage.active)) #helpButton,
-    body:not(:has(#dashboardPage.active)) .helpButton {
+    body:not(:has(#dashboardPage.active)) .helpButton,
+    body:not(:has(#dashboardPage.active)) #firebaseOnlineDot {
       display: none !important;
     }
   `;
