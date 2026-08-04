@@ -2362,4 +2362,39 @@ button.btnKembali {
     display: grid !important;
     grid-template-columns: 1.2fr 2fr 2fr 1.2fr !important;
   }
+   /* 1. Pastikan tableWrap yang memegang kendali scroll horizontal */
+#detailDashboard .tableWrap {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  overflow-x: auto !important; /* Wadah utama yang di-scroll kanan-kiri */
+  overflow-y: hidden !important;
+  border-radius: 10px;
+  min-height: 0 !important;
+}
+
+/* 2. Buat pembungkus dalam (jika ada) atau atur lebar header & item agar menyatu */
+.lastHeader, .lastItem {
+  display: grid;
+  grid-template-columns: 1.2fr 2fr 2fr 1.2fr;
+  align-items: center;
+  gap: 26px !important;
+  padding: 10px 14px;
+  font-size: 13px;
+  white-space: nowrap !important;
+  
+  /* UBAH BAGIAN INI: Gunakan min-width agar tidak memotong saat di-scroll */
+  min-width: max-content; /* Memaksa header & row mengikuti lebar konten terpanjang */
+  width: 100%;
+}
+
+/* 3. Matikan scroll horizontal bawaan di #lastData */
+#lastData {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important; /* Ubah ke hidden agar tidak buat scrollbar sendiri */
+  width: 100% !important;
+  min-height: 0 !important;
+}
 }
