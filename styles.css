@@ -1041,7 +1041,7 @@ input:focus, select:focus, textarea:focus {
 #lastData {
   flex: 1 !important;
   overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow-x: visible !important;
   width: 100% !important;
   min-height: 0 !important;
   -webkit-overflow-scrolling: touch !important;
@@ -1053,10 +1053,9 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   gap: 26px !important;
   padding: 10px 14px;
+  width: 100%;
   font-size: 13px;
   white-space: nowrap !important;
-  min-width:max-content;
-   width:100%;
 }
 
 .lastHeader {
@@ -1117,11 +1116,11 @@ input:focus, select:focus, textarea:focus {
 .detailTable2 th {
   text-align: center !important;
   background: var(--bg-header) !important;
-  padding: 3px 3px !important;
+  padding: 10px 12px !important;
 }
 
 .detailTable2 td {
-  padding: 3px 3px !important;
+  padding: 10px 12px !important;
   border-bottom: 1px solid var(--table-border) !important;
 }
 
