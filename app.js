@@ -1777,7 +1777,7 @@ function getBadgeStatus(r) {
       if (role === 'SERVICE' || role === 'TOKO' || role === 'SALES') {
         return '<span>TUNGGU DM</span>';
       }
-      return '<span>TUNGGU APPROVAL DM</span>';
+      return '<span>TUNGGU DM</span>';
     }
   }
 
