@@ -1018,7 +1018,7 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-main) !important;
 }
 
-/* RECENT DATA LIST ON DASHBOARD - SYNCHRONOUS HORIZONTAL SCROLL FOR HEADER & ROWS VIA TABLESCROLLINNER */
+/* RECENT DATA LIST ON DASHBOARD - SYNCHRONOUS HORIZONTAL SCROLL FOR HEADER & ROWS */
 #detailDashboard .tableWrap {
   flex: 1 !important;
   display: flex !important;
@@ -1028,15 +1028,6 @@ input:focus, select:focus, textarea:focus {
   overflow-y: hidden !important;
   -webkit-overflow-scrolling: touch !important;
   border-radius: 10px;
-  min-height: 0 !important;
-}
-
-.tableScrollInner {
-  min-width: 580px !important;
-  width: max-content !important;
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
   min-height: 0 !important;
 }
 
@@ -1062,7 +1053,6 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   gap: 26px !important;
   padding: 10px 14px;
-  min-width: 560px !important;
   width: 100%;
   font-size: 13px;
   white-space: nowrap !important;
@@ -2362,15 +2352,7 @@ button.btnKembali {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 100% !important;
-    overflow-x: hidden !important;
-  }
-
-  #detailDashboard .tableScrollInner {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
+    overflow-x: auto !important;
   }
 
   .lastHeader, .lastItem {
