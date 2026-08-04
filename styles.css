@@ -1834,8 +1834,14 @@ input:focus, select:focus, textarea:focus {
   }
 
   #detailDashboard {
-    min-height: calc(100vh - 275px) !important;
-    margin-bottom: 10px !important;
+    min-height: auto !important;
+    margin-bottom: 12px !important;
+    padding: 14px 12px !important;
+  }
+
+  #detailDashboard #lastData {
+    max-height: 220px !important;
+    overflow-y: auto !important;
   }
 
   .login-card {

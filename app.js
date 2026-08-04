@@ -701,15 +701,16 @@ function bersihkanCacheAplikasiWeb() {
   }
 }
 
-// DEFAULT FIREBASE ONLINE CONFIGURATION
+// DEFAULT FIREBASE ONLINE CONFIGURATION (PERMINTAAN TOKO - REAL LIVE DATABASE)
 const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDemoKeyPermintaanTokoJabar2026",
-  authDomain: "permintaan-toko-jabar.firebaseapp.com",
-  databaseURL: "https://permintaan-toko-jabar-default-rtdb.firebaseio.com",
-  projectId: "permintaan-toko-jabar",
-  storageBucket: "permintaan-toko-jabar.appspot.com",
-  messagingSenderId: "987654321012",
-  appId: "1:987654321012:web:abcdef1234567890"
+  apiKey: "AIzaSyDTQdgmBi39SqLZ1j_aa8tj-mimCIXJTa0",
+  authDomain: "permintaan-toko-e3b5d.firebaseapp.com",
+  databaseURL: "https://permintaan-toko-e3b5d-default-rtdb.firebaseio.com",
+  projectId: "permintaan-toko-e3b5d",
+  storageBucket: "permintaan-toko-e3b5d.firebasestorage.app",
+  messagingSenderId: "1072410401023",
+  appId: "1:1072410401023:web:465e23030d2259b56454ca",
+  measurementId: "G-KFHDYEP3VD"
 };
 
 let firebaseApp = null;
