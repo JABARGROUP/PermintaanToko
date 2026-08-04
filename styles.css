@@ -1117,11 +1117,11 @@ input:focus, select:focus, textarea:focus {
 .detailTable2 th {
   text-align: center !important;
   background: var(--bg-header) !important;
-  padding: 10px 12px !important;
+  padding: 3px 3px !important;
 }
 
 .detailTable2 td {
-  padding: 10px 12px !important;
+  padding: 3px 3px !important;
   border-bottom: 1px solid var(--table-border) !important;
 }
 
