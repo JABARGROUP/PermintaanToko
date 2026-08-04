@@ -2136,13 +2136,14 @@ input:focus, select:focus, textarea:focus {
   }
 
   #detailDashboard {
-    min-height: auto !important;
+    flex: 1 !important;
+    padding: 16px 16px !important;
     margin-bottom: 12px !important;
-    padding: 14px 12px !important;
   }
 
   #detailDashboard #lastData {
-    max-height: 220px !important;
+    max-height: none !important;
+    flex: 1 !important;
     overflow-y: auto !important;
   }
 
@@ -2327,32 +2328,56 @@ button.btnKembali {
     margin-top: 1px !important;
   }
 
-  .box, .box.box-full {
-    padding: 8px 10px !important;
-    border-radius: 10px !important;
-  }
-
-  /* FULL-WIDTH PC DASHBOARD RECENT DETAIL CARD (LEFT TO RIGHT FULL EDGE) */
-  #detailDashboard {
+  /* PC DASHBOARD PAGE & DETAIL CARD - 100% FULL WIDE LEBAR SEMULA */
+  .page, .page.active, #dashboardPage {
+    padding: 20px 24px !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding: 14px 16px !important;
-    border-radius: 16px !important;
-    box-sizing: border-border-box !important;
+    box-sizing: border-box !important;
   }
 
-  #detailDashboard .tableWrap,
+  .dashboardTop {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 16px !important;
+  }
+
+  #detailDashboard,
+  .box, .box.box-full {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 22px 24px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 18px !important;
+    box-sizing: border-box !important;
+  }
+
+  #detailDashboard #lastData {
+    max-height: none !important;
+    flex: 1 !important;
+  }
+
+  #detailDashboard .tableWrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
   #detailDashboard .tableScrollInner {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .lastHeader, .lastItem {
     width: 100% !important;
     min-width: 100% !important;
+    padding: 12px 18px !important;
+    display: grid !important;
     grid-template-columns: 1.2fr 2fr 2fr 1.2fr !important;
   }
 }
