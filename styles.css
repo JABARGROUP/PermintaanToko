@@ -3,6 +3,18 @@
    MASTER STYLESHEET WITH 10 THEME PALETTES & ALL COMPONENTS
 ====================================================== */
 
+/* HIDE ALL RIGHT & BOTTOM SCROLLBARS GLOBALLY ACROSS BROWSERS */
+::-webkit-scrollbar {
+  width: 0px !important;
+  height: 0px !important;
+  display: none !important;
+}
+
+* {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
 :root, body {
   --bg-body: #0f172a;
   --bg-box: #1e293b;
@@ -793,13 +805,29 @@ input:focus, select:focus, textarea:focus {
 .btnPdf { background: #ea580c; }
 .btnPdf:hover { background: #c2410c; }
 
-/* DASHBOARD CARDS & STRUCTURE - USER NAME & STAT CARDS BOLD & BESAR */
+/* DASHBOARD CARDS & STRUCTURE - USER NAME & STAT CARDS FIXED AT TOP */
+#dashboardPage {
+  display: none;
+  flex-direction: column !important;
+  height: calc(100vh - 65px) !important;
+  overflow: hidden !important;
+  padding-bottom: 12px !important;
+  box-sizing: border-box !important;
+}
+
+#dashboardPage.active {
+  display: flex !important;
+}
+
 .dashboardTop {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: var(--bg-body);
-  padding-bottom: 15px;
+  position: relative !important;
+  top: auto !important;
+  z-index: 10 !important;
+  background: var(--bg-body) !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 10px !important;
+  flex-shrink: 0 !important;
 }
 
 .header {
@@ -971,17 +999,48 @@ input:focus, select:focus, textarea:focus {
   text-align: center !important;
 }
 
-/* RECENT DATA LIST ON DASHBOARD - SYNCHRONOUS HORIZONTAL SCROLL FOR HEADER & ROWS */
-.tableWrap {
+#detailDashboard {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  margin-bottom: 0 !important;
+  padding: 14px 14px !important;
+  min-height: 0 !important;
+}
+
+#detailDashboard #dashboardRecentTitle {
+  flex-shrink: 0 !important;
+  margin-bottom: 10px !important;
+}
+
+/* RECENT DATA LIST ON DASHBOARD - SYNCHRONOUS HORIZONTAL SCROLL FOR HEADER & ROWS, VERTICAL ONLY ON LASTDATA */
+#detailDashboard .tableWrap {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
   width: 100% !important;
   overflow-x: auto !important;
+  overflow-y: hidden !important;
   -webkit-overflow-scrolling: touch !important;
   border-radius: 10px;
+  min-height: 0 !important;
+}
+
+.lastHeader {
+  flex-shrink: 0 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
 }
 
 #lastData {
+  flex: 1 !important;
+  overflow-y: auto !important;
   overflow-x: visible !important;
   width: 100% !important;
+  min-height: 0 !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 .lastHeader, .lastItem {
@@ -1351,9 +1410,15 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 14px;
 }
 
-/* DYNAMICALLY AUTOSIZING WIDE DETAIL POPUP BOX (1MM GAP ON EDGES FOR ALL DETAIL POPUPS) */
+/* DYNAMICALLY AUTOSIZING WIDE DETAIL POPUP BOX (1MM GAP ON EDGES FOR ALL POPUPS) */
+.popupBox,
 .popupBoxDetail,
+.popupOverlay .popupBox,
 .popupOverlay .popupBoxDetail,
+.akunBox,
+.confirmBox,
+.rejectBoxPopup,
+.ttdBox,
 #popupDetail .popupBox,
 #popupDetail .popupBoxDetail,
 #pdfModal .popupBox {
@@ -2028,6 +2093,15 @@ input:focus, select:focus, textarea:focus {
     overflow-y: auto !important;
   }
 
+  .lastHeader, .lastHeader > div {
+    text-align: left !important;
+    justify-content: flex-start !important;
+  }
+
+  .lastItem {
+    text-align: left !important;
+  }
+
   .login-card {
     padding: 18px 14px !important;
   }
@@ -2084,6 +2158,47 @@ input:focus, select:focus, textarea:focus {
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
+}
+
+/* DESKTOP / PC VIEW: COMPACT SLIGHTLY SMALLER UI FOR CLEAN ELEGANT LOOK */
+@media(min-width: 769px) {
+  .stats {
+    gap: 10px !important;
+    margin: 8px 0 12px 0 !important;
+  }
+
+  .cardStat {
+    padding: 10px 14px !important;
+    min-height: 82px !important;
+    border-radius: 14px !important;
+  }
+
+  .cardStat .icon {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .cardStat .icon .material-symbols-rounded {
+    font-size: 20px !important;
+  }
+
+  .cardStat .judul {
+    font-size: 11px !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .cardStat .angka {
+    font-size: 26px !important;
+  }
+
+  .cardStat .bgWatermark {
+    font-size: 42px !important;
+    right: 6px !important;
+  }
+
+  .box, .box.box-full {
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
   }
 }
