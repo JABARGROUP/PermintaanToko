@@ -114,7 +114,7 @@
         <h2>PERMINTAAN TOKO</h2>
         <p>SISTEM PERMINTAAN TOKO AREA JAWA BARAT</p>
 
-        <form id="loginForm" novalidate>
+        <form id="loginForm" onsubmit="event.preventDefault(); if(typeof window.prosesLogin === 'function') window.prosesLogin();" novalidate>
           <div class="input-group">
             <span><span class="material-symbols-rounded">person</span></span>
             <input type="text" id="username" placeholder="USERNAME" autocomplete="off">
@@ -130,7 +130,7 @@
             <label for="rememberMe" style="margin: 0; font-size: 12px; color: var(--text-muted); cursor: pointer;">INGAT SANDI & SESI SAYA</label>
           </div>
 
-          <button type="button" class="btn-primary" id="btnLogin">MASUK APLIKASI</button>
+          <button type="submit" class="btn-primary" id="btnLogin" onclick="if(typeof window.prosesLogin === 'function') window.prosesLogin();">MASUK APLIKASI</button>
         </form>
       </div>
     </section>
@@ -937,6 +937,6 @@
   </div>
 
   <!-- Database Engine & Master Logic -->
-  <script src="app.js?v=20260804_clean" defer></script>
+  <script src="app.js?v=20260804_clean"></script>
 </body>
 </html>

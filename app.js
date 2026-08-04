@@ -1303,6 +1303,8 @@ function updateThemeIcon() {
   });
 }
 
+const STORE_REMEMBER_LOGIN_CREDS_KEY = 'STORE_REMEMBER_LOGIN_CREDS_V1';
+
 function autoLogin() {
   if (!currentUser) {
     try {
@@ -1310,13 +1312,29 @@ function autoLogin() {
       if (savedSession) {
         currentUser = JSON.parse(savedSession);
       }
-    } catch (e) {}
+    } catch (e) {
+      currentUser = null;
+    }
   }
 
   if (typeof currentUser !== 'undefined' && currentUser !== null) {
     bukaMainApp();
   } else {
     pindahHalaman('loginPage');
+    
+    // PRE-FILL USERNAME & PASSWORD HANYA JIKA INGAT SANDI DILAKUKAN DI PENYIMPANAN LOKAL
+    const savedCredsStr = appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
+    if (savedCredsStr) {
+      try {
+        const creds = JSON.parse(savedCredsStr);
+        const uEl = document.getElementById('username');
+        const pEl = document.getElementById('password');
+        const remEl = document.getElementById('rememberMe');
+        if (uEl && creds.username) uEl.value = creds.username;
+        if (pEl && creds.password) pEl.value = creds.password;
+        if (remEl) remEl.checked = true;
+      } catch(e) {}
+    }
   }
 }
 
@@ -1327,36 +1345,18 @@ async function prosesLogin() {
 
   const u = uEl.value.trim().toUpperCase();
   const p = pEl.value.trim();
-  const remember = document.getElementById('rememberMe')?.checked !== false;
+  const remember = document.getElementById('rememberMe')?.checked === true;
 
   if (!u || !p) {
     showNotif('USERNAME DAN PASSWORD WAJIB DIISI!', 'warning');
     return;
   }
 
-  showLoading('');
+  showLoading('MEMPROSES LOGIN...');
 
   try {
-    // SYNC SEMUA DATA TERBARU DARI FIREBASE ONLINE SANGAT PERTAMA SEBELUM VALIDASI LOGIN
-    await syncAllDataToCache();
-
+    // AMBIL DARI LOCAL STORAGE & SEED UNTUK RESPONSE LOGIN KILAT TANPA BLOCKING
     let users = getUsersFromDB();
-
-    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-      const { data } = await supabaseClient
-        .from('app_storage')
-        .select('value')
-        .eq('key', USERS_DB_KEY)
-        .single();
-
-      if (data && data.value) {
-        const fetched = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
-        if (Array.isArray(fetched) && fetched.length > 0) {
-          users = fetched;
-        }
-      }
-    }
-
     if (!Array.isArray(users) || !users.length) {
       users = [...SEED_USERS];
     }
@@ -1369,11 +1369,23 @@ async function prosesLogin() {
 
     if (user) {
       currentUser = user;
+
+      // HANYA SIMPAN SESI & SANDI KE PENYIMPANAN LOKAL JIKA 'INGAT SANDI' DICENTANG
       if (remember) {
         appStorage.setItem(SESSION_KEY, JSON.stringify(user));
+        appStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, JSON.stringify({ username: u, password: p }));
+      } else {
+        appStorage.removeItem(SESSION_KEY);
+        appStorage.removeItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
       }
+
       catatLogLogin(user.username, user.fullName, user.area, 'BERHASIL');
       bukaMainApp();
+
+      // SINKRONISASI DATA DI BACKGROUND UNTUK KINERJA MAKSIMAL
+      if (typeof syncAllDataToCache === 'function') {
+        syncAllDataToCache().catch(() => {});
+      }
 
       setTimeout(() => {
         if (typeof aturTampilanLonceng === 'function') aturTampilanLonceng('dashboardPage');
@@ -1387,11 +1399,12 @@ async function prosesLogin() {
     }
   } catch (error) {
     console.error("Login error:", error);
-    showNotif('GAGAL TERHUBUNG KE SERVER!', 'error');
+    showNotif('GAGAL MEMPROSES LOGIN!', 'error');
   } finally {
     hideLoading();
   }
 }
+window.prosesLogin = prosesLogin;
 
 async function catatLogLogin(username, nama, area, status) {
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
@@ -1418,6 +1431,17 @@ function logout() {
   showConfirm('YAKIN INGIN KELUAR DARI APLIKASI?', () => {
     currentUser = null;
     appStorage.removeItem(SESSION_KEY);
+    
+    // TIDAK MENGHAPUS CREDS JIKA USER MEMANG PERNAH MENYIMPAN INGAT SANDI, ATAU SESUAIKAN DENGAN FORM
+    const remEl = document.getElementById('rememberMe');
+    if (!remEl || !remEl.checked) {
+      appStorage.removeItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
+      const uEl = document.getElementById('username');
+      const pEl = document.getElementById('password');
+      if (uEl) uEl.value = '';
+      if (pEl) pEl.value = '';
+    }
+
     tutupAkun();
     tutupNotificationModal();
     const popupBantuan = document.getElementById('popupBantuan');
@@ -2527,6 +2551,8 @@ function filterRiwayat() {
       aksi += `
         <button class="btnIcon btnPdf" onclick="bukaPdfModal('${r.noSurat}')" title="CETAK PDF"><span class="material-symbols-rounded">picture_as_pdf</span></button>
       `;
+    }
+
     const isWaitingDM = (r.status === 'PENDING' && r.serviceApprove);
     const tr = document.createElement('tr');
     if (isWaitingDM) {

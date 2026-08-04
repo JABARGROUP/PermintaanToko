@@ -1158,25 +1158,19 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-muted) !important;
   font-weight: 700 !important;
   text-align: center !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-right: none !important;
+  border-left: none !important;
   border-bottom: 2px solid var(--table-border) !important;
   padding: 10px 14px !important;
   white-space: nowrap !important;
 }
 
-.historyTable th:last-child, #tableMasterDb th:last-child, #tableUserMgmt th:last-child {
-  border-right: none !important;
-}
-
 .historyTable td, #tableMasterDb td, #tableUserMgmt td {
   padding: 10px 14px !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-right: none !important;
+  border-left: none !important;
   border-bottom: 1px solid var(--border-color) !important;
   color: var(--text-main) !important;
-}
-
-.historyTable td:last-child, #tableMasterDb td:last-child, #tableUserMgmt td:last-child {
-  border-right: none !important;
 }
 
 .historyTable tr:last-child td, #tableMasterDb tr:last-child td, #tableUserMgmt tr:last-child td {
