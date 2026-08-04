@@ -1012,9 +1012,13 @@ input:focus, select:focus, textarea:focus {
 #detailDashboard #dashboardRecentTitle {
   flex-shrink: 0 !important;
   margin-bottom: 10px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  color: var(--text-main) !important;
 }
 
-/* RECENT DATA LIST ON DASHBOARD - SYNCHRONOUS HORIZONTAL SCROLL FOR HEADER & ROWS, VERTICAL ONLY ON LASTDATA */
+/* RECENT DATA LIST ON DASHBOARD - SYNCHRONOUS HORIZONTAL SCROLL FOR HEADER & ROWS VIA TABLESCROLLINNER */
 #detailDashboard .tableWrap {
   flex: 1 !important;
   display: flex !important;
@@ -1024,6 +1028,15 @@ input:focus, select:focus, textarea:focus {
   overflow-y: hidden !important;
   -webkit-overflow-scrolling: touch !important;
   border-radius: 10px;
+  min-height: 0 !important;
+}
+
+.tableScrollInner {
+  min-width: 580px !important;
+  width: max-content !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
   min-height: 0 !important;
 }
 
@@ -2222,14 +2235,14 @@ input:focus, select:focus, textarea:focus {
   -webkit-backdrop-filter: none !important;
 }
 
-/* DASHBOARD RECENT TITLE: 11PX (EXACTLY 2 POINTS SMALLER THAN 13PX DATA ROWS BELOW) */
+/* DASHBOARD RECENT TITLE: SAME FONT SIZE AS OTHER TITLE HEADINGS (13.5PX) */
 #dashboardRecentTitle {
-  font-size: 11px !important;
+  font-size: 13.5px !important;
   font-weight: 700 !important;
   letter-spacing: 0.5px !important;
   margin-bottom: 8px !important;
   text-align: center !important;
-  color: var(--text-muted) !important;
+  color: var(--text-main) !important;
 }
 
 /* BACK BUTTON THEME BACKGROUND COLOR MATCH */

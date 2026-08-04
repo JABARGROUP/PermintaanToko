@@ -2812,35 +2812,47 @@ window.editData = editData;
 window.editPermintaan = editPermintaan;
 
 function hapusData(noSurat) {
+  if (!noSurat) return;
   showConfirm(`HAPUS PERMANEN DATA PERMINTAAN #${noSurat}?`, () => {
-    showLoading('MENGHAPUS DATA DARI FIREBASE ONLINE...');
-    setTimeout(() => {
-      hideLoading();
-      const requests = getRequestsFromDB().filter(r => r.noSurat !== noSurat);
+    try {
+      // 1. HAPUS DARI CACHE LOKAL SEKETIKA
+      const currentReqs = getRequestsFromDB();
+      const updatedReqs = currentReqs.filter(r => r.noSurat !== noSurat);
       
       const delReqs = JSON.parse(appStorage.getItem(DELETED_REQUESTS_KEY) || '[]');
       if (!delReqs.includes(noSurat)) delReqs.push(noSurat);
       appStorage.setItem(DELETED_REQUESTS_KEY, JSON.stringify(delReqs));
 
-      saveRequestsToDB(requests);
+      saveRequestsToDB(updatedReqs);
 
-      const docId = String(noSurat || '').replace(/[\/\.]/g, '_');
+      // 2. HAPUS DOKUMEN DARI FIREBASE FIRESTORE & REALTIME DB ONLINE
+      const docId = String(noSurat).replace(/[\/\.]/g, '_');
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-        dbFirestore.collection('requests').doc(docId).delete().catch(e => console.warn(e));
+        dbFirestore.collection('requests').doc(docId).delete().catch(err => console.warn('[FIRESTORE DELETE NOTICE]:', err));
       }
       if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-        dbRealtime.ref(`requests/${docId}`).remove().catch(e => console.warn(e));
+        dbRealtime.ref(`requests/${docId}`).remove().catch(err => console.warn('[REALTIME DELETE NOTICE]:', err));
       }
 
+      // 3. SINKRONKAN KE FIREBASE CLOUD
       if (typeof pushCentralCloudDB === 'function') {
         pushCentralCloudDB();
       }
 
-      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS DARI FIREBASE ONLINE!`, 'info');
-      loadRiwayat();
-      loadDashboard();
-      if (currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
-    }, 300);
+      // 4. RE-RENDER TAMPILAN & TAMPILKAN NOTIFIKASI
+      hideLoading();
+      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS DARI CACHE & FIREBASE ONLINE!`, 'info');
+      
+      if (typeof loadRiwayat === 'function') loadRiwayat();
+      if (typeof loadDashboard === 'function') loadDashboard();
+      if (currentUser && currentUser.category === 'SERVICE' && currentUser.area === 'TSM' && typeof loadMasterDbTable === 'function') {
+        loadMasterDbTable();
+      }
+    } catch (err) {
+      hideLoading();
+      console.error('[HAPUS DATA ERROR]:', err);
+      showNotif('GAGAL MENGHAPUS DATA PERMINTAAN!', 'error');
+    }
   });
 }
 window.hapusData = hapusData;
@@ -4046,8 +4058,16 @@ function hapusUser(userId) {
     if (!delUsers.includes(userId)) delUsers.push(userId);
     appStorage.setItem(DELETED_USERS_KEY, JSON.stringify(delUsers));
 
+    const docId = String(u.username).toUpperCase();
+    if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+      dbFirestore.collection('users').doc(docId).delete().catch(e => console.warn(e));
+    }
+    if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+      dbRealtime.ref(`users/${docId}`).remove().catch(e => console.warn(e));
+    }
+
     saveUsersToDB(users.filter(x => x.id !== userId));
-    showNotif(`USER ${u.username} DIHAPUS.`, 'info');
+    showNotif(`USER ${u.username} BERHASIL DIHAPUS DARI FIREBASE ONLINE!`, 'info');
     loadUsersManagement();
   });
 }
@@ -4107,30 +4127,36 @@ function loadMasterDbTable() {
 }
 
 function hapusDataMaster(noSurat) {
+  if (!noSurat) return;
   showConfirm(`ADMIN: HAPUS PERMANEN DATA PERMINTAAN #${noSurat} DARI MASTER DATABASE?`, () => {
-    showLoading('MENGHAPUS DATA MASTER DARI FIREBASE ONLINE...');
-    setTimeout(() => {
-      hideLoading();
-      const requests = getRequestsFromDB().filter(r => r.noSurat !== noSurat);
-      saveRequestsToDB(requests);
+    try {
+      const currentReqs = getRequestsFromDB();
+      const updatedReqs = currentReqs.filter(r => r.noSurat !== noSurat);
+      saveRequestsToDB(updatedReqs);
 
-      const docId = String(noSurat || '').replace(/[\/\.]/g, '_');
+      const docId = String(noSurat).replace(/[\/\.]/g, '_');
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-        dbFirestore.collection('requests').doc(docId).delete().catch(e => console.warn(e));
+        dbFirestore.collection('requests').doc(docId).delete().catch(err => console.warn('[FIRESTORE DELETE NOTICE]:', err));
       }
       if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-        dbRealtime.ref(`requests/${docId}`).remove().catch(e => console.warn(e));
+        dbRealtime.ref(`requests/${docId}`).remove().catch(err => console.warn('[REALTIME DELETE NOTICE]:', err));
       }
 
       if (typeof pushCentralCloudDB === 'function') {
         pushCentralCloudDB();
       }
 
-      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS DARI MASTER DATABASE!`, 'info');
-      loadMasterDbTable();
-      loadRiwayat();
-      loadDashboard();
-    }, 300);
+      hideLoading();
+      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS DARI MASTER DATABASE & FIREBASE ONLINE!`, 'info');
+      
+      if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+      if (typeof loadRiwayat === 'function') loadRiwayat();
+      if (typeof loadDashboard === 'function') loadDashboard();
+    } catch (err) {
+      hideLoading();
+      console.error('[HAPUS MASTER ERROR]:', err);
+      showNotif('GAGAL MENGHAPUS DATA MASTER!', 'error');
+    }
   });
 }
 
