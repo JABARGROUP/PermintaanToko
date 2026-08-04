@@ -384,7 +384,7 @@ const SEED_USERS = [
     id: 'USR-ADMIN',
     username: 'ADMIN',
     password: '1',
-    fullName: 'ADMINISTRATOR PUSAT',
+    fullName: 'ADMIN',
     phone: '',
     category: 'ADMIN',
     area: 'ALL',
@@ -832,7 +832,7 @@ function simpanFirebaseConfigUser() {
       return;
     }
     appStorage.setItem(FIREBASE_USER_CONFIG_KEY, JSON.stringify(parsed));
-    showNotif('BERHASIL MENYIMPAN & MENGHUBUNGKAN FIREBASE ONLINE!', 'success');
+    showNotif('BERHASIL MENYIMPAN DATA!', 'success');
     initFirebaseDB();
   } catch (e) {
     showNotif('FORMAT JSON KONFIGURASI FIREBASE TIDAK VALID!', 'error');
@@ -1406,7 +1406,7 @@ function logout() {
     pindahHalaman('loginPage');
     if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
     
-    showNotif('BERHASIL LOGOUT DARI SISTEM', 'success');
+    showNotif('BERHASIL LOGOUT', 'success');
   });
 }
 
@@ -2283,7 +2283,7 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
           pushCentralCloudDB();
         }
 
-        showNotif(`PERMINTAAN #${editNoSurat} BERHASIL DIPERBARUI & DISINKRONKAN KE FIREBASE!`, 'success');
+        showNotif(`PERMINTAAN #${editNoSurat} DATA BERHASIL DIPERBARUHI!`, 'success');
         bersihkanForm();
         pindahHalaman('riwayatPage');
         if (typeof loadRiwayat === 'function') loadRiwayat();
@@ -2334,7 +2334,7 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
         pushCentralCloudDB();
       }
 
-      showNotif(`PERMINTAAN #${noSurat} BERHASIL DISIMPAN & DISINKRONKAN KE FIREBASE!`, 'success');
+      showNotif(`PERMINTAAN #${noSurat} DATA BERHASIL DISIMPAN!`, 'success');
       bersihkanForm();
 
       tambahNotifikasiSistem(['SERVICE'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI ${toko} (${currentUser.area}). MOHON SEGERA DIPERIKSA DI APLIKASI.`, noSurat);
@@ -2588,7 +2588,7 @@ function approveService(noSurat) {
           time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
         });
         saveRequestsToDB(requests);
-        showNotif(`APPROVE SERVICE BERHASIL UNTUK #${noSurat}!`, 'info');
+        showNotif(`APPROVE BERHASIL`, 'info');
 
         tambahNotifikasiSistem(['DM'], 'ALL', `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI SERVICE (${currentUser.fullName}). MOHON APPROVAL DM.`, noSurat);
         const users = getUsersFromDB();
@@ -2639,18 +2639,18 @@ function approveDM(noSurat) {
         requests[idx].log.push({
           action: 'APPROVE_DM',
           user: currentUser.fullName,
-          notes: 'DISETUJUI DM PUSAT',
+          notes: 'DISETUJUI DM',
           time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
         });
         saveRequestsToDB(requests);
-        showNotif(`APPROVE DM PUSAT BERHASIL UNTUK #${noSurat}!`, 'info');
+        showNotif(`APPROVE BERHASIL`, 'info');
 
         tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI DM PUSAT. SILAKAN DIPROSES.`, noSurat);
         const users = getUsersFromDB();
         const serviceUsers = users.filter(u => u.category === 'SERVICE' && u.area === requests[idx].area);
         serviceUsers.forEach(srv => {
           if (srv.phone) {
-            kirimNotifikasiWA(srv.phone, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI DM PUSAT. SILAKAN DIPROSES.`);
+            kirimNotifikasiWA(srv.phone, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI DM. SILAKAN DIPROSES.`);
           }
         });
 
@@ -2744,7 +2744,7 @@ function kirimReject() {
         time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
       });
       saveRequestsToDB(requests);
-      showNotif(`PERMINTAAN #${noSurat} BERHASIL DITOLAK.`, 'info');
+      showNotif(`PERMINTAAN BERHASIL DITOLAK`, 'info');
 
       const users = getUsersFromDB();
       const creator = users.find(u => u.id === requests[idx].userId || u.fullName === requests[idx].createdBy);
@@ -2755,14 +2755,14 @@ function kirimReject() {
           kirimNotifikasiWA(creator.phone, `PERMINTAAN #${noSurat} DITOLAK SERVICE. CATATAN: ${alasan}`);
         }
       } else if (roleType === 'DM') {
-        tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} DITOLAK DM PUSAT. CATATAN: ${alasan}`, noSurat);
+        tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} DITOLAK DM. CATATAN: ${alasan}`, noSurat);
         if (creator && creator.phone) {
-          kirimNotifikasiWA(creator.phone, `PERMINTAAN #${noSurat} DITOLAK DM PUSAT. CATATAN: ${alasan}`);
+          kirimNotifikasiWA(creator.phone, `PERMINTAAN #${noSurat} DITOLAK DM. CATATAN: ${alasan}`);
         }
         const serviceUsers = users.filter(u => u.category === 'SERVICE' && u.area === requests[idx].area);
         serviceUsers.forEach(srv => {
           if (srv.phone) {
-            kirimNotifikasiWA(srv.phone, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} DITOLAK DM PUSAT. CATATAN: ${alasan}`);
+            kirimNotifikasiWA(srv.phone, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} DITOLAK DM. CATATAN: ${alasan}`);
           }
         });
       }
@@ -2831,7 +2831,7 @@ window.editPermintaan = editPermintaan;
 
 function hapusData(noSurat) {
   if (!noSurat) return;
-  showConfirm(`HAPUS PERMANEN DATA PERMINTAAN #${noSurat}?`, () => {
+  showConfirm(`HAPUS DATA PERMINTAAN #${noSurat}?`, () => {
     try {
       // 1. HAPUS DARI CACHE LOKAL SEKETIKA
       const currentReqs = getRequestsFromDB();
@@ -2859,7 +2859,7 @@ function hapusData(noSurat) {
 
       // 4. RE-RENDER TAMPILAN & TAMPILKAN NOTIFIKASI
       hideLoading();
-      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS DARI CACHE & FIREBASE ONLINE!`, 'info');
+      showNotif(`PERMINTAAN BERHASIL DIHAPUS!`, 'info');
       
       if (typeof loadRiwayat === 'function') loadRiwayat();
       if (typeof loadDashboard === 'function') loadDashboard();
@@ -3224,7 +3224,7 @@ function renderFullPdfPreviewDocument(modelId) {
           <div style="font-weight: normal; text-decoration: underline;">SERVICE BANDUNG</div>
         </div>
         <div>
-          <div>DISETUJUI (DM PUSAT)</div>
+          <div>DISETUJUI (DM)</div>
           <div style="height: 45px; margin: 6px 0; color: #7c3aed; font-size: 10px; display: flex; align-items: center; justify-content: center; font-style: italic;">[ DM APPROVAL ]</div>
           <div style="font-weight: normal; text-decoration: underline;">DISTRICT MANAGER</div>
         </div>
@@ -3274,7 +3274,7 @@ function bukaPdfModal(noSurat) {
     dmTTD = ttdMap[dmUser.id] || ttdMap[dmUser.username] || ttdMap[dmUser.fullName] || '';
   }
   if (!dmTTD) {
-    dmTTD = ttdMap['DM'] || ttdMap['DM_PUSAT'] || '';
+    dmTTD = ttdMap['DM'] || ttdMap['DM'] || '';
   }
 
   const nowPrint = new Date();
@@ -3598,7 +3598,7 @@ function simpanTTD() {
     }
     appStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap));
     pushCentralCloudDB();
-    showNotif('TANDA TANGAN DIGITAL BERHASIL DISIMPAN!', 'info');
+    showNotif('TANDA TANGAN BERHASIL DISIMPAN!', 'info');
     tutupTTD();
   });
 }
@@ -4085,7 +4085,7 @@ function hapusUser(userId) {
     }
 
     saveUsersToDB(users.filter(x => x.id !== userId));
-    showNotif(`USER ${u.username} BERHASIL DIHAPUS DARI FIREBASE ONLINE!`, 'info');
+    showNotif(`USER ${u.username} BERHASIL DIHAPUS!`, 'info');
     loadUsersManagement();
   });
 }
@@ -4137,7 +4137,7 @@ function loadMasterDbTable() {
       <td>${getBadgeStatus(r.status)}</td>
       <td style="word-break:break-word; max-width:200px;">${r.catatan || '-'}</td>
       <td style="text-align:center;">
-        <button class="btnIcon btnDelete" onclick="hapusDataMaster('${r.noSurat}')" title="HAPUS PERMANEN"><span class="material-symbols-rounded">delete</span></button>
+        <button class="btnIcon btnDelete" onclick="hapusDataMaster('${r.noSurat}')" title="HAPUS DATA"><span class="material-symbols-rounded">delete</span></button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -4146,7 +4146,7 @@ function loadMasterDbTable() {
 
 function hapusDataMaster(noSurat) {
   if (!noSurat) return;
-  showConfirm(`ADMIN: HAPUS PERMANEN DATA PERMINTAAN #${noSurat} DARI MASTER DATABASE?`, () => {
+  showConfirm(`ADMIN: HAPUS DATA PERMINTAAN #${noSurat} DARI MASTER DATABASE?`, () => {
     try {
       const currentReqs = getRequestsFromDB();
       const updatedReqs = currentReqs.filter(r => r.noSurat !== noSurat);
@@ -4165,7 +4165,7 @@ function hapusDataMaster(noSurat) {
       }
 
       hideLoading();
-      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS DARI MASTER DATABASE & FIREBASE ONLINE!`, 'info');
+      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS!`, 'info');
       
       if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
       if (typeof loadRiwayat === 'function') loadRiwayat();
@@ -4365,7 +4365,7 @@ function simpanAkun() {
       currentUser = users[idx];
       appStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
 
-      showNotif('PROFIL AKUN BERHASIL DIPERBARUI!', 'info');
+      showNotif('PROFIL BERHASIL DIPERBARUI!', 'info');
 
       const akunArea = document.getElementById('akunArea');
       if (akunArea) akunArea.value = `${currentUser.area} - ${AREA_MAP[currentUser.area] || currentUser.area}`;
