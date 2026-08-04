@@ -864,6 +864,7 @@ async function syncAllDataToCache() {
 
     if (dbFirestore) {
       try {
+        // 1. SYNC REQUESTS DATA
         const reqSnapshot = await dbFirestore.collection('requests').get();
         if (!reqSnapshot.empty) {
           const reqs = [];
@@ -871,6 +872,32 @@ async function syncAllDataToCache() {
           if (reqs.length > 0) {
             appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(reqs));
           }
+        }
+
+        // 2. SYNC USERS MASTER DATA
+        const userSnapshot = await dbFirestore.collection('users').get();
+        if (!userSnapshot.empty) {
+          const usrs = [];
+          userSnapshot.forEach(doc => usrs.push(doc.data()));
+          if (usrs.length > 0) {
+            appStorage.setItem(USERS_DB_KEY, JSON.stringify(usrs));
+          }
+        }
+
+        // 3. SYNC APP SETTINGS, NOTIFICATIONS, CHATS, THEMES, TOKENS
+        const configDoc = await dbFirestore.collection('app_settings').doc('config').get();
+        if (configDoc.exists) {
+          const cfg = configDoc.data() || {};
+          if (cfg.notifications) appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(cfg.notifications));
+          if (cfg.chatMessages) appStorage.setItem(CHAT_MESSAGES_KEY, JSON.stringify(cfg.chatMessages));
+          if (cfg.theme) {
+            appStorage.setItem(THEME_KEY, cfg.theme);
+            if (typeof loadSavedTheme === 'function') loadSavedTheme();
+          }
+          if (cfg.fonteToken) appStorage.setItem(FONTE_TOKEN_KEY, cfg.fonteToken);
+          if (cfg.adminReminder !== undefined) appStorage.setItem(ADMIN_REMINDER_KEY, String(cfg.adminReminder));
+          if (cfg.adminReminderTime) appStorage.setItem(ADMIN_REMINDER_TIME_KEY, cfg.adminReminderTime);
+          if (cfg.featurePhotos !== undefined) appStorage.setItem(FEATURE_PHOTOS_KEY, String(cfg.featurePhotos));
         }
       } catch (err) {
         console.warn("[FIREBASE SYNC NOTICE]:", err.message);
@@ -886,16 +913,50 @@ async function pushCentralCloudDB() {
   try {
     if (dbFirestore) {
       try {
+        // 1. PUSH REQUESTS
         const requests = getRequestsFromDB();
-        const batch = dbFirestore.batch();
+        const reqBatch = dbFirestore.batch();
         requests.forEach(r => {
           if (r && r.noSurat) {
             const docId = r.noSurat.replace(/[\/\.]/g, '_');
             const docRef = dbFirestore.collection('requests').doc(docId);
-            batch.set(docRef, r, { merge: true });
+            reqBatch.set(docRef, r, { merge: true });
           }
         });
-        await batch.commit();
+        await reqBatch.commit();
+
+        // 2. PUSH USERS MASTER DATA
+        const users = getUsersFromDB();
+        const userBatch = dbFirestore.batch();
+        users.forEach(u => {
+          if (u && u.username) {
+            const docId = String(u.username).toUpperCase();
+            const docRef = dbFirestore.collection('users').doc(docId);
+            userBatch.set(docRef, u, { merge: true });
+          }
+        });
+        await userBatch.commit();
+
+        // 3. PUSH APP CONFIG, NOTIFICATIONS, CHAT MESSAGES, THEME, FONTE TOKEN (EXCEPT ACTIVE SESSION)
+        const notifs = getSystemNotifications();
+        const chatMsgs = JSON.parse(appStorage.getItem(CHAT_MESSAGES_KEY) || '[]');
+        const theme = appStorage.getItem(THEME_KEY) || 'dark-mode';
+        const fonteToken = getFonteToken();
+        const adminReminder = getAdminReminderEnabled();
+        const adminReminderTime = getAdminReminderTime();
+        const featurePhotos = getFeaturePhotosEnabled();
+
+        await dbFirestore.collection('app_settings').doc('config').set({
+          notifications: notifs,
+          chatMessages: chatMsgs,
+          theme: theme,
+          fonteToken: fonteToken,
+          adminReminder: adminReminder,
+          adminReminderTime: adminReminderTime,
+          featurePhotos: featurePhotos,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+
       } catch (err) {
         console.warn("[FIREBASE PUSH NOTICE]:", err.message);
       }
@@ -904,7 +965,21 @@ async function pushCentralCloudDB() {
     if (dbRealtime) {
       try {
         const requests = getRequestsFromDB();
+        const users = getUsersFromDB();
+        const notifs = getSystemNotifications();
+        const chatMsgs = JSON.parse(appStorage.getItem(CHAT_MESSAGES_KEY) || '[]');
+
         dbRealtime.ref('requests').set(requests);
+        dbRealtime.ref('users').set(users);
+        dbRealtime.ref('notifications').set(notifs);
+        dbRealtime.ref('chat_messages').set(chatMsgs);
+        dbRealtime.ref('settings').set({
+          theme: appStorage.getItem(THEME_KEY) || 'dark-mode',
+          fonteToken: getFonteToken(),
+          adminReminder: getAdminReminderEnabled(),
+          adminReminderTime: getAdminReminderTime(),
+          featurePhotos: getFeaturePhotosEnabled()
+        });
       } catch (err) {
         console.warn("[FIREBASE REALTIME PUSH NOTICE]:", err.message);
       }
@@ -1193,6 +1268,7 @@ function toggleTheme() {
   document.body.className = t.id;
   appStorage.setItem(THEME_KEY, t.id);
   updateThemeIcon();
+  pushCentralCloudDB();
 }
 
 function updateThemeIcon() {
@@ -1237,6 +1313,9 @@ async function prosesLogin() {
   showLoading('');
 
   try {
+    // SYNC SEMUA DATA TERBARU DARI FIREBASE ONLINE SANGAT PERTAMA SEBELUM VALIDASI LOGIN
+    await syncAllDataToCache();
+
     let users = getUsersFromDB();
 
     if (typeof supabaseClient !== 'undefined' && supabaseClient) {
