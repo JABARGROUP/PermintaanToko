@@ -707,7 +707,6 @@ function bersihkanCacheAplikasiWeb() {
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyDTQdgmBi39SqLZ1j_aa8tj-mimCIXJTa0",
   authDomain: "permintaan-toko-e3b5d.firebaseapp.com",
-  databaseURL: "https://permintaan-toko-e3b5d-default-rtdb.firebaseio.com",
   projectId: "permintaan-toko-e3b5d",
   storageBucket: "permintaan-toko-e3b5d.firebasestorage.app",
   messagingSenderId: "1072410401023",
@@ -742,10 +741,11 @@ function initFirebaseDB() {
         firebaseApp = firebase.app();
       }
 
+      // FIRESTORE ENGINE (UTAMA)
       if (typeof firebase.firestore === 'function') {
-        dbFirestore = firebase.firestore();
-
         try {
+          dbFirestore = firebase.firestore();
+
           dbFirestore.collection('requests').onSnapshot(snapshot => {
             if (!snapshot.empty) {
               const reqs = [];
@@ -766,39 +766,34 @@ function initFirebaseDB() {
               dot.title = `FIREBASE DATABASE ONLINE: TERHUBUNG (${activeConfig.projectId})`;
             }
           }, err => {
-            console.warn("[FIREBASE FIRESTORE SNAPSHOT ERR]:", err.message);
+            console.warn("[FIRESTORE NOTICE]:", err.message);
           });
-        } catch (e) {}
+
+          // JIKA FIRESTORE BERHASIL DIINISIALISASI, SET BULAT HIJAU
+          const dot = document.getElementById('firebaseOnlineDot');
+          if (dot) {
+            dot.style.background = '#10b981';
+            dot.style.boxShadow = '0 0 10px #10b981';
+            dot.title = `FIREBASE DATABASE ONLINE: TERHUBUNG (${activeConfig.projectId})`;
+          }
+        } catch (e) {
+          console.warn("[FIRESTORE INIT NOTICE]:", e.message);
+        }
       }
 
-      if (typeof firebase.database === 'function') {
-        dbRealtime = firebase.database();
-
+      // REALTIME DATABASE (JIKA ADANYA CONFIG DATABASEURL)
+      if (activeConfig.databaseURL && typeof firebase.database === 'function') {
         try {
-          const connectedRef = dbRealtime.ref('.info/connected');
-          connectedRef.on('value', snap => {
-            const isConn = snap.val() === true;
-            const dot = document.getElementById('firebaseOnlineDot');
-            if (dot) {
-              dot.style.background = isConn ? '#10b981' : '#ef4444';
-              dot.style.boxShadow = isConn ? '0 0 10px #10b981' : '0 0 10px #ef4444';
-              dot.title = isConn ? `FIREBASE ONLINE: TERHUBUNG (${activeConfig.projectId})` : 'FIREBASE ONLINE: TERPUTUS';
-            }
-          });
-        } catch (e) {}
+          dbRealtime = firebase.database();
+        } catch (e) {
+          dbRealtime = null;
+        }
       }
 
       const statusBadge = document.getElementById('firebaseStatusBadge');
       if (statusBadge) {
         statusBadge.textContent = `STATUS: TERHUBUNG KE FIREBASE ONLINE (${activeConfig.projectId})`;
         statusBadge.style.color = '#10b981';
-      }
-
-      const dot = document.getElementById('firebaseOnlineDot');
-      if (dot) {
-        dot.style.background = '#10b981';
-        dot.style.boxShadow = '0 0 10px #10b981';
-        dot.title = `FIREBASE DATABASE ONLINE: TERHUBUNG (${activeConfig.projectId})`;
       }
 
       console.log(`[FIREBASE ONLINE ENGINE]: Connected to ${activeConfig.projectId}`);
