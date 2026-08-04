@@ -752,9 +752,22 @@ function initFirebaseDB() {
         statusBadge.style.color = '#10b981';
       }
 
+      const dot = document.getElementById('firebaseOnlineDot');
+      if (dot) {
+        dot.style.background = '#10b981';
+        dot.style.boxShadow = '0 0 10px #10b981';
+        dot.title = `FIREBASE DATABASE ONLINE: TERHUBUNG (${activeConfig.projectId})`;
+      }
+
       console.log(`[FIREBASE ONLINE ENGINE]: Connected to ${activeConfig.projectId}`);
     }
   } catch (err) {
+    const dot = document.getElementById('firebaseOnlineDot');
+    if (dot) {
+      dot.style.background = '#ef4444';
+      dot.style.boxShadow = '0 0 10px #ef4444';
+      dot.title = 'FIREBASE DATABASE ONLINE: TERPUTUS / DISKONEK';
+    }
     console.warn("[FIREBASE ENGINE NOTICE]:", err.message);
   }
 }
@@ -1351,6 +1364,18 @@ function initMobileBackButtonEngine() {
   } catch(e) {}
 
   window.addEventListener('popstate', (e) => {
+    const popTTD = document.getElementById('popupTTD');
+    const isTtdOpen = popTTD && (popTTD.classList.contains('show') || popTTD.style.display === 'flex' || popTTD.style.display === 'block');
+
+    // JIKA POPUP TTD TERBUKA & DI-BACK DARI HP -> KEMBALI KE POPUP AKUN
+    if (isTtdOpen) {
+      if (typeof tutupTTD === 'function') tutupTTD();
+      if (typeof bukaAkun === 'function') bukaAkun();
+      try { history.pushState({ page: getCurrentActivePageId() }, '', location.href); } catch(err) {}
+      if (typeof aturTampilanLonceng === 'function') aturTampilanLonceng(getCurrentActivePageId());
+      return;
+    }
+
     const openModals = [
       document.getElementById('popupDetail'),
       document.getElementById('popupNotifList'),
@@ -1359,7 +1384,6 @@ function initMobileBackButtonEngine() {
       document.getElementById('popupUserForm'),
       document.getElementById('pdfModal'),
       document.getElementById('rejectOverlay'),
-      document.getElementById('popupTTD'),
       document.getElementById('popupTambahToko'),
       document.getElementById('popupPdfModelsModal'),
       document.getElementById('confirmOverlay'),
@@ -1379,7 +1403,14 @@ function initMobileBackButtonEngine() {
     if (closedAnyModal) {
       if (typeof tutupScanner === 'function') tutupScanner();
       if (typeof tutupImageViewer === 'function') tutupImageViewer();
-      try { history.pushState({ page: getCurrentActivePageId() }, '', location.href); } catch(err) {}
+      
+      // JAGA AGAR TOMBOL ICON HEADER (LONCENG & BANTUAN) TETAP TERSEDIA DI DASHBOARD
+      const activePage = getCurrentActivePageId();
+      if (typeof aturTampilanLonceng === 'function') {
+        aturTampilanLonceng(activePage);
+      }
+
+      try { history.pushState({ page: activePage }, '', location.href); } catch(err) {}
       return;
     }
 

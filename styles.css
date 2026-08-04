@@ -263,24 +263,26 @@ body {
   margin: 0 !important;
   width: 40px !important;
   height: 40px !important;
+  border-radius: 12px !important;
 }
 
 .theme-toggle-btn {
-  border: none;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px !important;
+  background: var(--bg-box);
+  color: var(--primary);
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
-  transition: transform 0.2s, background 0.2s;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s, background 0.2s, color 0.2s;
 }
 
 .theme-toggle-btn:hover {
   transform: scale(1.08);
-  background: var(--primary-hover);
+  background: var(--primary);
+  color: #ffffff;
 }
 
 .theme-toggle-btn .material-symbols-rounded {
@@ -288,8 +290,8 @@ body {
 }
 
 .notif-bell-btn {
-  border: 1.5px solid var(--primary);
-  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  border-radius: 12px !important;
   background: var(--bg-box);
   color: var(--primary);
   display: none;
@@ -327,21 +329,22 @@ body {
 
 /* FLOATING HELP / CHAT BUTTON & UNREAD BADGE */
 .helpButton {
-  border-radius: 50%;
-  background: #16a34a;
-  color: #ffffff;
-  border: none;
+  border: 1px solid var(--border-color);
+  border-radius: 12px !important;
+  background: var(--bg-box);
+  color: #16a34a;
   display: none;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(22, 163, 74, 0.35);
-  transition: transform 0.2s, background 0.2s;
+  box-shadow: 0 4px 15px rgba(22, 163, 74, 0.2);
+  transition: transform 0.2s, background 0.2s, color 0.2s;
 }
 
 .helpButton:hover {
   transform: scale(1.08);
-  background: #15803d;
+  background: #16a34a;
+  color: #ffffff;
 }
 
 .helpButton .material-symbols-rounded {
