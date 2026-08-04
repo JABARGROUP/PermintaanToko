@@ -191,17 +191,26 @@ button .material-symbols-rounded,
   -webkit-font-smoothing: antialiased;
 }
 
-html {
-  scroll-behavior: smooth;
+html, body {
+  overflow: hidden !important;
+  height: 100vh !important;
+  width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 body {
+  font-family: 'Poppins', sans-serif;
   background: var(--bg-body);
   color: var(--text-main);
   font-size: 14px;
-  overflow-x: hidden;
   transition: background 0.3s, color 0.3s;
-  min-height: 100vh;
+}
+
+#app {
+  height: 100vh !important;
+  width: 100vw !important;
+  overflow: hidden !important;
 }
 
 /* UTILITY CLASSES */
@@ -221,6 +230,11 @@ body {
 
 .page.active {
   display: block;
+  height: calc(100vh - 65px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  box-sizing: border-box !important;
+  padding-bottom: 75px !important;
 }
 
 #riwayatPage {
@@ -965,6 +979,11 @@ input:focus, select:focus, textarea:focus {
   border-radius: 10px;
 }
 
+#lastData {
+  overflow-x: visible !important;
+  width: 100% !important;
+}
+
 .lastHeader, .lastItem {
   display: grid;
   grid-template-columns: 1.2fr 2fr 2fr 1.2fr;
@@ -1332,10 +1351,12 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 14px;
 }
 
-/* DYNAMICALLY AUTOSIZING WIDE DETAIL POPUP BOX (1MM GAP ON EDGES) */
+/* DYNAMICALLY AUTOSIZING WIDE DETAIL POPUP BOX (1MM GAP ON EDGES FOR ALL DETAIL POPUPS) */
 .popupBoxDetail,
+.popupOverlay .popupBoxDetail,
 #popupDetail .popupBox,
-#popupDetail .popupBoxDetail {
+#popupDetail .popupBoxDetail,
+#pdfModal .popupBox {
   width: calc(100vw - 6px) !important;
   max-width: calc(100vw - 6px) !important;
   min-width: 300px;
@@ -1349,6 +1370,10 @@ input:focus, select:focus, textarea:focus {
   margin-left: 3px !important;
   margin-right: 3px !important;
   box-sizing: border-box !important;
+}
+
+.popupOverlay {
+  padding: 8px 3px !important;
 }
 
 /* ENFORCE SINGLE LINE 1-ROW (NO WRAPTEXT) WITH HORIZONTAL SCROLL */

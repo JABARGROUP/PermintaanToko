@@ -635,14 +635,13 @@
         </button>
       </div>
 
-      <!-- SELEKSI TEMA TAMPILAN APLIKASI (KOTAK SPRESISI ELEGAN) -->
-      <div style="margin-top: 10px; margin-bottom: 12px; padding: 10px 14px; background: var(--bg-body); border-radius: 12px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="material-symbols-rounded" style="color: var(--primary); font-size: 20px;">palette</span>
-          <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">TEMA TAMPILAN APLIKASI</span>
-        </div>
-        <button type="button" class="theme-icon-btn" onclick="toggleTheme()" title="KLIK UNTUK GANTI TEMA" style="padding: 8px 14px; height: 38px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--primary); color: #ffffff; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; cursor: pointer;">
-          <span class="material-symbols-rounded" style="font-size: 18px;">dark_mode</span> GANTI TEMA
+      <!-- 2 EQUAL BUTTONS: REFRESH WEB & GANTI TEMA -->
+      <div style="margin-top: 10px; margin-bottom: 12px; display: flex; gap: 8px; width: 100%;">
+        <button type="button" onclick="location.reload()" title="REFRESH HALAMAN WEB" style="flex: 1; height: 40px; padding: 8px; border-radius: 10px; border: 1px solid var(--border-color); background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+          <span class="material-symbols-rounded" style="font-size: 18px;">refresh</span> REFRESH WEB
+        </button>
+        <button type="button" class="theme-icon-btn" onclick="toggleTheme()" title="GANTI TEMA TAMPILAN" style="flex: 1; height: 40px; padding: 8px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+          <span class="material-symbols-rounded" style="font-size: 18px;">palette</span> GANTI TEMA
         </button>
       </div>
 

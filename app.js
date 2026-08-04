@@ -527,35 +527,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function initPullToRefresh() {
-  const container = document.getElementById('app') || document.body;
-  let startY = 0;
-  let moveY = 0;
-  let isAtTop = false;
-
-  container.addEventListener('touchstart', (e) => {
-    if (container.scrollTop <= 5) {
-      startY = e.touches[0].clientY;
-      isAtTop = true;
-    } else {
-      isAtTop = false;
-    }
-  }, { passive: true });
-
-  container.addEventListener('touchmove', (e) => {
-    if (!isAtTop) return;
-    moveY = e.touches[0].clientY;
-  }, { passive: true });
-
-  container.addEventListener('touchend', async () => {
-    if (!isAtTop) return;
-    const dist = moveY - startY;
-    if (dist > 80 && container.scrollTop <= 5) {
-      await pushCentralCloudDB();
-    }
-    startY = 0;
-    moveY = 0;
-    isAtTop = false;
-  }, { passive: true });
+  // PULL DOWN REFRESH DISABLED PER USER DIRECTIVE
 }
 
 function getAdminReminderEnabled() {
