@@ -1030,9 +1030,6 @@ input:focus, select:focus, textarea:focus {
   font-weight: 700 !important;
   text-align: center !important;
   color: var(--text-main) !important;
-   white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
 }
 
 /* RECENT DATA LIST ON DASHBOARD - NO VERTICAL GRIDLINES & COMPACT ROW HEIGHT */
@@ -1068,6 +1065,8 @@ input:focus, select:focus, textarea:focus {
   border-bottom: 1px solid var(--table-border) !important;
   vertical-align: middle !important;
   box-sizing: border-box !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
 }
 
 .dashboardTable th {
@@ -1081,6 +1080,11 @@ input:focus, select:focus, textarea:focus {
 
 .dashboardTable td {
   background: transparent !important;
+  white-space: nowrap !important;
+}
+
+.dashboardTable td * {
+  white-space: nowrap !important;
 }
 
 .dashboardTable tr:hover td {
@@ -2548,6 +2552,7 @@ button.btnKembali {
   #masterDbPage {
     height: calc(100vh - 84px) !important;
     padding-bottom: 16px !important;
+    box-sizing: border-box !important;
   }
 
   .dashboardTop,
@@ -2561,9 +2566,14 @@ button.btnKembali {
   }
 
   #detailDashboard {
-    padding: 14px 14px !important;
-    border-radius: 16px !important;
-    margin-bottom: 18px !important;
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
+    margin-bottom: 16px !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   #detailDashboard #dashboardRecentTitle {
@@ -2577,6 +2587,16 @@ button.btnKembali {
     border: 1px solid var(--border-color) !important;
     border-radius: 10px !important;
     box-sizing: border-box !important;
+  }
+
+  .dashboardTable th,
+  .dashboardTable td,
+  .dashboardTable td *,
+  .dashboardTable th * {
+    padding: 8px 8px !important;
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
   }
 
   #detailDashboard #lastData {

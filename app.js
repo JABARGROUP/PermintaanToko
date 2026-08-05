@@ -1939,7 +1939,7 @@ function loadDashboard() {
 
   const titleEl = document.getElementById('dashboardRecentTitle');
   if (titleEl) {
-    titleEl.textContent = `PERMINTAAN [ ${dashboardFilterStatus} ] (KLIK BARIS UNTUK LIHAT DETAIL)`;
+    titleEl.textContent = `PERMINTAAN ${dashboardFilterStatus}`;
   }
 
   const lastDataContainer = document.getElementById('lastData');
@@ -3426,7 +3426,7 @@ function renderFullPdfPreviewDocument(modelId) {
 
       ${headerTitleHtml}
 
-      <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 14px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 8px; flex-wrap: wrap; gap: 8px;">
+      <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 14px; padding: 4px 0; flex-wrap: wrap; gap: 8px; background: transparent; border: none;">
         <div><b>NO SURAT:</b> <span style="color:${m.color}; font-weight:800;">PRM/2026/001</span></div>
         <div><b>TOKO:</b> TOKO UTAMA BANDUNG</div>
         <div><b>TANGGAL:</b> 01/08/2026</div>
@@ -3446,20 +3446,20 @@ function renderFullPdfPreviewDocument(modelId) {
         </thead>
         <tbody>
           <tr>
-            <td style="text-align:center; padding:8px; border:1px solid #cbd5e1;">1</td>
-            <td style="padding:8px; border:1px solid #cbd5e1;">AC DAIKIN 2 PK</td>
-            <td style="padding:8px; border:1px solid #cbd5e1;">SN-889920112</td>
-            <td style="padding:8px; border:1px solid #cbd5e1;">UNIT INDOOR AC 2PK</td>
-            <td style="padding:8px; border:1px solid #cbd5e1;">KOMPRESOR BOCOR FREON</td>
-            <td style="text-align:center; padding:8px; border:1px solid #cbd5e1; font-weight:bold;">1</td>
+            <td style="text-align:center; padding:8px; border-bottom:1px solid #e2e8f0;">1</td>
+            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">AC DAIKIN 2 PK</td>
+            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">SN-889920112</td>
+            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">UNIT INDOOR AC 2PK</td>
+            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">KOMPRESOR BOCOR FREON</td>
+            <td style="text-align:center; padding:8px; border-bottom:1px solid #e2e8f0; font-weight:bold;">1</td>
           </tr>
           <tr>
-            <td style="text-align:center; padding:8px; border:1px solid #cbd5e1;">2</td>
-            <td style="padding:8px; border:1px solid #cbd5e1;">KULKAS 2 PINTU</td>
-            <td style="padding:8px; border:1px solid #cbd5e1;">SN-776655100</td>
-            <td style="padding:8px; border:1px solid #cbd5e1;">UNIT KULKAS INVERTER</td>
-            <td style="padding:8px; border:1px solid #cbd5e1;">KARET PINTU LONGGAR</td>
-            <td style="text-align:center; padding:8px; border:1px solid #cbd5e1; font-weight:bold;">1</td>
+            <td style="text-align:center; padding:8px; border-bottom:1px solid #e2e8f0;">2</td>
+            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">KULKAS 2 PINTU</td>
+            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">SN-776655100</td>
+            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">UNIT KULKAS INVERTER</td>
+            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">KARET PINTU LONGGAR</td>
+            <td style="text-align:center; padding:8px; border-bottom:1px solid #e2e8f0; font-weight:bold;">1</td>
           </tr>
         </tbody>
       </table>
@@ -3474,7 +3474,7 @@ function renderFullPdfPreviewDocument(modelId) {
       <div style="display: flex; justify-content: space-around; font-size: 11px; text-align: center; margin-top: 24px;">
         <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
           <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">PEMOHON</div>
-          <div style="height: 55px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 10px; font-style: italic;">[ DIGITAL SIGNED ]</div>
+          <div style="height: 55px;"></div>
           <div>
             <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">TOKO UTAMA</div>
             <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">PEMOHON (TOKO)</div>
@@ -3483,7 +3483,7 @@ function renderFullPdfPreviewDocument(modelId) {
 
         <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
           <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DIPERIKSA</div>
-          <div style="height: 55px; display: flex; align-items: center; justify-content: center; color: #0284c7; font-size: 10px; font-style: italic;">[ SERVICE APPROVAL ]</div>
+          <div style="height: 55px;"></div>
           <div>
             <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">SERVICE BANDUNG</div>
             <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">HODS BANDUNG</div>
@@ -3492,7 +3492,7 @@ function renderFullPdfPreviewDocument(modelId) {
 
         <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
           <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DISETUJUI</div>
-          <div style="height: 55px; display: flex; align-items: center; justify-content: center; color: #7c3aed; font-size: 10px; font-style: italic;">[ DM APPROVAL ]</div>
+          <div style="height: 55px;"></div>
           <div>
             <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">FERRY EDIYANTO</div>
             <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">DISTRICT MANAGER</div>
@@ -3515,13 +3515,13 @@ function bukaPdfModal(noSurat) {
 
   let itemRowsHtml = req.items.map((i, idx) => `
     <tr>
-      <td style="text-align:center; padding:6px 8px; border:1px solid #cbd5e1;">${idx + 1}</td>
-      <td style="padding:6px 8px; border:1px solid #cbd5e1;">${i.type}</td>
-      <td style="padding:6px 8px; border:1px solid #cbd5e1;">${i.seri}</td>
-      ${req.jenis === 'DUS' ? `<td style="padding:6px 8px; border:1px solid #cbd5e1; color:#d97706;">${i.dus || '-'}</td>` : ''}
-      <td style="padding:6px 8px; border:1px solid #cbd5e1;">${i.barang}</td>
-      <td style="padding:6px 8px; border:1px solid #cbd5e1;">${i.alasan}</td>
-      <td style="text-align:center; padding:6px 8px; border:1px solid #cbd5e1;">${i.qty}</td>
+      <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0;">${idx + 1}</td>
+      <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.type}</td>
+      <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.seri}</td>
+      ${req.jenis === 'DUS' ? `<td style="padding:6px 8px; border-bottom:1px solid #e2e8f0; color:#d97706;">${i.dus || '-'}</td>` : ''}
+      <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.barang}</td>
+      <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.alasan}</td>
+      <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.qty}</td>
     </tr>
   `).join('');
 
@@ -3624,22 +3624,22 @@ function bukaPdfModal(noSurat) {
       <div>
         ${headerTitleHtml}
 
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12px; border: 1px solid #cbd5e1; background: #f8fafc;">
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12px; background: transparent; border: none;">
           <tr>
-            <td style="padding: 7px 10px; width: 14%; font-weight: bold; border-bottom: 1px solid #e2e8f0;">NO SURAT</td>
-            <td style="padding: 7px 4px; width: 2%; border-bottom: 1px solid #e2e8f0;">:</td>
-            <td style="padding: 7px 10px; width: 34%; font-weight: 700; color: #0284c7; border-bottom: 1px solid #e2e8f0;">${req.noSurat}</td>
-            <td style="padding: 7px 10px; width: 14%; font-weight: bold; border-bottom: 1px solid #e2e8f0;">TANGGAL</td>
-            <td style="padding: 7px 4px; width: 2%; border-bottom: 1px solid #e2e8f0;">:</td>
-            <td style="padding: 7px 10px; width: 34%; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${formatDateDDMMYYYYString(req.tanggal)}</td>
+            <td style="padding: 4px 0; width: 14%; font-weight: bold; border: none;">NO SURAT</td>
+            <td style="padding: 4px 0; width: 2%; border: none;">:</td>
+            <td style="padding: 4px 0; width: 34%; font-weight: 700; color: #0284c7; border: none;">${req.noSurat}</td>
+            <td style="padding: 4px 0; width: 14%; font-weight: bold; border: none;">TANGGAL</td>
+            <td style="padding: 4px 0; width: 2%; border: none;">:</td>
+            <td style="padding: 4px 0; width: 34%; font-weight: 600; border: none;">${formatDateDDMMYYYYString(req.tanggal)}</td>
           </tr>
           <tr>
-            <td style="padding: 7px 10px; font-weight: bold;">TOKO</td>
-            <td style="padding: 7px 4px;">:</td>
-            <td style="padding: 7px 10px; font-weight: 700;">${req.toko}</td>
-            <td style="padding: 7px 10px; font-weight: bold;">JENIS</td>
-            <td style="padding: 7px 4px;">:</td>
-            <td style="padding: 7px 10px; font-weight: 700; color: #16a34a;">${req.jenis || 'DEFAULT'}</td>
+            <td style="padding: 4px 0; font-weight: bold; border: none;">TOKO</td>
+            <td style="padding: 4px 0; border: none;">:</td>
+            <td style="padding: 4px 0; font-weight: 700; border: none;">${req.toko}</td>
+            <td style="padding: 4px 0; font-weight: bold; border: none;">JENIS</td>
+            <td style="padding: 4px 0; border: none;">:</td>
+            <td style="padding: 4px 0; font-weight: 700; color: #16a34a; border: none;">${req.jenis || 'DEFAULT'}</td>
           </tr>
         </table>
 
@@ -3681,7 +3681,7 @@ function bukaPdfModal(noSurat) {
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 28px; text-align: center; font-size: 11px;">
           <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
             <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">PEMOHON</div>
-            <div style="height: 55px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 10px; font-style: italic;">[ DIGITAL SIGNED ]</div>
+            <div style="height: 55px;"></div>
             <div>
               <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">${req.toko}</div>
               <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">PEMOHON (TOKO)</div>
@@ -3691,7 +3691,7 @@ function bukaPdfModal(noSurat) {
           <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
             <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DIPERIKSA</div>
             <div style="height: 55px; display: flex; align-items: center; justify-content: center;">
-              ${serviceTTD ? `<img src="${serviceTTD}" style="max-height: 52px; max-width: 100%; object-fit: contain;">` : `<span style="color: #0284c7; font-size: 10px; font-style: italic;">[ SERVICE APPROVAL ]</span>`}
+              ${serviceTTD ? `<img src="${serviceTTD}" style="max-height: 52px; max-width: 100%; object-fit: contain;">` : ''}
             </div>
             <div>
               <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">${serviceName}</div>
@@ -3702,7 +3702,7 @@ function bukaPdfModal(noSurat) {
           <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
             <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DISETUJUI</div>
             <div style="height: 55px; display: flex; align-items: center; justify-content: center;">
-              ${dmTTD ? `<img src="${dmTTD}" style="max-height: 52px; max-width: 100%; object-fit: contain;">` : `<span style="color: #7c3aed; font-size: 10px; font-style: italic;">[ DM APPROVAL ]</span>`}
+              ${dmTTD ? `<img src="${dmTTD}" style="max-height: 52px; max-width: 100%; object-fit: contain;">` : ''}
             </div>
             <div>
               <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">FERRY EDIYANTO</div>
