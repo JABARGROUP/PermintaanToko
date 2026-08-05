@@ -913,6 +913,15 @@ function initFirebaseDB() {
                 if (typeof loadSavedTheme === 'function') loadSavedTheme();
               }
               if (cfg.fonteToken) appStorage.setItem(FONTE_TOKEN_KEY, cfg.fonteToken);
+              if (cfg.firebaseConfig) {
+                const curLocal = appStorage.getItem(FIREBASE_USER_CONFIG_KEY);
+                const newStr = typeof cfg.firebaseConfig === 'string' ? cfg.firebaseConfig : JSON.stringify(cfg.firebaseConfig);
+                if (curLocal !== newStr && newStr !== 'null') {
+                  appStorage.setItem(FIREBASE_USER_CONFIG_KEY, newStr);
+                  if (typeof loadFirebaseConfigInput === 'function') loadFirebaseConfigInput();
+                  initFirebaseDB();
+                }
+              }
 
               if (typeof refreshActiveChatUI === 'function') {
                 refreshActiveChatUI();
@@ -980,6 +989,7 @@ function simpanFirebaseConfigUser() {
   if (!val) {
     appStorage.removeItem(FIREBASE_USER_CONFIG_KEY);
     showNotif('KONFIGURASI FIREBASE DI-RESET KE DEFAULT!', 'info');
+    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
     initFirebaseDB();
     return;
   }
@@ -991,7 +1001,8 @@ function simpanFirebaseConfigUser() {
       return;
     }
     appStorage.setItem(FIREBASE_USER_CONFIG_KEY, JSON.stringify(parsed));
-    showNotif('BERHASIL MENYIMPAN DATA!', 'success');
+    showNotif('BERHASIL MENYIMPAN & MENSINKRONKAN KE SEMUA PERANGKAT!', 'success');
+    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
     initFirebaseDB();
   } catch (e) {
     showNotif('FORMAT JSON KONFIGURASI FIREBASE TIDAK VALID!', 'error');
@@ -1106,6 +1117,10 @@ async function pushCentralCloudDB() {
         const featurePhotos = getFeaturePhotosEnabled();
         const kodeUnitMap = getKodeUnitMap();
 
+        const firebaseCfgStr = appStorage.getItem(FIREBASE_USER_CONFIG_KEY);
+        let parsedFbCfg = null;
+        try { if (firebaseCfgStr) parsedFbCfg = JSON.parse(firebaseCfgStr); } catch(e) {}
+
         await dbFirestore.collection('app_settings').doc('config').set({
           notifications: notifs,
           chatMessages: chatMsgs,
@@ -1116,6 +1131,7 @@ async function pushCentralCloudDB() {
           adminReminderTime: adminReminderTime,
           featurePhotos: featurePhotos,
           kodeUnitMap: kodeUnitMap,
+          firebaseConfig: parsedFbCfg,
           updatedAt: new Date().toISOString()
         }, { merge: true });
 
@@ -1671,15 +1687,22 @@ function showPage(pageId) {
 function aturTampilanLonceng(pageId) {
   const notifBtn = document.getElementById('notifBellBtn');
   const helpBtn = document.getElementById('helpButton');
+  const dotEl = document.getElementById('firebaseOnlineDot');
 
+  const activePage = pageId || (typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : 'dashboardPage');
   const isLoggedIn = (typeof currentUser !== 'undefined' && currentUser !== null && !document.getElementById('loginPage')?.classList.contains('active'));
+  const isDashboard = isLoggedIn && (activePage === 'dashboardPage');
 
   if (notifBtn) {
-    notifBtn.style.display = isLoggedIn ? 'flex' : 'none';
+    notifBtn.style.display = isDashboard ? 'flex' : 'none';
   }
   
   if (helpBtn) {
-    helpBtn.style.display = isLoggedIn ? 'flex' : 'none';
+    helpBtn.style.display = isDashboard ? 'flex' : 'none';
+  }
+
+  if (dotEl) {
+    dotEl.style.display = isDashboard ? 'block' : 'none';
   }
 
   if (isLoggedIn) {
@@ -1932,8 +1955,21 @@ function loadDashboard() {
 
   filteredData.forEach(r => {
     const isWaitingDM = (r.status === 'PENDING' && r.serviceApprove);
+    const isWaitingService = (r.status === 'PENDING' && !r.serviceApprove);
+
+    let isOrangeRow = false;
+    if (currentUser) {
+      const cat = (currentUser.category || '').toUpperCase();
+      const isAdm = cat === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN');
+      if ((cat === 'DM' || isAdm) && isWaitingDM) {
+        isOrangeRow = true;
+      } else if ((cat === 'SERVICE' || isAdm) && isWaitingService) {
+        isOrangeRow = true;
+      }
+    }
+
     const div = document.createElement('div');
-    div.className = `lastItem ${isWaitingDM ? 'rowWaitingDmBlink' : ''}`;
+    div.className = `lastItem ${isOrangeRow ? 'rowHighlightOrange' : (isWaitingDM ? 'rowWaitingDmBlink' : '')}`;
     div.style.cursor = 'pointer';
     div.title = `KLIK BARIS INI UNTUK MEMBUKA PERMINTAAN #${r.noSurat}`;
     div.onclick = () => bukaDetailDariDashboard(r.noSurat);
@@ -2702,8 +2738,23 @@ function filterRiwayat() {
     }
 
     const isWaitingDM = (r.status === 'PENDING' && r.serviceApprove);
+    const isWaitingService = (r.status === 'PENDING' && !r.serviceApprove);
+
+    let isOrangeRow = false;
+    if (currentUser) {
+      const cat = (currentUser.category || '').toUpperCase();
+      const isAdm = cat === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN');
+      if ((cat === 'DM' || isAdm) && isWaitingDM) {
+        isOrangeRow = true;
+      } else if ((cat === 'SERVICE' || isAdm) && isWaitingService) {
+        isOrangeRow = true;
+      }
+    }
+
     const tr = document.createElement('tr');
-    if (isWaitingDM) {
+    if (isOrangeRow) {
+      tr.className = 'rowHighlightOrange';
+    } else if (isWaitingDM) {
       tr.className = 'rowWaitingDmBlink';
     }
     tr.innerHTML = `
@@ -5277,7 +5328,10 @@ function initAllDraggableButtons() {
     body:has(#loginPage.active) .notif-bell-btn,
     body:has(#loginPage.active) #helpButton,
     body:has(#loginPage.active) .helpButton,
-    body:has(#loginPage.active) #firebaseOnlineDot {
+    body:has(#loginPage.active) #firebaseOnlineDot,
+    body:has(.page.active:not(#dashboardPage)) #notifBellBtn,
+    body:has(.page.active:not(#dashboardPage)) #helpButton,
+    body:has(.page.active:not(#dashboardPage)) #firebaseOnlineDot {
       display: none !important;
     }
   `;
