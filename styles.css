@@ -1048,12 +1048,12 @@ input:focus, select:focus, textarea:focus {
   position: relative !important;
 }
 
-/* UNIFIED HEADER & DATA CONTAINER - NON-STICKY (NO SEPARATE HEADER SCROLL) */
+/* FROZEN / STICKY TABLE HEADER FOR DASHBOARD */
 .lastHeader {
   flex-shrink: 0 !important;
-  position: relative !important;
-  top: auto !important;
-  z-index: 1 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
   background: var(--bg-header) !important;
   color: var(--text-muted) !important;
   border: none !important;
@@ -1061,7 +1061,7 @@ input:focus, select:focus, textarea:focus {
   border-radius: 0 !important;
   text-align: left !important;
   font-weight: 700 !important;
-  box-shadow: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
 }
 
 #lastData {
@@ -1297,12 +1297,68 @@ input:focus, select:focus, textarea:focus {
   display: flex; align-items: center; justify-content: center;
 }
 
+/* FROZEN TOP SECTION FOR DETAIL DATA / RIWAYAT PAGE & MASTER DB PAGE (DOWNLOAD EXCEL & SEARCH FIXED AT TOP) */
+#riwayatPage,
+#masterDbPage {
+  display: none;
+  flex-direction: column !important;
+  height: calc(100vh - 65px) !important;
+  overflow: hidden !important;
+  padding-bottom: 8px !important;
+  box-sizing: border-box !important;
+}
+
+#riwayatPage.active,
+#masterDbPage.active {
+  display: flex !important;
+}
+
+#riwayatPage .box,
+#masterDbPage .box {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 16px 14px !important;
+}
+
+#riwayatPage .box > h3,
+#masterDbPage .box > h3,
+#riwayatPage .searchToolbar,
+#masterDbPage .searchToolbar,
+#masterDbPage .box > div:first-child {
+  flex-shrink: 0 !important;
+}
+
+#riwayatPage .tableWrap,
+#masterDbPage .tableWrap {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+}
+
+#riwayatPage .historyTable th,
+#masterDbPage .historyTable th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background: var(--bg-header) !important;
+  color: var(--text-muted) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+}
+
 /* SEARCH & HISTORY TABLE */
 .searchToolbar {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
@@ -1320,23 +1376,36 @@ input:focus, select:focus, textarea:focus {
 
 .historyTable {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
   background: var(--bg-box);
   font-size: 13px;
   color: var(--text-main);
   table-layout: auto;
 }
 
-.historyTable th {
-  background: var(--primary);
-  color: #fff;
+.historyTable thead {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+}
+
+.historyTable th,
+.historyTable thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
   padding: 12px 10px;
   text-align: left;
   white-space: nowrap;
   font-size: 12px;
+  border-bottom: 2px solid var(--border-color) !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* AUTO-FIT AKSI COLUMN */
+/* NORMAL AUTO-FIT AKSI COLUMN (UNLOCKED HORIZONTALLY) */
 .historyTable th:first-child,
 .historyTable td:first-child {
   white-space: nowrap !important;
@@ -1571,20 +1640,28 @@ input:focus, select:focus, textarea:focus {
   border-collapse: collapse !important;
   font-size: 12.5px !important;
   margin-top: 10px !important;
+  border: 1px solid var(--border-color) !important;
 }
 
 .detailTable2 th,
 .detailTable2 td {
   border: 1px solid var(--border-color) !important;
-  padding: 8px 26px !important;
+  padding: 8px 14px !important;
   white-space: nowrap !important;
   text-align: center !important;
 }
 
 .detailTable2 th {
-  background: var(--bg-header) !important;
-  color: var(--text-muted) !important;
-  font-weight: 700 !important;
+  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+}
+
+.detailTable2 td {
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
 }
 
 #lastData, #detailDashboard, .popupTableScroll {
@@ -2358,10 +2435,9 @@ button.btnKembali {
   color: #ffffff !important;
 }
 
-/* ALL TABLES ACROSS APP (PC & MOBILE HP): NO VERTICAL GRIDLINES, HORIZONTAL LINES ONLY */
+/* ALL TABLES ACROSS APP (PC & MOBILE HP): NO VERTICAL GRIDLINES EXCEPT POPUP DETAIL TABLE */
 .historyTable th, .historyTable td,
 .lastHeader > div, .lastItem > div,
-.detailTable2 th, .detailTable2 td,
 #tableMasterDb th, #tableMasterDb td,
 #tableUserMgmt th, #tableUserMgmt td {
   border-right: none !important;
@@ -2370,7 +2446,7 @@ button.btnKembali {
 
 /* DESKTOP / PC VIEW (MIN-WIDTH 769PX): COMPACT ELEGANT SCALE & HEIGHT ADJUSTMENT */
 @media(min-width: 769px) {
-  /* LAPTOP / PC VIEW: STICKY HEADER FIXED AT TOP OF DASHBOARD TABLE */
+  /* FROZEN / STICKY HEADER FOR DASHBOARD TABLE */
   #detailDashboard .lastHeader,
   .lastHeader {
     position: sticky !important;
@@ -2443,7 +2519,9 @@ button.btnKembali {
     box-sizing: border-box !important;
   }
 
-  #dashboardPage {
+  #dashboardPage,
+  #riwayatPage,
+  #masterDbPage {
     height: calc(100vh - 84px) !important;
     padding-bottom: 16px !important;
   }
@@ -2485,10 +2563,11 @@ button.btnKembali {
 
   #detailDashboard .lastHeader,
   .lastHeader {
-    position: relative !important;
-    top: auto !important;
-    z-index: 1 !important;
-    box-shadow: none !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: var(--bg-header) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
   }
 
   .lastHeader, .lastItem {
@@ -2528,7 +2607,7 @@ button.btnKembali {
   }
 
   #popupDetail .popupContent {
-    padding: 10px 1mm !important;
+    padding: 10px 4px !important;
     box-sizing: border-box !important;
   }
 
@@ -2545,7 +2624,7 @@ button.btnKembali {
   }
 
   #popupDetail .popupDetailActions {
-    padding: 8px 1mm !important;
+    padding: 8px 4px !important;
   }
 }
 

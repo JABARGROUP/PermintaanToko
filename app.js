@@ -3471,21 +3471,32 @@ function renderFullPdfPreviewDocument(modelId) {
         <div style="font-weight: 600; color: #0f172a; line-height: 1.5; font-size: 11.5px;">MOHON DIPROSES SECEPATNYA UNTUK KEPERLUAN DISPLAY TOKO UTAMA.</div>
       </div>
 
-      <div style="display: flex; justify-content: space-around; font-size: 11px; text-align: center; margin-top: 24px; font-weight: bold; border-top: 1px dashed #cbd5e1; padding-top: 16px;">
-        <div>
-          <div>PEMOHON (TOKO)</div>
-          <div style="height: 45px; margin: 6px 0; color: #10b981; font-size: 10px; display: flex; align-items: center; justify-content: center; font-style: italic;">[ DIGITAL SIGNED ]</div>
-          <div style="font-weight: normal; text-decoration: underline;">TOKO UTAMA</div>
+      <div style="display: flex; justify-content: space-around; font-size: 11px; text-align: center; margin-top: 24px;">
+        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
+          <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">PEMOHON</div>
+          <div style="height: 55px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 10px; font-style: italic;">[ DIGITAL SIGNED ]</div>
+          <div>
+            <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">TOKO UTAMA</div>
+            <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">PEMOHON (TOKO)</div>
+          </div>
         </div>
-        <div>
-          <div>DIPERIKSA (SERVICE)</div>
-          <div style="height: 45px; margin: 6px 0; color: #0284c7; font-size: 10px; display: flex; align-items: center; justify-content: center; font-style: italic;">[ SERVICE APPROVAL ]</div>
-          <div style="font-weight: normal; text-decoration: underline;">SERVICE BANDUNG</div>
+
+        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
+          <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DIPERIKSA</div>
+          <div style="height: 55px; display: flex; align-items: center; justify-content: center; color: #0284c7; font-size: 10px; font-style: italic;">[ SERVICE APPROVAL ]</div>
+          <div>
+            <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">SERVICE BANDUNG</div>
+            <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">HODS BANDUNG</div>
+          </div>
         </div>
-        <div>
-          <div>DISETUJUI (DM)</div>
-          <div style="height: 45px; margin: 6px 0; color: #7c3aed; font-size: 10px; display: flex; align-items: center; justify-content: center; font-style: italic;">[ DM APPROVAL ]</div>
-          <div style="font-weight: normal; text-decoration: underline;">DISTRICT MANAGER</div>
+
+        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
+          <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DISETUJUI</div>
+          <div style="height: 55px; display: flex; align-items: center; justify-content: center; color: #7c3aed; font-size: 10px; font-style: italic;">[ DM APPROVAL ]</div>
+          <div>
+            <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">FERRY EDIYANTO</div>
+            <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">DISTRICT MANAGER</div>
+          </div>
         </div>
       </div>
     </div>
@@ -3667,30 +3678,35 @@ function bukaPdfModal(noSurat) {
       </div>
 
       <div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; text-align: center; font-size: 11px;">
-          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 120px;">
-            <div style="font-weight: bold;">PEMOHON</div>
-            <div style="height: 50px;"></div>
-            <div style="border-top: 1px solid #000; padding-top: 4px;">
-              <div style="font-weight: bold;">${req.toko}</div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 28px; text-align: center; font-size: 11px;">
+          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
+            <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">PEMOHON</div>
+            <div style="height: 55px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 10px; font-style: italic;">[ DIGITAL SIGNED ]</div>
+            <div>
+              <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">${req.toko}</div>
+              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">PEMOHON (TOKO)</div>
             </div>
           </div>
 
-          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 120px;">
-            <div style="font-weight: bold;">DIPERIKSA</div>
-            <div style="height: 50px; display: flex; align-items: center; justify-content: center;">${serviceTTD ? `<img src="${serviceTTD}" style="height: 48px; max-width: 100%; object-fit: contain;">` : ''}</div>
-            <div style="border-top: 1px solid #000; padding-top: 4px;">
-              <div style="font-weight: bold;">${serviceName}</div>
-              <div style="font-size: 10px; color: #475569; margin-top: 2px;">${hodsAreaTitle}</div>
+          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
+            <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DIPERIKSA</div>
+            <div style="height: 55px; display: flex; align-items: center; justify-content: center;">
+              ${serviceTTD ? `<img src="${serviceTTD}" style="max-height: 52px; max-width: 100%; object-fit: contain;">` : `<span style="color: #0284c7; font-size: 10px; font-style: italic;">[ SERVICE APPROVAL ]</span>`}
+            </div>
+            <div>
+              <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">${serviceName}</div>
+              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">${hodsAreaTitle}</div>
             </div>
           </div>
 
-          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 120px;">
-            <div style="font-weight: bold;">DISETUJUI</div>
-            <div style="height: 50px; display: flex; align-items: center; justify-content: center;">${dmTTD ? `<img src="${dmTTD}" style="height: 48px; max-width: 100%; object-fit: contain;">` : ''}</div>
-            <div style="border-top: 1px solid #000; padding-top: 4px;">
-              <div style="font-weight: bold;">FERRY EDIYANTO</div>
-              <div style="font-size: 10px; color: #475569; margin-top: 2px;">DISTRICT MANAGER</div>
+          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
+            <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DISETUJUI</div>
+            <div style="height: 55px; display: flex; align-items: center; justify-content: center;">
+              ${dmTTD ? `<img src="${dmTTD}" style="max-height: 52px; max-width: 100%; object-fit: contain;">` : `<span style="color: #7c3aed; font-size: 10px; font-style: italic;">[ DM APPROVAL ]</span>`}
+            </div>
+            <div>
+              <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">FERRY EDIYANTO</div>
+              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">DISTRICT MANAGER</div>
             </div>
           </div>
         </div>
