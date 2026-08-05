@@ -28,15 +28,28 @@ if (!window.appStorage) {
   const fallbackMemory = {};
   window.appStorage = {
     getItem(key) {
+      try {
+        const val = localStorage.getItem(key);
+        if (val !== null) return val;
+      } catch (e) {}
       return Object.prototype.hasOwnProperty.call(fallbackMemory, key) ? String(fallbackMemory[key]) : null;
     },
     setItem(key, value) {
+      try {
+        localStorage.setItem(key, String(value));
+      } catch (e) {}
       fallbackMemory[key] = String(value);
     },
     removeItem(key) {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {}
       delete fallbackMemory[key];
     },
     clear() {
+      try {
+        localStorage.clear();
+      } catch (e) {}
       Object.keys(fallbackMemory).forEach(key => delete fallbackMemory[key]);
     }
   };
@@ -1133,6 +1146,15 @@ function updatePhotoSectionVisibility() {
     statusText.textContent = isEnabled ? 'AKTIF (ON)' : 'NONAKTIF (OFF)';
     statusText.style.color = isEnabled ? '#10b981' : '#ef4444';
   }
+
+  const adminCard = document.getElementById('adminPhotoControlContainer');
+  if (adminCard) {
+    adminCard.style.display = (currentUser && (currentUser.category === 'ADMIN' || currentUser.username === 'ADMIN')) ? 'flex' : 'none';
+  }
+
+  if (typeof loadRiwayat === 'function' && document.getElementById('riwayatPage')?.classList.contains('active')) {
+    loadRiwayat();
+  }
 }
 
 function normalizeUserList(users) {
@@ -1370,7 +1392,7 @@ function kirimNotifikasiWA(targetPhone, message) {
 }
 
 function loadSavedTheme() {
-  const saved = appStorage.getItem(THEME_KEY) || 'dark-mode';
+  const saved = (typeof localStorage !== 'undefined' ? localStorage.getItem('APP_SELECTED_THEME') : null) || appStorage.getItem(THEME_KEY) || 'dark-mode';
   document.body.className = saved;
   const idx = THEME_MODES.findIndex(t => t.id === saved);
   currentThemeIndex = idx !== -1 ? idx : 0;
@@ -1381,6 +1403,11 @@ function toggleTheme() {
   currentThemeIndex = (currentThemeIndex + 1) % THEME_MODES.length;
   const t = THEME_MODES[currentThemeIndex];
   document.body.className = t.id;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('APP_SELECTED_THEME', t.id);
+    }
+  } catch(e) {}
   appStorage.setItem(THEME_KEY, t.id);
   updateThemeIcon();
   pushCentralCloudDB();
@@ -1881,24 +1908,30 @@ function loadDashboard() {
     const isWaitingService = (r.status === 'PENDING' && !r.serviceApprove);
 
     let isOrangeRow = false;
+    let isBoldRow = false;
     if (currentUser) {
       const cat = (currentUser.category || '').toUpperCase();
       const isAdm = cat === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN');
       if ((cat === 'DM' || isAdm) && isWaitingDM) {
         isOrangeRow = true;
+        isBoldRow = true;
       } else if ((cat === 'SERVICE' || isAdm) && isWaitingService) {
         isOrangeRow = true;
+        isBoldRow = true;
       }
     }
 
     const tr = document.createElement('tr');
     tr.className = `${isOrangeRow ? 'rowHighlightOrange' : (isWaitingDM ? 'rowWaitingDmBlink' : '')}`;
+    if (isBoldRow) {
+      tr.style.fontWeight = '800';
+    }
     tr.style.cursor = 'pointer';
     tr.title = `KLIK BARIS INI UNTUK MEMBUKA PERMINTAAN #${r.noSurat}`;
     tr.onclick = () => bukaDetailDariDashboard(r.noSurat);
     tr.innerHTML = `
       <td style="white-space:nowrap;">${formatDateDDMMYYYYString(r.tanggal)}</td>
-      <td style="font-weight:600; color:var(--primary);">${r.noSurat}</td>
+      <td style="font-weight:700; color:var(--primary);">${r.noSurat}</td>
       <td>${r.toko} <small style="color:var(--primary);">(${r.area})</small></td>
       <td style="text-align:center;">${getBadgeStatus(r)}</td>
     `;
@@ -1918,7 +1951,8 @@ function getBadgeStatus(r) {
 
   if (!r) return '<span>-</span>';
 
-  const role = currentUser ? currentUser.category : '';
+  const role = currentUser ? String(currentUser.category || '').toUpperCase() : '';
+  const isAdm = role === 'ADMIN' || (currentUser && currentUser.username && String(currentUser.username).toUpperCase() === 'ADMIN');
   const st = r.status;
   const serviceAppv = r.serviceApprove;
 
@@ -1928,12 +1962,11 @@ function getBadgeStatus(r) {
 
   if (st === 'PENDING') {
     if (!serviceAppv) {
-      return '<span>TUNGGU SERVICE</span>';
+      const isServiceBold = (role === 'SERVICE' || isAdm) ? 'font-weight:900 !important; font-size:13.5px !important; letter-spacing:0.5px;' : '';
+      return `<span style="${isServiceBold}">TUNGGU SERVICE</span>`;
     } else {
-      if (role === 'SERVICE' || role === 'TOKO' || role === 'SALES') {
-        return '<span>TUNGGU DM</span>';
-      }
-      return '<span>TUNGGU DM</span>';
+      const isDmBold = (role === 'DM' || isAdm) ? 'font-weight:900 !important; font-size:13.5px !important; letter-spacing:0.5px;' : '';
+      return `<span style="${isDmBold}">TUNGGU DM</span>`;
     }
   }
 
@@ -2646,7 +2679,7 @@ function filterRiwayat() {
       <button class="btnIcon btnInfo" onclick="lihatDetail('${r.noSurat}')" title="LIHAT DETAIL"><span class="material-symbols-rounded">visibility</span></button>
     `;
 
-    const isPhotoHidden = (r.status === 'APPROVE' || r.status === 'DONE' || r.status === 'REJECT');
+    const isPhotoHidden = (r.status === 'APPROVE' || r.status === 'DONE' || r.status === 'REJECT') || !getFeaturePhotosEnabled();
     if (r.photos && r.photos.length > 0 && !isPhotoHidden) {
       aksi += `
         <button class="btnIcon btnView" onclick="lihatFotoByNoSurat('${r.noSurat}')" title="LIHAT FOTO"><span class="material-symbols-rounded">image</span></button>
@@ -2694,6 +2727,10 @@ function filterRiwayat() {
 }
 
 function lihatFotoByNoSurat(noSurat) {
+  if (!getFeaturePhotosEnabled()) {
+    showNotif('FITUR UPLOAD & LIHAT FOTO SEDANG DINOAKTIFKAN OLEH ADMIN!', 'warning');
+    return;
+  }
   const requests = getRequestsFromDB();
   const req = requests.find(r => r.noSurat === noSurat);
   if (req && req.photos && req.photos.length > 0) {
@@ -3949,21 +3986,49 @@ function simpanTTD() {
     }
     appStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap));
     
-    // SIMPAN PERSISTEN KE LOCAL STORAGE BERDASARKAN ID USER
-    if (currentUser && currentUser.id) {
-      appStorage.setItem(`LOCAL_TTD_${currentUser.id}`, png);
+    // SIMPAN PERSISTEN PADA PENYIMPANAN LOKAL (LOCALSTORAGE) PERANGKAT
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('APP_USER_TTD_MAP', JSON.stringify(ttdMap));
+        if (currentUser) {
+          if (currentUser.id) localStorage.setItem(`LOCAL_TTD_${currentUser.id}`, png);
+          if (currentUser.username) localStorage.setItem(`LOCAL_TTD_${currentUser.username}`, png);
+        }
+      }
+    } catch(e) {}
+
+    if (currentUser) {
+      if (currentUser.id) appStorage.setItem(`LOCAL_TTD_${currentUser.id}`, png);
+      if (currentUser.username) appStorage.setItem(`LOCAL_TTD_${currentUser.username}`, png);
     }
     
     pushCentralCloudDB();
-    showNotif('TANDA TANGAN BERHASIL DISIMPAN DI LOKAL & CLOUD!', 'info');
+    showNotif('TANDA TANGAN BERHASIL DISIMPAN PADA PENYIMPANAN LOKAL PERANGKAT & CLOUD!', 'info');
     tutupTTD();
   });
 }
 
 function loadTTD() {
-  const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-  const localTTD = currentUser ? appStorage.getItem(`LOCAL_TTD_${currentUser.id}`) : null;
-  const data = localTTD || (currentUser ? (ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap[currentUser.fullName]) : null);
+  let localTTD = null;
+  try {
+    if (typeof localStorage !== 'undefined' && currentUser) {
+      localTTD = localStorage.getItem(`LOCAL_TTD_${currentUser.id}`) || localStorage.getItem(`LOCAL_TTD_${currentUser.username}`);
+    }
+  } catch(e) {}
+
+  let ttdMap = {};
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const rawMap = localStorage.getItem('APP_USER_TTD_MAP');
+      if (rawMap) ttdMap = JSON.parse(rawMap);
+    }
+  } catch(e) {}
+
+  if (!Object.keys(ttdMap).length) {
+    ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+  }
+
+  const data = localTTD || (currentUser ? (appStorage.getItem(`LOCAL_TTD_${currentUser.id}`) || appStorage.getItem(`LOCAL_TTD_${currentUser.username}`) || ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap[currentUser.fullName]) : null);
   if (data && ctxTTD && canvasTTD) {
     const img = new Image();
     img.onload = () => {
@@ -4187,9 +4252,7 @@ function loadChatAdmin(room) {
       const isSelf = (c.pengirim === 'SERVICE' || c.pengirim === 'ADMIN' || (currentUser && String(c.senderUsername).toUpperCase() === String(currentUser.username).toUpperCase()));
       const div = document.createElement('div');
       div.className = isSelf ? 'chatUser' : 'chatAdmin';
-      const senderName = isSelf ? `SERVICE TSM (${currentUser.fullName || currentUser.username})` : (c.senderName || c.user || 'USER');
       div.innerHTML = `
-        <div style="font-size:10px; font-weight:bold; margin-bottom:2px; opacity:0.85;">${senderName}</div>
         <div class="chatText">${c.pesan}</div>
         <div class="chatTime">${c.tanggal}</div>
       `;
@@ -4231,7 +4294,6 @@ function loadChatUser() {
   if (userChats.length === 0) {
     body.innerHTML = `
       <div class="chatAdmin">
-        <div style="font-size:10px; font-weight:bold; margin-bottom:2px; color:var(--primary);">SERVICE TSM SUPPORT</div>
         <div class="chatText">HALO 👋<br>ADA YANG BISA KAMI BANTU UNTUK PERMINTAAN TOKO ANDA? SILAKAN KIRIM PESAN DI SINI.</div>
       </div>
     `;
@@ -4240,9 +4302,7 @@ function loadChatUser() {
       const isSelf = (c.pengirim === 'USER' || (currentUser && String(c.senderUsername).toUpperCase() === myUsernameUpper));
       const div = document.createElement('div');
       div.className = isSelf ? 'chatUser' : 'chatAdmin';
-      const senderLabel = isSelf ? 'ANDA' : 'SERVICE TSM';
       div.innerHTML = `
-        <div style="font-size:10px; font-weight:bold; margin-bottom:2px; opacity:0.85;">${senderLabel}</div>
         <div class="chatText">${c.pesan}</div>
         <div class="chatTime">${c.tanggal}</div>
       `;

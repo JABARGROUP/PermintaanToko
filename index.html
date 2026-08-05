@@ -424,6 +424,24 @@
         </div>
       </div>
 
+      <!-- ADMIN CONTROL: PENGATURAN UPLOAD FOTO (GLOBAL ON / OFF) -->
+      <div id="adminPhotoControlContainer" class="box" style="border-left: 4px solid #10b981; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h3 style="color: #10b981; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span class="material-symbols-rounded">add_a_photo</span> PENGATURAN UPLOAD FOTO BUKTI (GLOBAL ON / OFF)
+          </h3>
+          <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+            JIKA STATUS OFF, FITUR UPLOAD FOTO DI SELEKSI FORM INPUT DAN LIHAT FOTO DINOAKTIFKAN UNTUK SEMUA AKUN / USER.
+          </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <span id="photoFeatureStatusText" style="font-size: 13px; font-weight: 800; color: #10b981;">AKTIF (ON)</span>
+          <button type="button" class="btnDownload" style="background: #10b981; height: 38px; padding: 0 16px;" onclick="toggleFeaturePhotoAdmin()">
+            <span class="material-symbols-rounded">toggle_on</span> ON / OFF
+          </button>
+        </div>
+      </div>
+
       <!-- ADMIN CONTROL: HAPUS SEMUA CHAT DI FIREBASE & LOKAL -->
       <div class="box" style="border-left: 4px solid #ef4444; margin-bottom: 20px; background: rgba(239, 68, 68, 0.05);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
