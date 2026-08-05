@@ -1529,7 +1529,7 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 14px;
 }
 
-/* DYNAMICALLY AUTOSIZING WIDE DETAIL POPUP BOX & DATA CARDS (1MM GAP ON LEFT AND RIGHT EDGES) */
+/* DYNAMICALLY AUTOSIZING WIDE POPUP BOX & MODALS (1MM GAP ON LEFT AND RIGHT EDGES FOR MODALS ONLY) */
 .popupBox,
 .popupBoxDetail,
 .popupOverlay .popupBox,
@@ -1541,7 +1541,6 @@ input:focus, select:focus, textarea:focus {
 #popupDetail .popupBox,
 #popupDetail .popupBoxDetail,
 #pdfModal .popupBox,
-#detailDashboard,
 .box-full {
   width: calc(100vw - 2mm) !important;
   max-width: calc(100vw - 2mm) !important;
@@ -2371,6 +2370,16 @@ button.btnKembali {
 
 /* DESKTOP / PC VIEW (MIN-WIDTH 769PX): COMPACT ELEGANT SCALE & HEIGHT ADJUSTMENT */
 @media(min-width: 769px) {
+  /* LAPTOP / PC VIEW: STICKY HEADER FIXED AT TOP OF DASHBOARD TABLE */
+  #detailDashboard .lastHeader,
+  .lastHeader {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: var(--bg-header) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  }
+
   .stats {
     gap: 12px !important;
     margin: 8px 0 12px 0 !important;
@@ -2425,12 +2434,12 @@ button.btnKembali {
   .page, .page.active, #dashboardPage, #riwayatPage, #masterDbPage, #userManagementPage {
     padding-top: 10px !important;
     padding-bottom: 20px !important;
-    padding-left: 6px !important;
-    padding-right: 6px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
     box-sizing: border-box !important;
   }
 
@@ -2472,6 +2481,14 @@ button.btnKembali {
     max-height: none !important;
     flex: 1 !important;
     min-width: 100% !important;
+  }
+
+  #detailDashboard .lastHeader,
+  .lastHeader {
+    position: relative !important;
+    top: auto !important;
+    z-index: 1 !important;
+    box-shadow: none !important;
   }
 
   .lastHeader, .lastItem {
@@ -2532,25 +2549,38 @@ button.btnKembali {
   }
 }
 
-/* STRICT 100% PERFECT CENTERING & BALANCED MARGINS FOR ALL PAGES, MODALS & CARDS */
-.page, .page.active, #dashboardPage, #riwayatPage, #masterDbPage, #userManagementPage {
-  padding-left: 8px !important;
-  padding-right: 8px !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 auto !important;
-  box-sizing: border-box !important;
-}
-
-.dashboardTop,
-#detailDashboard,
-.box,
-.box.box-full {
+/* STRICT 100% FULL LAYAR (0 MARGIN/PADDING KIRI-KANAN) FOR DASHBOARD & ALL CONTAINERS */
+/* STRICT 100% SYMMETRICAL & BALANCED MARGINS (12PX EQUAL LEFT & RIGHT PADDING) FOR ALL PAGES & DASHBOARD */
+.page,
+.page.active,
+#dashboardPage,
+#riwayatPage,
+#masterDbPage,
+#userManagementPage {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
   width: 100% !important;
   max-width: 100% !important;
   margin-left: auto !important;
   margin-right: auto !important;
   box-sizing: border-box !important;
+}
+
+.dashboardTop,
+.stats,
+#detailDashboard,
+.box,
+.box.box-full {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#detailDashboard {
+  padding: 14px 14px !important;
+  border-radius: 14px !important;
 }
 
 .popupBoxDetail,
