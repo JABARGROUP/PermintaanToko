@@ -156,53 +156,9 @@ function getAccessibleNotifications() {
 
   const requests = getRequestsFromDB();
 
-  // 1. SINTESIS NOTIFIKASI PENDING APPROVAL SERVICE UNTUK USER SERVICE & ADMIN
-  if (userCat === 'SERVICE' || isSysAdmin) {
-    const servicePendingReqs = requests.filter(r => {
-      const areaMatch = (userArea === 'ALL' || userArea === 'TSM' || r.area === userArea || isSysAdmin);
-      return r.status === 'PENDING' && !r.serviceApprove && areaMatch;
-    });
-
-    servicePendingReqs.forEach(r => {
-      const exists = filtered.some(n => n.noSurat === r.noSurat);
-      if (!exists) {
-        filtered.unshift({
-          id: `NTF-SRV-${r.noSurat}`,
-          targetRoles: ['SERVICE', 'ADMIN'],
-          targetArea: r.area || 'ALL',
-          message: `PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko || '-'} (${r.area || 'TSM'}) MENUNGGU APPROVAL SERVICE.`,
-          noSurat: r.noSurat,
-          time: r.tanggalInput || r.createdAt || getFormattedDateDDMMYYYY(),
-          readBy: []
-        });
-      }
-    });
-  }
-
-  // 2. SINTESIS NOTIFIKASI PENDING APPROVAL DM UNTUK USER DM & ADMIN
-  if (userCat === 'DM' || isSysAdmin) {
-    const dmPendingReqs = requests.filter(r => {
-      const areaMatch = (userArea === 'ALL' || r.area === userArea || isSysAdmin);
-      return r.status === 'PENDING' && r.serviceApprove && !r.dmApprove && areaMatch;
-    });
-
-    dmPendingReqs.forEach(r => {
-      const exists = filtered.some(n => n.noSurat === r.noSurat);
-      if (!exists) {
-        filtered.unshift({
-          id: `NTF-DM-${r.noSurat}`,
-          targetRoles: ['DM', 'ADMIN'],
-          targetArea: r.area || 'ALL',
-          message: `PERMINTAAN #${r.noSurat} DARI ${r.toko || '-'} (${r.area || 'TSM'}) TELAH DISETUJUI SERVICE. MOHON APPROVAL DM.`,
-          noSurat: r.noSurat,
-          time: r.tanggalInput || r.createdAt || getFormattedDateDDMMYYYY(),
-          readBy: []
-        });
-      }
-    });
-  }
-
-  // 3. SINTESIS NOTIFIKASI PENDING TRANSAKSI UNTUK USER TOKO / SALES
+  // NOTIFIKASI REMINDER SERVIS & DM DIHAPUS DARI LONCENG NOTIFIKASI SISTEM (DIKIRIM EKSKLUSIF VIA WA FONNTE API)
+  
+  // SINTESIS STATUS TRANSAKSI PENDING UNTUK USER TOKO / SALES ONLY
   if (userCat === 'TOKO' || userCat === 'SALES') {
     const tokoPendingReqs = requests.filter(r => {
       const isMine = (r.createdBy === currentUser.username || r.toko === currentUser.fullName || r.area === userArea);
@@ -355,7 +311,7 @@ function loadNotificationList() {
 }
 
 function clickNotificationItem(notifId, noSurat) {
-  markNotifAsRead(notifId);
+  markNotifAsRead(notifId, noSurat);
 
   const notifListPopup = document.getElementById('popupNotifList');
   if (notifListPopup) {
@@ -370,9 +326,23 @@ function clickNotificationItem(notifId, noSurat) {
   }
 }
 
-function markNotifAsRead(notifId) {
-  const notifs = getSystemNotifications();
+function markNotifAsRead(notifId, noSurat = '') {
+  let notifs = getSystemNotifications();
   const idx = notifs.findIndex(n => n.id === notifId);
+
+  const targetNoSurat = noSurat || (idx !== -1 ? notifs[idx].noSurat : '');
+  const requests = getRequestsFromDB();
+  const req = requests.find(r => r.noSurat === targetNoSurat);
+
+  // JIKA STATUS PERMINTAAN SUDAH APPROVE, REJECT, ATAU DONE -> OTOMATIS HAPUS DARI PENYIMPANAN LOKAL & DATABASE CLOUD
+  if (req && (req.status === 'APPROVE' || req.status === 'REJECT' || req.status === 'DONE')) {
+    notifs = notifs.filter(n => n.id !== notifId && n.noSurat !== targetNoSurat);
+    appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
+    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
+    updateNotifBellCounter();
+    return;
+  }
+
   if (idx !== -1) {
     if (!notifs[idx].readBy.includes(currentUser.id)) {
       notifs[idx].readBy.push(currentUser.id);
@@ -381,6 +351,7 @@ function markNotifAsRead(notifId) {
       notifs[idx].readBy.push(currentUser.username);
     }
     appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
+    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
     updateNotifBellCounter();
   }
 }
@@ -478,52 +449,10 @@ const SEED_USERS = [
   {
     id: 'USR-ADMIN',
     username: 'ADMIN',
-    password: '1',
-    fullName: 'ADMINISTRATOR PUSAT',
+    password: '0',
+    fullName: 'SUPER ADMIN',
     phone: '',
     category: 'ADMIN',
-    area: 'ALL',
-    createdAt: '31/07/2026'
-  },
-  {
-    id: 'USR-SERVICE-TSM',
-    username: 'SERVICE_TSM',
-    password: '1',
-    fullName: 'SERVICE TASIKMALAYA',
-    phone: '',
-    category: 'SERVICE',
-    area: 'TSM',
-    createdAt: '31/07/2026'
-  },
-  {
-    id: 'USR-DM-TSM',
-    username: 'DM_TSM',
-    password: '1',
-    fullName: 'DISTRICT MANAGER TSM',
-    phone: '',
-    category: 'DM',
-    area: 'TSM',
-    createdAt: '31/07/2026'
-  },
-  {
-    id: 'USR-TOKO-1',
-    username: 'TOKO_1',
-    password: '1',
-    fullName: 'TOKO UTAMA TSM',
-    storeCode: 'TU',
-    phone: '',
-    category: 'TOKO',
-    area: 'TSM',
-    createdAt: '31/07/2026'
-  },
-  {
-    id: 'USR-SALES-1',
-    username: 'SALES_1',
-    password: '1',
-    fullName: 'SALES TASIKMALAYA',
-    storeCode: 'SL',
-    phone: '',
-    category: 'SALES',
     area: 'TSM',
     createdAt: '31/07/2026'
   }
@@ -851,15 +780,6 @@ let dbFirestore = null;
 let dbRealtime = null;
 
 function getActiveFirebaseConfig() {
-  const saved = appStorage.getItem(FIREBASE_USER_CONFIG_KEY);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed === 'object' && parsed.projectId && !parsed.projectId.includes('demo') && !parsed.projectId.includes('jabar')) {
-        return parsed;
-      }
-    } catch (e) {}
-  }
   return DEFAULT_FIREBASE_CONFIG;
 }
 
@@ -913,6 +833,11 @@ function initFirebaseDB() {
                 if (typeof loadSavedTheme === 'function') loadSavedTheme();
               }
               if (cfg.fonteToken) appStorage.setItem(FONTE_TOKEN_KEY, cfg.fonteToken);
+              if (cfg.kodeUnitMap) {
+                const existingMap = JSON.parse(appStorage.getItem(KODE_UNIT_MAP_KEY) || '{}');
+                const mergedMap = { ...existingMap, ...cfg.kodeUnitMap };
+                appStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(mergedMap));
+              }
               if (cfg.firebaseConfig) {
                 const curLocal = appStorage.getItem(FIREBASE_USER_CONFIG_KEY);
                 const newStr = typeof cfg.firebaseConfig === 'string' ? cfg.firebaseConfig : JSON.stringify(cfg.firebaseConfig);
@@ -1334,23 +1259,30 @@ function getUsersFromDB() {
 
   users = normalizeUserList(users);
 
-  if (!Array.isArray(users) || !users.length) {
-    users = normalizeUserList([...SEED_USERS]);
-    appStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-    return users;
-  }
-
+  const defaultUsernamesToRemove = ['SERVICE_TSM', 'DM_TSM', 'TOKO_1', 'SALES_1'];
   let updated = false;
-  SEED_USERS.forEach(su => {
-    const exists = users.some(u => u && u.username && String(u.username).trim().toUpperCase() === String(su.username).toUpperCase());
-    if (!exists) {
-      users.push({ ...su });
+
+  users = users.filter(u => {
+    if (u && u.username && defaultUsernamesToRemove.includes(String(u.username).toUpperCase())) {
       updated = true;
+      return false;
     }
+    return true;
   });
 
-  if (updated) {
-    users = normalizeUserList(users);
+  const adminIndex = users.findIndex(u => u && u.username && String(u.username).toUpperCase() === 'ADMIN');
+  if (adminIndex !== -1) {
+    if (users[adminIndex].password !== '0') {
+      users[adminIndex].password = '0';
+      updated = true;
+    }
+  } else {
+    users.push({ ...SEED_USERS[0] });
+    updated = true;
+  }
+
+  if (updated || !users.length) {
+    users = normalizeUserList(users.length ? users : [...SEED_USERS]);
     appStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
   }
 
@@ -1638,12 +1570,7 @@ function bukaMainApp() {
 
   isAdminChat = typeof isServiceTSMUser === 'function' ? isServiceTSMUser() : (isAdmin || currentUser.category === 'SERVICE');
 
-  let savedPage = sessionStorage.getItem('LAST_ACTIVE_PAGE');
-  if (!savedPage || savedPage === 'null' || savedPage === 'undefined' || !document.getElementById(savedPage)) {
-    savedPage = 'dashboardPage';
-  }
-  
-  pindahHalaman(savedPage);
+  pindahHalaman('dashboardPage');
 
   setTimeout(() => {
     if (typeof aturTampilanLonceng === 'function') {
@@ -1847,10 +1774,6 @@ function pindahHalaman(pageId, pushHistory = true) {
   if (target) target.classList.add('active');
 
   updateBottomMenuHighlight(pageId);
-
-  if (pageId !== 'loginPage') {
-    sessionStorage.setItem('LAST_ACTIVE_PAGE', pageId);
-  }
 
   if (pushHistory && pageId !== 'loginPage') {
     try {
@@ -2088,7 +2011,7 @@ function tambahRow() {
       <input type="text" inputmode="text" class="namaBarang" placeholder="PERMINTAAN" autocomplete="off">
       <input type="text" inputmode="text" class="seriDusBarang" placeholder="NO SERI DUS" autocomplete="off">
       <input type="text" inputmode="text" class="alasan" placeholder="ALASAN" autocomplete="off">
-      <input type="number" class="qty" value="1" min="1" style="text-align: center;" autocomplete="off">
+      <input type="number" class="qty" value="1" min="1" style="text-align: left;" autocomplete="off">
       <button type="button" class="btnHapusRow" onclick="hapusRow(this)"><span class="material-symbols-rounded">remove</span></button>
     `;
   } else {
@@ -2100,7 +2023,7 @@ function tambahRow() {
       </div>
       <input type="text" inputmode="text" class="namaBarang" placeholder="PERMINTAAN" autocomplete="off">
       <input type="text" inputmode="text" class="alasan" placeholder="ALASAN" autocomplete="off">
-      <input type="number" class="qty" value="1" min="1" style="text-align: center;" autocomplete="off">
+      <input type="number" class="qty" value="1" min="1" style="text-align: left;" autocomplete="off">
       <button type="button" class="btnHapusRow" onclick="hapusRow(this)"><span class="material-symbols-rounded">remove</span></button>
     `;
   }
@@ -2570,7 +2493,7 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
       showNotif(`PERMINTAAN #${noSurat} DATA BERHASIL DISIMPAN!`, 'success');
       bersihkanForm();
 
-      tambahNotifikasiSistem(['SERVICE'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI ${toko} (${currentUser.area}). MOHON SEGERA DIPERIKSA DI APLIKASI.`, noSurat);
+      // REMINDER DIKIRIM HANYA VIA WHATSAPP (FONNTE API), TIDAK LEWAT SYSTEM BELL NOTIFIKASI
       const allUsers = getUsersFromDB();
       const serviceUsers = allUsers.filter(u => u.category === 'SERVICE' && u.area === currentUser.area);
       serviceUsers.forEach(srv => {
@@ -2786,15 +2709,150 @@ function lihatFotoByNoSurat(noSurat) {
   }
 }
 
+let viewerCurrentZoom = 1;
+let viewerPanX = 0;
+let viewerPanY = 0;
+let isDraggingViewerImage = false;
+let startDragX = 0;
+let startDragY = 0;
+let initialPinchDistance = 0;
+let initialPinchZoom = 1;
+
+function applyViewerTransform() {
+  const img = document.getElementById('viewerImage');
+  if (!img) return;
+  if (viewerCurrentZoom <= 1) {
+    viewerCurrentZoom = 1;
+    viewerPanX = 0;
+    viewerPanY = 0;
+  }
+  img.style.transform = `translate(${viewerPanX}px, ${viewerPanY}px) scale(${viewerCurrentZoom})`;
+  img.style.cursor = viewerCurrentZoom > 1 ? (isDraggingViewerImage ? 'grabbing' : 'grab') : 'pointer';
+}
+
+function zoomImage(delta) {
+  viewerCurrentZoom += delta;
+  if (viewerCurrentZoom < 1) viewerCurrentZoom = 1;
+  if (viewerCurrentZoom > 5) viewerCurrentZoom = 5;
+  applyViewerTransform();
+}
+
+function resetZoom() {
+  viewerCurrentZoom = 1;
+  viewerPanX = 0;
+  viewerPanY = 0;
+  applyViewerTransform();
+}
+
+function initPhotoViewerGestureListeners() {
+  const modal = document.getElementById('imageViewer');
+  const img = document.getElementById('viewerImage');
+  if (!modal || !img || modal.dataset.gesturesInited) return;
+  modal.dataset.gesturesInited = 'true';
+
+  // Touch Start (Pinch or Pan)
+  modal.addEventListener('touchstart', (e) => {
+    if (e.target.closest('#navViewerLeft') || e.target.closest('#navViewerRight') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar')) {
+      return;
+    }
+
+    if (e.touches.length === 2) {
+      isDraggingViewerImage = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      initialPinchDistance = Math.hypot(dx, dy);
+      initialPinchZoom = viewerCurrentZoom;
+    } else if (e.touches.length === 1 && viewerCurrentZoom > 1) {
+      isDraggingViewerImage = true;
+      startDragX = e.touches[0].clientX - viewerPanX;
+      startDragY = e.touches[0].clientY - viewerPanY;
+    }
+  }, { passive: false });
+
+  // Touch Move
+  modal.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && initialPinchDistance > 0) {
+      if (e.cancelable) e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 0) {
+        viewerCurrentZoom = initialPinchZoom * (dist / initialPinchDistance);
+        if (viewerCurrentZoom < 1) viewerCurrentZoom = 1;
+        if (viewerCurrentZoom > 5) viewerCurrentZoom = 5;
+        applyViewerTransform();
+      }
+    } else if (e.touches.length === 1 && isDraggingViewerImage && viewerCurrentZoom > 1) {
+      if (e.cancelable) e.preventDefault();
+      viewerPanX = e.touches[0].clientX - startDragX;
+      viewerPanY = e.touches[0].clientY - startDragY;
+      applyViewerTransform();
+    }
+  }, { passive: false });
+
+  // Touch End
+  modal.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+      initialPinchDistance = 0;
+    }
+    if (e.touches.length === 0) {
+      isDraggingViewerImage = false;
+    }
+  });
+
+  // Mouse Drag (PC/Laptop)
+  img.addEventListener('mousedown', (e) => {
+    if (viewerCurrentZoom > 1) {
+      isDraggingViewerImage = true;
+      startDragX = e.clientX - viewerPanX;
+      startDragY = e.clientY - viewerPanY;
+      applyViewerTransform();
+      e.preventDefault();
+    }
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (isDraggingViewerImage && viewerCurrentZoom > 1) {
+      viewerPanX = e.clientX - startDragX;
+      viewerPanY = e.clientY - startDragY;
+      applyViewerTransform();
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isDraggingViewerImage) {
+      isDraggingViewerImage = false;
+      applyViewerTransform();
+    }
+  });
+
+  // Mouse Wheel Zoom
+  modal.addEventListener('wheel', (e) => {
+    if (e.target.closest('.viewerBottomBar')) return;
+    if (e.cancelable) e.preventDefault();
+    if (e.deltaY < 0) {
+      zoomImage(0.25);
+    } else {
+      zoomImage(-0.25);
+    }
+  }, { passive: false });
+}
+
 function tampilkanFotoViewerAktif() {
-  currentZoom = 1;
+  viewerCurrentZoom = 1;
+  viewerPanX = 0;
+  viewerPanY = 0;
+  applyViewerTransform();
+
   const img = document.getElementById('viewerImage');
   if (img && viewerPhotos.length > 0) {
     img.src = viewerPhotos[viewerCurrentIndex];
-    img.style.transform = `scale(${currentZoom})`;
   }
   const modal = document.getElementById('imageViewer');
-  if (modal) modal.style.display = 'flex';
+  if (modal) {
+    modal.style.display = 'flex';
+    initPhotoViewerGestureListeners();
+  }
   
   const btnLeft = document.getElementById('navViewerLeft');
   const btnRight = document.getElementById('navViewerRight');
@@ -2842,7 +2900,7 @@ function approveService(noSurat) {
         saveRequestsToDB(requests);
         showNotif(`APPROVE BERHASIL`, 'info');
 
-        tambahNotifikasiSistem(['DM'], 'ALL', `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI SERVICE (${currentUser.fullName}). MOHON APPROVAL DM.`, noSurat);
+        // REMINDER DIKIRIM HANYA VIA WHATSAPP (FONNTE API), TIDAK LEWAT SYSTEM BELL NOTIFIKASI
         const users = getUsersFromDB();
         const dmUsers = users.filter(u => u.category === 'DM');
         dmUsers.forEach(dm => {
@@ -3242,7 +3300,7 @@ function lihatDetail(noSurat, fromDashboard = false) {
 
   if (actionButtons.length > 0) {
     bottomActionsHtml = `
-      <div class="popupDetailActions">
+      <div class="popupDetailActions" style="justify-content: flex-start !important; text-align: left !important; flex-wrap: wrap !important;">
         ${actionButtons.join('')}
       </div>
     `;
@@ -3350,24 +3408,47 @@ function konfirmasiGunakanModelPdf() {
 }
 
 function updatePdfModelSelectorButtons() {
+  const containerNav = document.getElementById('pdfModelSelectorNav');
+  const descBanner = document.getElementById('pdfModelDescBanner');
+
+  const activeModelObj = PDF_MODELS_DATA.find(m => m.id === currentlyPreviewedModel) || PDF_MODELS_DATA[0];
+
+  if (descBanner) {
+    descBanner.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <div style="font-weight:900; font-size:12.5px; color:var(--text-main); text-transform:uppercase; display:flex; align-items:center; gap:6px;">
+          <span class="material-symbols-rounded" style="color:${activeModelObj.color}; font-size:18px;">style</span>
+          ${activeModelObj.title}
+        </div>
+        <div style="font-size:11.5px; color:var(--text-muted); font-weight:600;">${activeModelObj.desc}</div>
+      </div>
+    `;
+  }
+
+  if (!containerNav) return;
+  containerNav.innerHTML = '';
+
   PDF_MODELS_DATA.forEach(m => {
+    const isActive = (m.id === currentlyPreviewedModel);
     const num = m.id.replace('MODEL_', '');
-    const btn = document.getElementById(`btnPdfModel${num}`) || document.getElementById(`btnPdf${m.id}`);
-    if (btn) {
-      if (m.id === currentlyPreviewedModel) {
-        btn.style.background = m.color === '#0f172a' ? '#0f172a' : (m.color || '#7c3aed');
-        btn.style.color = '#ffffff';
-        btn.style.border = '2px solid #ffffff';
-        btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-        btn.innerHTML = `<span class="material-symbols-rounded" style="vertical-align:middle; font-size:16px;">check_circle</span> ${m.title.split(':')[0]}`;
-      } else {
-        btn.style.background = 'var(--bg-header)';
-        btn.style.color = 'var(--text-main)';
-        btn.style.border = '1px solid var(--border-color)';
-        btn.style.boxShadow = 'none';
-        btn.innerHTML = `${m.title.split(':')[0]}`;
-      }
+    
+    let btnBg = 'var(--bg-box)';
+    if (isActive) {
+      btnBg = (m.color === '#0f172a' ? '#0f172a' : (m.color || '#7c3aed'));
     }
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `btnPdfNumSimple ${isActive ? 'active' : ''}`;
+    btn.style.background = btnBg;
+    if (isActive) {
+      btn.style.color = '#ffffff';
+    }
+
+    btn.onclick = () => switchPdfPreviewModel(m.id);
+    btn.innerHTML = `${num}`;
+    btn.title = m.title;
+    containerNav.appendChild(btn);
   });
 }
 
@@ -3415,87 +3496,79 @@ function renderFullPdfPreviewDocument(modelId) {
   }
 
   container.innerHTML = `
-    <div style="background: #ffffff; color: #0f172a; width: 100%; max-width: 720px; margin: 0 auto; padding: 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); font-family: Arial, sans-serif; box-sizing: border-box;">
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 12px; border-radius: 8px; margin-bottom: 16px;">
-        <span style="font-size: 12px; font-weight: 800; color: ${m.color};">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 16px;">style</span> ${m.title}
-        </span>
-        <span style="font-size: 11px; color: #64748b; font-weight: 600;">${m.desc}</span>
-      </div>
-
+    <div style="background: #ffffff; color: #0f172a; width: 100%; max-width: 720px; margin: 0 auto; padding: 20px 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.18); font-family: Arial, sans-serif; box-sizing: border-box; border: 1px solid #cbd5e1;">
       ${headerTitleHtml}
 
-      <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 14px; padding: 4px 0; flex-wrap: wrap; gap: 8px; background: transparent; border: none;">
+      <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 10px; padding: 2px 0; flex-wrap: wrap; gap: 6px; background: transparent; border: none;">
         <div><b>NO SURAT:</b> <span style="color:${m.color}; font-weight:800;">PRM/2026/001</span></div>
         <div><b>TOKO:</b> TOKO UTAMA BANDUNG</div>
         <div><b>TANGGAL:</b> 01/08/2026</div>
         <div><b>JENIS:</b> UNIT</div>
       </div>
 
-      <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 14px; border: 1px solid #cbd5e1;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 10.5px; margin-bottom: 10px; border: 1px solid #cbd5e1;">
         <thead>
           <tr style="background: ${tableHeaderBg}; color: #ffffff;">
-            <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">NO</th>
-            <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: left;">TIPE BARANG</th>
-            <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: left;">NO. SERI</th>
-            <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: left;">NAMA BARANG</th>
-            <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: left;">ALASAN</th>
-            <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">QTY</th>
+            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">NO</th>
+            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left;">TIPE BARANG</th>
+            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left;">NO. SERI</th>
+            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left;">NAMA BARANG</th>
+            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left;">ALASAN</th>
+            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">QTY</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="text-align:center; padding:8px; border-bottom:1px solid #e2e8f0;">1</td>
-            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">AC DAIKIN 2 PK</td>
-            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">SN-889920112</td>
-            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">UNIT INDOOR AC 2PK</td>
-            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">KOMPRESOR BOCOR FREON</td>
-            <td style="text-align:center; padding:8px; border-bottom:1px solid #e2e8f0; font-weight:bold;">1</td>
+            <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0;">1</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">AC DAIKIN 2 PK</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">SN-889920112</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">UNIT INDOOR AC 2PK</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">KOMPRESOR BOCOR FREON</td>
+            <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0; font-weight:bold;">1</td>
           </tr>
           <tr>
-            <td style="text-align:center; padding:8px; border-bottom:1px solid #e2e8f0;">2</td>
-            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">KULKAS 2 PINTU</td>
-            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">SN-776655100</td>
-            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">UNIT KULKAS INVERTER</td>
-            <td style="padding:8px; border-bottom:1px solid #e2e8f0;">KARET PINTU LONGGAR</td>
-            <td style="text-align:center; padding:8px; border-bottom:1px solid #e2e8f0; font-weight:bold;">1</td>
+            <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0;">2</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">KULKAS 2 PINTU</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">SN-776655100</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">UNIT KULKAS INVERTER</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">KARET PINTU LONGGAR</td>
+            <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0; font-weight:bold;">1</td>
           </tr>
         </tbody>
       </table>
 
-      <div style="margin-top: 10px; margin-bottom: 16px; font-size: 11.5px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 6px solid ${tableHeaderBg}; padding: 12px 16px; border-radius: 8px; box-shadow: 0 3px 10px rgba(2,132,199,0.12); color: #0f172a; opacity: 1 !important;">
-        <div style="font-weight: 800; font-size: 11.5px; color: ${tableHeaderBg === '#0f172a' ? '#0369a1' : tableHeaderBg}; margin-bottom: 4px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
-          <span style="font-size: 14px;">📌</span> CATATAN / KETERANGAN PERMINTAAN:
+      <div style="margin-top: 8px; margin-bottom: 12px; font-size: 11px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 5px solid ${tableHeaderBg}; padding: 8px 12px; border-radius: 6px; color: #0f172a;">
+        <div style="font-weight: 800; font-size: 11px; color: ${tableHeaderBg === '#0f172a' ? '#0369a1' : tableHeaderBg}; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
+          <span>📌</span> CATATAN / KETERANGAN PERMINTAAN:
         </div>
-        <div style="font-weight: 600; color: #0f172a; line-height: 1.5; font-size: 11.5px;">MOHON DIPROSES SECEPATNYA UNTUK KEPERLUAN DISPLAY TOKO UTAMA.</div>
+        <div style="font-weight: 600; color: #0f172a; font-size: 11px;">MOHON DIPROSES SECEPATNYA UNTUK KEPERLUAN DISPLAY TOKO UTAMA.</div>
       </div>
 
-      <div style="display: flex; justify-content: space-around; font-size: 11px; text-align: center; margin-top: 24px;">
-        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
-          <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">PEMOHON</div>
-          <div style="height: 55px;"></div>
+      <div style="display: flex; justify-content: space-around; font-size: 10.5px; text-align: center; margin-top: 14px;">
+        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 95px;">
+          <div style="font-weight: 800; color: #0f172a; text-transform: uppercase;">PEMOHON</div>
+          <div style="height: 35px;"></div>
           <div>
-            <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">TOKO UTAMA</div>
-            <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">PEMOHON (TOKO)</div>
+            <div style="font-weight: 800; color: #0f172a; font-size: 11px;">TOKO UTAMA</div>
+            <div style="font-size: 9.5px; color: #475569; margin-top: 1px; text-transform: uppercase;">PEMOHON (TOKO)</div>
           </div>
         </div>
 
-        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
-          <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DIPERIKSA</div>
-          <div style="height: 55px;"></div>
+        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 95px;">
+          <div style="font-weight: 800; color: #0f172a; text-transform: uppercase;">DIPERIKSA</div>
+          <div style="height: 35px;"></div>
           <div>
-            <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">SERVICE BANDUNG</div>
-            <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">HODS BANDUNG</div>
+            <div style="font-weight: 800; color: #0f172a; font-size: 11px;">SERVICE BANDUNG</div>
+            <div style="font-size: 9.5px; color: #475569; margin-top: 1px; text-transform: uppercase;">HODS BANDUNG</div>
           </div>
         </div>
 
-        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
-          <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DISETUJUI</div>
-          <div style="height: 55px;"></div>
+        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 95px;">
+          <div style="font-weight: 800; color: #0f172a; text-transform: uppercase;">DISETUJUI</div>
+          <div style="height: 35px;"></div>
           <div>
-            <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">FERRY EDIYANTO</div>
-            <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">DISTRICT MANAGER</div>
+            <div style="font-weight: 800; color: #0f172a; font-size: 11px;">FERRY EDIYANTO</div>
+            <div style="font-size: 9.5px; color: #475569; margin-top: 1px; text-transform: uppercase;">DISTRICT MANAGER</div>
           </div>
         </div>
       </div>
@@ -4316,9 +4389,68 @@ function cekUnreadNotif() {
     if (myRoom && myRoom.unreadUser > 0) {
       badge.textContent = myRoom.unreadUser > 99 ? '99+' : myRoom.unreadUser;
       badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
     }
   }
 }
+
+function hapusSemuaChatAdmin() {
+  if (!currentUser || (currentUser.category !== 'ADMIN' && String(currentUser.username).toUpperCase() !== 'ADMIN')) {
+    showNotif('HANYA SUPER ADMIN YANG DAPAT MENGHAPUS SELURUH CHAT!', 'warning');
+    return;
+  }
+
+  showConfirm('YAKIN INGIN MENGHAPUS SELURUH RIWAYAT CHAT & ROOM DARI FIREBASE CLOUD & PENYIMPANAN LOKAL?', () => {
+    showLoading('MENGHAPUS SEMUA CHAT CLOUD...');
+    setTimeout(async () => {
+      try {
+        // 1. KOSONGKAN PENYIMPANAN LOKAL
+        appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
+        appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
+
+        // 2. KOSONGKAN DI FIRESTORE
+        if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+          try {
+            await dbFirestore.collection('app_settings').doc('config').set({
+              chatMessages: [],
+              chatRooms: []
+            }, { merge: true });
+          } catch(e) {
+            console.warn('[FIRESTORE CHAT DELETE NOTICE]:', e);
+          }
+        }
+
+        // 3. KOSONGKAN DI REALTIME DB
+        if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+          try {
+            await dbRealtime.ref('chat_messages').remove();
+            await dbRealtime.ref('chat_rooms').remove();
+          } catch(e) {
+            console.warn('[RTDB CHAT DELETE NOTICE]:', e);
+          }
+        }
+
+        // 4. SYNC CENTRAL CLOUD
+        if (typeof pushCentralCloudDB === 'function') {
+          pushCentralCloudDB();
+        }
+
+        hideLoading();
+        showNotif('SELURUH PESAN CHAT & ROOM BERHASIL DIHAPUS DARI FIREBASE CLOUD!', 'success');
+
+        if (typeof refreshActiveChatUI === 'function') {
+          refreshActiveChatUI();
+        }
+      } catch (err) {
+        hideLoading();
+        console.error('[HAPUS CHAT ERROR]:', err);
+        showNotif('TERJADI KESALAHAN SAAT MENGHAPUS CHAT!', 'error');
+      }
+    }, 400);
+  });
+}
+window.hapusSemuaChatAdmin = hapusSemuaChatAdmin;
 
 window.bukaBantuan = bukaBantuan;
 window.tutupBantuan = tutupBantuan;
@@ -4329,9 +4461,64 @@ window.loadDaftarChatAdmin = loadDaftarChatAdmin;
 window.bukaRoomAdmin = bukaRoomAdmin;
 window.loadChatAdmin = loadChatAdmin;
 window.loadChatUser = loadChatUser;
-window.updateNotifBellCounter = updateNotifBellCounter;
-window.aturTampilanLonceng = aturTampilanLonceng;
 window.startGlobalRealtimeLoop = startGlobalRealtimeLoop;
+
+// GLOBAL EVENT LISTENER: CLICK OUTSIDE BACKDROP TO CLOSE POPUPS (PC / LAPTOP / MOBILE)
+window.addEventListener('click', function (e) {
+  // 1. Detail Barang Popup (#popupDetail)
+  const popupDetail = document.getElementById('popupDetail');
+  if (popupDetail && e.target === popupDetail && typeof closeDetail === 'function') {
+    closeDetail();
+  }
+
+  // 2. Akun Profile Popup (#popupAkun)
+  const popupAkun = document.getElementById('popupAkun');
+  if (popupAkun && e.target === popupAkun && typeof tutupAkun === 'function') {
+    tutupAkun();
+  }
+
+  // 3. PDF Models Selector Modal (#popupPdfModelsModal)
+  const popupPdfModelsModal = document.getElementById('popupPdfModelsModal');
+  if (popupPdfModelsModal && e.target === popupPdfModelsModal && typeof tutupModalPdfModels === 'function') {
+    tutupModalPdfModels();
+  }
+
+  // 4. PDF Document Modal (#pdfModal)
+  const pdfModal = document.getElementById('pdfModal');
+  if (pdfModal && e.target === pdfModal && typeof tutupPdfModal === 'function') {
+    tutupPdfModal();
+  }
+
+  // 5. User Form Modal (#popupUserForm)
+  const popupUserForm = document.getElementById('popupUserForm');
+  if (popupUserForm && e.target === popupUserForm && typeof tutupUserModal === 'function') {
+    tutupUserModal();
+  }
+
+  // 6. Tambah Toko Modal (#popupTambahToko)
+  const popupTambahToko = document.getElementById('popupTambahToko');
+  if (popupTambahToko && e.target === popupTambahToko && typeof tutupModalTambahToko === 'function') {
+    tutupModalTambahToko();
+  }
+
+  // 7. Reject Reason Modal (#rejectOverlay)
+  const rejectOverlay = document.getElementById('rejectOverlay');
+  if (rejectOverlay && e.target === rejectOverlay && typeof closeReject === 'function') {
+    closeReject();
+  }
+
+  // 8. TTD Modal (#popupTTD)
+  const popupTTD = document.getElementById('popupTTD');
+  if (popupTTD && e.target === popupTTD && typeof tutupTTD === 'function') {
+    tutupTTD();
+  }
+
+  // 9. Image Viewer Modal (#imageViewer)
+  const imageViewer = document.getElementById('imageViewer');
+  if (imageViewer && e.target === imageViewer && typeof tutupImageViewer === 'function') {
+    tutupImageViewer();
+  }
+});
 
 
 function loadUsersManagement() {
@@ -4349,8 +4536,11 @@ function loadUsersManagement() {
   tbody.innerHTML = '';
 
   users.forEach(u => {
+    const isSuperAdmin = (String(u.username).trim().toUpperCase() === 'ADMIN');
+    const chkHtml = !isSuperAdmin ? `<input type="checkbox" class="userCheckbox" value="${u.id}" onchange="updateMultiUserBtnState()" style="cursor:pointer; width:16px; height:16px;">` : '';
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td style="text-align:center;">${chkHtml}</td>
       <td style="font-weight:600; color:var(--text-main);">${u.username}</td>
       <td style="font-family:monospace; color:var(--text-muted);">${u.password}</td>
       <td>${u.fullName}</td>
@@ -4360,12 +4550,93 @@ function loadUsersManagement() {
       <td><span style="color:var(--primary); font-weight:600;">${u.area}</span></td>
       <td style="text-align: right; white-space:nowrap;">
         <button class="btnIcon btnEdit" onclick="bukaUserModal('${u.id}')" title="EDIT USER"><span class="material-symbols-rounded">edit</span></button>
-        <button class="btnIcon btnDelete" onclick="hapusUser('${u.id}')" title="HAPUS USER"><span class="material-symbols-rounded">delete</span></button>
+        ${!isSuperAdmin ? `<button class="btnIcon btnDelete" onclick="hapusUser('${u.id}')" title="HAPUS USER"><span class="material-symbols-rounded">delete</span></button>` : ''}
       </td>
     `;
     tbody.appendChild(tr);
   });
+  updateMultiUserBtnState();
 }
+
+function toggleSelectAllUsers(masterCheckbox) {
+  const isChecked = masterCheckbox ? masterCheckbox.checked : false;
+  const checkboxes = document.querySelectorAll('.userCheckbox');
+  checkboxes.forEach(cb => {
+    cb.checked = isChecked;
+  });
+  updateMultiUserBtnState();
+}
+
+function updateMultiUserBtnState() {
+  const checkboxes = document.querySelectorAll('.userCheckbox:checked');
+  const btn = document.getElementById('btnHapusMultiUser');
+  const selectAll = document.getElementById('selectAllUsers');
+  const totalCheckboxes = document.querySelectorAll('.userCheckbox');
+
+  if (selectAll && totalCheckboxes.length > 0) {
+    selectAll.checked = (checkboxes.length === totalCheckboxes.length);
+  }
+
+  if (btn) {
+    if (checkboxes.length > 0) {
+      btn.style.display = 'inline-flex';
+      btn.innerHTML = `<span class="material-symbols-rounded" style="vertical-align:middle; margin-right:4px;">delete_sweep</span> HAPUS (${checkboxes.length}) USER`;
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+}
+
+function hapusMultiUser() {
+  const selectedCheckboxes = document.querySelectorAll('.userCheckbox:checked');
+  const userIds = Array.from(selectedCheckboxes).map(cb => cb.value).filter(Boolean);
+
+  if (userIds.length === 0) {
+    showNotif('PILIH MINIMAL 1 USER UNTUK DIHAPUS!', 'warning');
+    return;
+  }
+
+  const users = getUsersFromDB();
+  const selectedUsers = users.filter(u => userIds.includes(u.id) && String(u.username).trim().toUpperCase() !== 'ADMIN');
+
+  if (selectedUsers.length === 0) {
+    showNotif('TIDAK ADA USER VALID YANG DAPAT DIHAPUS!', 'warning');
+    return;
+  }
+
+  const usernamesStr = selectedUsers.map(u => u.username).join(', ');
+
+  showConfirm(`YAKIN INGIN MENGHAPUS ${selectedUsers.length} USER TERPILIH? (${usernamesStr})`, () => {
+    showLoading('MENGHAPUS USER TERPILIH...');
+    setTimeout(() => {
+      const delUsers = JSON.parse(appStorage.getItem(DELETED_USERS_KEY) || '[]');
+      
+      selectedUsers.forEach(u => {
+        if (!delUsers.includes(u.id)) delUsers.push(u.id);
+
+        const docId = String(u.username).toUpperCase();
+        if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+          dbFirestore.collection('users').doc(docId).delete().catch(e => console.warn(e));
+        }
+        if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+          dbRealtime.ref(`users/${docId}`).remove().catch(e => console.warn(e));
+        }
+      });
+
+      appStorage.setItem(DELETED_USERS_KEY, JSON.stringify(delUsers));
+
+      const remainingUsers = users.filter(u => !userIds.includes(u.id) || String(u.username).trim().toUpperCase() === 'ADMIN');
+      saveUsersToDB(remainingUsers);
+
+      hideLoading();
+      showNotif(`BERHASIL MENGHAPUS ${selectedUsers.length} USER TERPILIH!`, 'success');
+      loadUsersManagement();
+    }, 400);
+  });
+}
+window.toggleSelectAllUsers = toggleSelectAllUsers;
+window.updateMultiUserBtnState = updateMultiUserBtnState;
+window.hapusMultiUser = hapusMultiUser;
 
 function bukaUserModal(userId = null) {
   if (typeof userId !== 'string' || userId.startsWith('[object')) {
@@ -4598,6 +4869,7 @@ function loadMasterDbTable() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td style="text-align:center;"><input type="checkbox" class="masterDbCheckbox" value="${r.noSurat}" onchange="updateMultiMasterDbBtnState()" style="cursor:pointer; width:16px; height:16px;"></td>
       <td style="font-weight:600; color:var(--primary);">${r.noSurat}</td>
       <td style="white-space:nowrap;">${formatDateDDMMYYYYString(r.tanggal)}</td>
       <td>${r.toko} <div style="font-size:11px; color:var(--text-muted);">By: ${r.createdBy}</div></td>
@@ -4612,7 +4884,86 @@ function loadMasterDbTable() {
     `;
     tbody.appendChild(tr);
   });
+  updateMultiMasterDbBtnState();
 }
+
+function toggleSelectAllMasterDb(masterCheckbox) {
+  const isChecked = masterCheckbox ? masterCheckbox.checked : false;
+  const checkboxes = document.querySelectorAll('.masterDbCheckbox');
+  checkboxes.forEach(cb => {
+    cb.checked = isChecked;
+  });
+  updateMultiMasterDbBtnState();
+}
+
+function updateMultiMasterDbBtnState() {
+  const checkboxes = document.querySelectorAll('.masterDbCheckbox:checked');
+  const btn = document.getElementById('btnHapusMultiMasterDb');
+  const selectAll = document.getElementById('selectAllMasterDb');
+  const totalCheckboxes = document.querySelectorAll('.masterDbCheckbox');
+
+  if (selectAll && totalCheckboxes.length > 0) {
+    selectAll.checked = (checkboxes.length === totalCheckboxes.length);
+  }
+
+  if (btn) {
+    if (checkboxes.length > 0) {
+      btn.style.display = 'inline-flex';
+      btn.innerHTML = `<span class="material-symbols-rounded" style="vertical-align:middle; margin-right:4px;">delete_sweep</span> HAPUS (${checkboxes.length}) DATA`;
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+}
+
+function hapusMultiMasterDb() {
+  const selectedCheckboxes = document.querySelectorAll('.masterDbCheckbox:checked');
+  const noSuratList = Array.from(selectedCheckboxes).map(cb => cb.value).filter(Boolean);
+
+  if (noSuratList.length === 0) {
+    showNotif('PILIH MINIMAL 1 DATA PERMINTAAN UNTUK DIHAPUS!', 'warning');
+    return;
+  }
+
+  showConfirm(`ADMIN: YAKIN INGIN MENGHAPUS ${noSuratList.length} DATA PERMINTAAN TERPILIH DARI MASTER DATABASE?`, () => {
+    showLoading('MENGHAPUS DATA TERPILIH...');
+    setTimeout(() => {
+      try {
+        const currentReqs = getRequestsFromDB();
+        const updatedReqs = currentReqs.filter(r => !noSuratList.includes(r.noSurat));
+        saveRequestsToDB(updatedReqs);
+
+        noSuratList.forEach(noSurat => {
+          const docId = String(noSurat).replace(/[\/\.]/g, '_');
+          if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+            dbFirestore.collection('requests').doc(docId).delete().catch(err => console.warn('[FIRESTORE DELETE NOTICE]:', err));
+          }
+          if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+            dbRealtime.ref(`requests/${docId}`).remove().catch(err => console.warn('[REALTIME DELETE NOTICE]:', err));
+          }
+        });
+
+        if (typeof pushCentralCloudDB === 'function') {
+          pushCentralCloudDB();
+        }
+
+        hideLoading();
+        showNotif(`BERHASIL MENGHAPUS ${noSuratList.length} DATA PERMINTAAN TERPILIH!`, 'info');
+
+        if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+        if (typeof loadRiwayat === 'function') loadRiwayat();
+        if (typeof loadDashboard === 'function') loadDashboard();
+      } catch (err) {
+        hideLoading();
+        console.error('[HAPUS MULTI MASTER ERROR]:', err);
+        showNotif('GAGAL MENGHAPUS DATA MULTI TERPILIH!', 'error');
+      }
+    }, 400);
+  });
+}
+window.toggleSelectAllMasterDb = toggleSelectAllMasterDb;
+window.updateMultiMasterDbBtnState = updateMultiMasterDbBtnState;
+window.hapusMultiMasterDb = hapusMultiMasterDb;
 
 function hapusDataMaster(noSurat) {
   if (!noSurat) return;
@@ -4740,12 +5091,24 @@ function prosesUploadExcelLookup(event) {
         const updatedMap = { ...existingMap, ...newLookup };
         appStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(updatedMap));
 
-        pushCentralCloudDB();
+        // SYNC LANGSUNG KE FIRESTORE CLOUD & REALTIME DB (EFFICIENT SINGLE DOC SAVE)
+        if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+          dbFirestore.collection('app_settings').doc('config').set({
+            kodeUnitMap: updatedMap
+          }, { merge: true }).catch(e => console.warn('[FIRESTORE LOOKUP SYNC]:', e));
+        }
+        if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+          dbRealtime.ref('app_settings/kodeUnitMap').set(updatedMap).catch(e => console.warn('[RTDB LOOKUP SYNC]:', e));
+        }
+
+        if (typeof pushCentralCloudDB === 'function') {
+          pushCentralCloudDB();
+        }
 
         hideLoading();
-        showNotif(`BERHASIL MEMPERBARUI ${count} KODE SERI BARANG!`, 'info');
+        showNotif(`BERHASIL MEMPERBARUI ${count} KODE SERI BARANG & TERSINKRON KE DATABASE!`, 'info');
         const statusEl = document.getElementById('lookupUploadStatus');
-        if (statusEl) statusEl.textContent = `✓ ${count} KODE SERI BERHASIL DITAMBAHKAN!`;
+        if (statusEl) statusEl.textContent = `✓ ${count} KODE SERI BERHASIL DITAMBAHKAN & TERKIRIM KE CLOUD DATABASE!`;
       } else {
         hideLoading();
         showNotif('TIDAK ADA DATA VALID DENGAN 2 KOLOM (KOLOM A & KOLOM B)!', 'warning');
