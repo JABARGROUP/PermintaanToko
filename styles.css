@@ -478,7 +478,7 @@ body {
 
 .chatBody {
   flex: 1;
-  padding: 12px;
+  padding: 10px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -486,32 +486,48 @@ body {
   background: var(--bg-header);
 }
 
+/* PESAN SAYA / KITA (DIBALAS / DIKIRIM) - ALIGN RIGHT / KANAN */
 .chatUser {
-  align-self: flex-end;
-  background: var(--primary);
-  color: #ffffff;
-  padding: 8px 12px;
-  border-radius: 12px 12px 2px 12px;
-  max-width: 82%;
-  font-size: 12px;
+  align-self: flex-end !important;
+  text-align: right !important;
+  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+  color: #ffffff !important;
+  padding: 7px 11px !important;
+  border-radius: 14px 14px 2px 14px !important;
+  max-width: 80% !important;
+  font-size: 11.5px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
 }
 
+/* PESAN LAWAN BICARA (MASUK / DIBALAS SESEORANG) - ALIGN LEFT / KIRI */
 .chatAdmin {
-  align-self: flex-start;
-  background: var(--bg-box);
-  color: var(--text-main);
-  border: 1px solid var(--border-color);
-  padding: 8px 12px;
-  border-radius: 12px 12px 12px 2px;
-  max-width: 82%;
-  font-size: 12px;
+  align-self: flex-start !important;
+  text-align: left !important;
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-color) !important;
+  padding: 7px 11px !important;
+  border-radius: 14px 14px 14px 2px !important;
+  max-width: 80% !important;
+  font-size: 11.5px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+.chatText {
+  font-size: 11.5px !important;
+  line-height: 1.4 !important;
+  word-break: break-word !important;
 }
 
 .chatTime {
-  font-size: 9px;
-  opacity: 0.7;
-  margin-top: 4px;
-  text-align: right;
+  font-size: 8.5px !important;
+  opacity: 0.75 !important;
+  margin-top: 3px !important;
+  text-align: right !important;
 }
 
 .chatFooter {
@@ -524,9 +540,9 @@ body {
 
 .chatFooter input {
   flex: 1;
-  padding: 8px 12px;
+  padding: 7px 12px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 .chatFooter button {
@@ -1032,12 +1048,12 @@ input:focus, select:focus, textarea:focus {
   position: relative !important;
 }
 
-/* STICKY UNIFIED HEADER DASHBOARD */
+/* UNIFIED HEADER & DATA CONTAINER - NON-STICKY (NO SEPARATE HEADER SCROLL) */
 .lastHeader {
   flex-shrink: 0 !important;
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 10 !important;
+  position: relative !important;
+  top: auto !important;
+  z-index: 1 !important;
   background: var(--bg-header) !important;
   color: var(--text-muted) !important;
   border: none !important;
@@ -1045,7 +1061,7 @@ input:focus, select:focus, textarea:focus {
   border-radius: 0 !important;
   text-align: left !important;
   font-weight: 700 !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+  box-shadow: none !important;
 }
 
 #lastData {
@@ -1058,18 +1074,19 @@ input:focus, select:focus, textarea:focus {
   flex: none !important;
 }
 
-/* LAPTOP / PC VIEW: EVEN BALANCED SPACING, FULL CONTAINER WIDTH (100%) */
+/* FULL SCREEN WIDTH AUTO-FIT GRID: 100% STRETCH & PERFECT VERTICAL COLUMN ALIGNMENT */
 .lastHeader, .lastItem {
   display: grid !important;
-  grid-template-columns: 1.2fr 2.2fr 2.6fr 1.5fr !important;
+  grid-template-columns: minmax(90px, 1fr) minmax(160px, 1.8fr) minmax(180px, 2.5fr) minmax(120px, 1.2fr) !important;
   align-items: center !important;
-  gap: 12px !important;
+  gap: 10px !important;
   padding: 10px 14px !important;
   width: 100% !important;
   min-width: 100% !important;
   font-size: 12.5px !important;
   box-sizing: border-box !important;
-  white-space: nowrap !important;
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 
 .lastHeader > div {
@@ -1414,14 +1431,20 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* COMPACT POPUP DIMENSIONS FOR CONFIRM & REJECT POPUPS */
-/* SINGLE-LINE NO WRAPTEXT FOR ALL POPUPS */
+/* AUTO-WRAP TEXT FOR ALL POPUP CONFIRMATIONS, NOTIFICATIONS & MESSAGES */
 .popupNotifBody p,
 .popupNotifCard p,
 #confirmMessage,
 #popupNotifMessage,
 .confirmBox p,
+.rejectBodyPopup p {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.5 !important;
+}
+
 .rejectHeaderPopup,
-.rejectBodyPopup p,
 .popupHeader span,
 .popupHeader,
 .popupBox h3,
@@ -1570,7 +1593,7 @@ input:focus, select:focus, textarea:focus {
   -webkit-overflow-scrolling: touch !important;
 }
 
-/* BEAUTIFUL THEME-MATCHED POPUP CLOSE BUTTON (X ONLY, WARNA MENGIKUTI TEMA) */
+/* ALL POPUP CLOSE BUTTONS (BOLD BRIGHT RED 'X') */
 .popupClose,
 .closeViewer,
 .chatClose,
@@ -1579,15 +1602,16 @@ input:focus, select:focus, textarea:focus {
 .detailHeader button {
   background: transparent !important;
   border: none !important;
-  color: var(--primary) !important;
+  color: #ef4444 !important;
   font-size: 26px !important;
-  font-weight: 800 !important;
+  font-weight: 900 !important;
   line-height: 1 !important;
   cursor: pointer !important;
   padding: 0 4px !important;
   margin: 0 !important;
   outline: none !important;
   box-shadow: none !important;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.5) !important;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -2398,10 +2422,9 @@ button.btnKembali {
     opacity: 0.12 !important;
   }
 
-  /* PC PAGE CONTAINERS & ALIGNED DASHBOARD CARDS */
   .page, .page.active, #dashboardPage, #riwayatPage, #masterDbPage, #userManagementPage {
     padding-top: 10px !important;
-    padding-bottom: 10px !important;
+    padding-bottom: 20px !important;
     padding-left: 6px !important;
     padding-right: 6px !important;
     width: 100% !important;
@@ -2409,6 +2432,11 @@ button.btnKembali {
     margin-left: 0 !important;
     margin-right: 0 !important;
     box-sizing: border-box !important;
+  }
+
+  #dashboardPage {
+    height: calc(100vh - 84px) !important;
+    padding-bottom: 16px !important;
   }
 
   .dashboardTop,
@@ -2424,6 +2452,7 @@ button.btnKembali {
   #detailDashboard {
     padding: 14px 14px !important;
     border-radius: 16px !important;
+    margin-bottom: 18px !important;
   }
 
   #detailDashboard #dashboardRecentTitle {
@@ -2442,26 +2471,64 @@ button.btnKembali {
   #detailDashboard #lastData {
     max-height: none !important;
     flex: 1 !important;
-    min-width: 580px !important;
+    min-width: 100% !important;
   }
 
   .lastHeader, .lastItem {
     width: 100% !important;
-    min-width: 580px !important;
-    padding: 10px 8px !important;
+    min-width: 100% !important;
+    padding: 10px 6px !important;
     font-size: 11.5px !important;
     display: grid !important;
-    grid-template-columns: 85px 165px 1fr 125px !important;
-    gap: 8px !important;
+    grid-template-columns: minmax(70px, 1fr) minmax(130px, 1.8fr) minmax(140px, 2.2fr) minmax(95px, 1.2fr) !important;
+    gap: 6px !important;
     align-items: center !important;
     box-sizing: border-box !important;
-    white-space: nowrap !important;
+    white-space: normal !important;
+    word-break: break-word !important;
   }
 
   .lastHeader > div, .lastItem > div {
     overflow: visible !important;
     text-overflow: clip !important;
-    white-space: nowrap !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+  }
+
+  /* MOBILE HP POPUP DETAIL TABLE: STRETCH FULL WIDTH LEFT-RIGHT WITH 1MM GAP FROM POPUP BOX EDGE */
+  #popupDetail .popupBoxDetail,
+  .popupBoxDetail {
+    width: calc(100vw - 2mm) !important;
+    max-width: calc(100vw - 2mm) !important;
+    margin-left: 1mm !important;
+    margin-right: 1mm !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  #popupDetail .popupHeader {
+    padding: 12px 10px !important;
+  }
+
+  #popupDetail .popupContent {
+    padding: 10px 1mm !important;
+    box-sizing: border-box !important;
+  }
+
+  #popupDetail .popupTableScroll {
+    width: 100% !important;
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+    border-radius: 8px !important;
+  }
+
+  #popupDetail .detailTable2 {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  #popupDetail .popupDetailActions {
+    padding: 8px 1mm !important;
   }
 }
 
