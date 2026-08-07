@@ -842,26 +842,42 @@ input:focus, select:focus, textarea:focus {
 .btnDownload:hover { background: #15803d; }
 
 .btnIcon {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 8px;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  margin-right: 4px;
-  color: #fff;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  border: none !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  cursor: pointer !important;
+  margin-right: 4px !important;
+  color: #ffffff !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 15 !important;
+  flex-shrink: 0 !important;
+  transition: transform 0.15s ease, opacity 0.15s ease !important;
 }
 
-.btnEdit { background: var(--primary); }
-.btnDelete { background: #ef4444; }
-.btnApprove { background: #16a34a; }
-.btnReject { background: #dc2626; }
-.btnDone { background: #7c3aed; }
-.btnView, .btnInfo { background: #0ea5e9; }
-.btnPdf { background: #ea580c; }
-.btnPdf:hover { background: #c2410c; }
+.btnIcon:hover {
+  transform: scale(1.1) !important;
+  opacity: 0.9 !important;
+}
+
+.btnIcon:active {
+  transform: scale(0.95) !important;
+}
+
+.btnEdit { background: var(--primary) !important; }
+.btnDelete { background: #ef4444 !important; }
+.btnApprove { background: #16a34a !important; }
+.btnReject { background: #dc2626 !important; }
+.btnDone { background: #7c3aed !important; }
+.btnView, .btnInfo { background: #0ea5e9 !important; }
+.btnPdf { background: #ea580c !important; }
+.btnPdf:hover { background: #c2410c !important; }
 
 /* DASHBOARD CARDS & STRUCTURE - USER NAME & STAT CARDS FIXED AT TOP */
 #dashboardPage {
@@ -915,32 +931,43 @@ input:focus, select:focus, textarea:focus {
   margin-top: 2px !important;
 }
 
-/* MODERN ULTRA-PREMIUM 3D DASHBOARD METRIC CARDS (FLEX WRAP AUTO-FLOW) */
+/* MODERN ULTRA-PREMIUM 3D DASHBOARD METRIC CARDS (2 COLUMNS x 2 ROWS FIXED FOR COMPACT / F12 / MOBILE SCREENS) */
 .stats {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 10px !important;
-  margin: 6px 0 4px 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 8px !important;
+  margin: 6px 0 6px 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 1024px) {
+  .stats {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 10px !important;
+  }
 }
 
 .cardStat {
-  flex: 1 1 calc((100% - 30px) / 4) !important;
-  min-width: 170px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 12px 14px !important;
+  padding: 10px 12px !important;
   border-radius: 16px !important;
   color: #ffffff !important;
   cursor: pointer;
   overflow: hidden;
-  min-height: 78px !important;
-  height: 82px !important;
-  max-height: 86px !important;
+  min-height: 72px !important;
+  height: 76px !important;
+  max-height: 82px !important;
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   transform: translateZ(0);
+  box-sizing: border-box !important;
 }
 
 .cardStat:hover {
