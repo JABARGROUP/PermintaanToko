@@ -1716,7 +1716,7 @@ section#masterDbPage.page.active {
   background: var(--bg-box) !important;
   backdrop-filter: blur(16px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-  display: flex !important;
+  display: flex;
   justify-content: space-around !important;
   align-items: center !important;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
@@ -2069,17 +2069,22 @@ section#masterDbPage.page.active {
 .btnBatal { background: #64748b; color: #fff; }
 .btnHapus { background: #dc2626; color: #fff; }
 
-/* COMPACT 2-COLUMN POPUP AKUN BOX */
+/* COMPACT & PROPORTIONAL POPUP AKUN BOX */
 .akunBox {
-  width: 520px !important;
-  max-width: 92vw !important;
+  width: 500px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 92vh !important;
+  overflow: visible !important;
   padding: 18px 20px !important;
   border-radius: 18px !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
 }
 
 .akunBox h2 {
   font-size: 16px !important;
-  margin-bottom: 12px !important;
+  margin-bottom: 10px !important;
   color: var(--primary) !important;
   text-align: center !important;
 }
@@ -2087,32 +2092,33 @@ section#masterDbPage.page.active {
 .akunGrid {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
-  gap: 10px 14px !important;
+  gap: 8px 12px !important;
 }
 
 .akunGrid label {
-  margin-top: 2px !important;
+  margin-top: 1px !important;
   margin-bottom: 3px !important;
   font-size: 10.5px !important;
 }
 
 .akunGrid input {
-  padding: 8px 10px !important;
+  padding: 7px 10px !important;
   font-size: 12px !important;
+  height: 36px !important;
 }
 
 /* EQUAL BUTTONS IN POPUP AKUN */
 .akunButton {
   display: flex !important;
-  gap: 10px !important;
-  margin-top: 16px !important;
+  gap: 8px !important;
+  margin-top: 10px !important;
   width: 100% !important;
 }
 
 .akunButton button {
   flex: 1 !important;
-  height: 40px !important;
-  padding: 8px 14px !important;
+  height: 38px !important;
+  padding: 6px 12px !important;
   font-size: 12.5px !important;
   border-radius: 10px !important;
   border: none !important;
@@ -2429,39 +2435,109 @@ section#masterDbPage.page.active {
   margin-top: 50px;
 }
 
-/* LIGHTBOX & TOAST */
-#imageViewer {
-  position: fixed;
-  inset: 0;
-  display: none;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0,0,0,.92);
-  z-index: 999999;
+.btnPhotoView {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+}
+.btnPhotoView:hover {
+  background: #0369a1 !important;
+  transform: translateY(-2px) scale(1.05) !important;
 }
 
-#viewerImage { max-width: 88vw; max-height: 80vh; border-radius: 12px; object-fit: contain; }
+/* LIGHTBOX IMAGE VIEWER & PAN/ZOOM ENGINE */
+#imageViewer {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: none;
+  background: #000000 !important;
+  z-index: 99999999 !important;
+  overflow: hidden !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  touch-action: none !important;
+}
+
+.imageViewerCanvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 100000000 !important;
+  touch-action: none !important;
+  user-select: none !important;
+}
+
+#viewerImage {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  margin: auto !important;
+  max-width: 90vw !important;
+  max-height: 82vh !important;
+  border-radius: 10px !important;
+  object-fit: contain !important;
+  transform-origin: center center !important;
+  will-change: transform !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  pointer-events: auto !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important;
+}
 
 .closeViewer {
-  position: absolute;
-  top: 20px;
-  right: 25px;
-  color: #ffffff;
-  font-size: 32px;
-  font-weight: 700;
-  cursor: pointer;
-  z-index: 1003;
-  line-height: 1;
-  transition: opacity 0.2s;
+  position: absolute !important;
+  top: 18px !important;
+  right: 24px !important;
+  color: #ffffff !important;
+  font-size: 30px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  z-index: 100000002 !important;
+  line-height: 1 !important;
+  background: rgba(0,0,0,0.6) !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  transition: opacity 0.2s, transform 0.2s;
 }
 
 .closeViewer:hover {
   opacity: 0.8;
+  transform: scale(1.08);
 }
 
 /* LIGHTBOX BOTTOM CONTROL BAR: COUNTER + ZOOM CONTROLS */
 .viewerBottomBar {
-  position: absolute;
+  position: absolute !important;
+  bottom: 25px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  padding: 8px 20px !important;
+  border-radius: 30px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  z-index: 100000002 !important;
+}
   bottom: 25px;
   left: 50%;
   transform: translateX(-50%);
@@ -3341,15 +3417,16 @@ div.rowHighlightOrange {
   display: none;
   align-items: center !important;
   justify-content: center !important;
-  padding: 10px !important;
+  padding: 10px 1mm !important;
 }
 
 #popupDetail .popupBoxDetail,
 .popupOverlay #popupDetail .popupBoxDetail,
 .popupBoxDetail {
   width: 840px !important;
-  max-width: calc(100vw - 16px) !important;
-  max-height: 84vh !important;
+  max-width: calc(100vw - 2mm) !important;
+  height: auto !important;
+  max-height: 85vh !important;
   margin: auto !important;
   padding: 0 !important;
   border-radius: 14px !important;
@@ -3427,10 +3504,10 @@ div.rowHighlightOrange {
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
-  justify-content: flex-start !important;
+  justify-content: center !important;
   align-items: center !important;
-  gap: 2cm !important;
-  padding: 8px 18px !important;
+  gap: 5cm !important;
+  padding: 10px 18px !important;
   margin-top: 2mm !important;
   margin-bottom: 0 !important;
   border-bottom: 1px solid #e2e8f0 !important;
@@ -3451,7 +3528,7 @@ div.rowHighlightOrange {
 }
 
 .detailHeaderInfo .tokoWrap {
-  text-align: left !important;
+  text-align: right !important;
   line-height: 1.2 !important;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
@@ -3468,7 +3545,7 @@ div.rowHighlightOrange {
   color: #0f172a !important;
 }
 
-/* FLAT NON-3D TABLE & AUTO-FIT COMPACT ROW HEIGHT FOR #popupMessage */
+/* FLAT NON-3D TABLE & THIN BORDER GRIDLINES FOR #popupMessage */
 #popupMessage table,
 #popupMessage .detailTable2,
 #popupDetail table.detailTable2,
@@ -3477,11 +3554,11 @@ div.rowHighlightOrange {
   min-width: 100% !important;
   height: auto !important;
   table-layout: auto !important;
-  border-collapse: separate !important;
+  border-collapse: collapse !important;
   border-spacing: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-  border: none !important;
+  border: 1px solid #e2e8f0 !important;
   box-shadow: none !important;
   text-shadow: none !important;
   filter: none !important;
@@ -3512,8 +3589,7 @@ div.rowHighlightOrange {
   padding: 6px 14px !important;
   height: auto !important;
   line-height: 1.2 !important;
-  border: none !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
   box-shadow: none !important;
   text-shadow: none !important;
   filter: none !important;
@@ -3548,8 +3624,7 @@ div.rowHighlightOrange {
   line-height: 1.2 !important;
   font-size: 12px !important;
   font-weight: 400 !important;
-  border: none !important;
-  border-bottom: 1px solid #e2e8f0 !important;
+  border: 1px solid #e2e8f0 !important;
   background: #ffffff !important;
   color: #0f172a !important;
   text-align: left !important;
@@ -3642,4 +3717,307 @@ div.rowHighlightOrange {
 #confirmModal,
 #loadingOverlay {
   z-index: 9999999 !important;
+}
+
+/* STRICT HIDE FOR BOTTOM MENU ON LOGIN PAGE ONLY */
+#bottomMenu.login-hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ==========================================================================
+   NEW EXCLUSIVE POPUP DETAIL BARANG V2 STYLING
+   ========================================================================== */
+#popupDetailBarangV2 {
+  z-index: 999999 !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 10px 0 !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(4px) !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  box-sizing: border-box !important;
+}
+
+#popupDetailBarangV2 .popupBoxDetailV2,
+.popupBoxDetailV2 {
+  width: calc(100vw - 2mm) !important;
+  min-width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
+  height: auto !important;
+  max-height: 90vh !important;
+  margin: auto 1mm !important;
+  padding: 0 !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4) !important;
+  background: var(--bg-box) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+}
+
+#popupDetailBarangV2 .popupHeaderV2 {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 16px !important;
+  padding: 14px 18px !important;
+  margin: 0 !important;
+  border-radius: 18px 18px 0 0 !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+#popupDetailBarangV2 #popupTitleV2 {
+  font-weight: 800 !important;
+  text-align: center !important;
+  font-size: 16px !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  margin: 0 auto !important;
+  color: #ffffff !important;
+}
+
+#popupDetailBarangV2 .popupCloseV2 {
+  position: absolute !important;
+  right: 14px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: #ef4444 !important;
+  font-weight: 900 !important;
+  font-size: 28px !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  line-height: 1 !important;
+  padding: 0 4px !important;
+  transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+
+#popupDetailBarangV2 .popupCloseV2:hover {
+  transform: translateY(-50%) scale(1.15) !important;
+  color: #dc2626 !important;
+}
+
+#popupDetailBarangV2 #popupBodyV2,
+.popupCardBodyContainerV2 {
+  width: 100% !important;
+  min-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  background: var(--bg-box) !important;
+  border: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  flex: 0 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: calc(85vh - 55px) !important;
+}
+
+.detailHeaderInfoV2 {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 10px 18px !important;
+  margin-top: 2mm !important;
+  margin-bottom: 0 !important;
+  border-bottom: 1px solid var(--border-color, #e2e8f0) !important;
+  font-size: 13px !important;
+  color: var(--text-color, #0f172a) !important;
+  flex-shrink: 0 !important;
+  background: var(--card-bg, #ffffff) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+}
+
+.detailHeaderInfoV2 .noSuratWrapV2 {
+  text-align: left !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.detailHeaderInfoV2 .tokoWrapV2 {
+  text-align: right !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+}
+
+.detailHeaderInfoV2 .noSuratValV2 {
+  color: var(--primary) !important;
+  font-weight: 700 !important;
+}
+
+.detailHeaderInfoV2 .tokoValV2 {
+  font-weight: 700 !important;
+  color: var(--text-color, #0f172a) !important;
+}
+
+/* THIN BORDER GRIDLINES FOR TABLE V2 - FULL SCREEN & BALANCED COLUMNS */
+.detailTableV2 {
+  width: 100% !important;
+  min-width: 750px !important;
+  height: auto !important;
+  table-layout: auto !important;
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--border-color, #e2e8f0) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  flex: 0 0 auto !important;
+}
+
+.detailTableV2 thead {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.detailTableV2 th {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  letter-spacing: 0.3px !important;
+  padding: 6px 14px !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  white-space: nowrap !important;
+  width: auto !important;
+}
+
+.detailTableV2 tr {
+  height: auto !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.detailTableV2 td {
+  padding: 6px 14px !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  border: 1px solid var(--border-color) !important;
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
+  text-align: left !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  width: auto !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.popupDetailActionsV2 {
+  padding: 4px 14px !important;
+  margin: 0 !important;
+  border-top: none !important;
+  background: transparent !important;
+  border-radius: 0 0 18px 18px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  box-sizing: border-box !important;
+  flex-wrap: wrap !important;
+}
+
+/* RESPONSIVE SCALING & AUTOMATIC SHRINKING ON MOBILE / PHONE SCREENS */
+@media (max-width: 600px) {
+  #popupDetailBarangV2 .popupBoxDetailV2,
+  .popupBoxDetailV2 {
+    width: calc(100vw - 2mm) !important;
+    max-width: calc(100vw - 2mm) !important;
+    padding: 0 !important;
+    margin: auto 1mm !important;
+    border-radius: 14px !important;
+  }
+
+  .detailHeaderInfoV2 {
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+  }
+
+  .detailHeaderInfoV2 .noSuratWrapV2,
+  .detailHeaderInfoV2 .tokoWrapV2 {
+    font-size: 11px !important;
+  }
+
+  .tableCardV2 {
+    max-height: 55vh !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y !important;
+  }
+
+  .detailTableV2 {
+    width: 100% !important;
+    min-width: 580px !important;
+    font-size: 11px !important;
+  }
+
+  .detailTableV2 th {
+    padding: 6px 8px !important;
+    font-size: 10.5px !important;
+    letter-spacing: 0px !important;
+    white-space: nowrap !important;
+  }
+
+  .detailTableV2 td {
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+  }
+
+  .popupDetailActionsV2 {
+    padding: 6px 10px !important;
+    gap: 8px !important;
+  }
 }
