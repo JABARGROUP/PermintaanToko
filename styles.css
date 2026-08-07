@@ -237,7 +237,7 @@ body {
 
 /* PAGE CONTAINERS & FADE ANIMATIONS - ALL PAGES WIDE & FULL WIDTH */
 .page {
-  display: none;
+  display: none !important;
   padding: 16px 8px !important;
   animation: fade .25s ease-out;
   padding-bottom: 95px;
@@ -247,7 +247,7 @@ body {
 }
 
 .page.active {
-  display: block;
+  display: block !important;
   min-height: calc(100vh - 60px) !important;
   height: auto !important;
   overflow-y: auto !important;
@@ -1799,12 +1799,13 @@ section#masterDbPage.page.active {
   border-bottom: none !important;
   border-radius: 0 !important;
   margin: 0 !important;
-  z-index: 9999 !important;
+  z-index: 99999999 !important;
   padding: 0 4px !important;
   box-sizing: border-box !important;
   transform: translateY(0) !important;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, background 0.3s ease, border-color 0.3s ease !important;
   opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 #bottomMenu.hide-bottom-menu {
@@ -1828,6 +1829,9 @@ section#masterDbPage.page.active {
   height: 100% !important;
   padding: 4px 0 !important;
   border-radius: 12px !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 100000000 !important;
   transition: color 0.2s ease, transform 0.2s ease, background 0.2s ease !important;
 }
 
@@ -2827,8 +2831,12 @@ section#masterDbPage.page.active {
     touch-action: auto !important;
   }
 
-  #dashboardPage, #riwayatPage, #masterDbPage,
-  section#dashboardPage.page.active, section#riwayatPage.page.active, section#masterDbPage.page.active {
+  section#dashboardPage.page.active,
+  section#riwayatPage.page.active,
+  section#masterDbPage.page.active,
+  #dashboardPage.active,
+  #riwayatPage.active,
+  #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
     height: calc(100vh - 60px) !important;

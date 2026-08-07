@@ -7021,7 +7021,7 @@ function downloadExcel() {
 }
 
 function closeAllPopups() {
-  const allOverlays = document.querySelectorAll('.popupOverlay, #imageViewer, #rejectOverlay, #confirmOverlay, #pdfModal, #popupDetail, #popupAkun, #popupUserForm, #popupTTD, #popupNotifList, #popupBantuan');
+  const allOverlays = document.querySelectorAll('.popupOverlay, #imageViewer, #rejectOverlay, #confirmOverlay, #pdfModal, #popupDetail, #popupDetailBarangV2, #popupAkun, #popupUserForm, #popupTTD, #popupNotifList, #popupBantuan, #scannerModal, #popupTambahToko, #popupPdfModelsModal');
   allOverlays.forEach(el => {
     if (el) {
       el.style.display = 'none';
