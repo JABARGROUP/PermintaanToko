@@ -322,17 +322,13 @@ function tambahNotifikasiSistem(targetRoles, targetArea, message, noSurat = '') 
 
 function getAccessibleNotifications() {
   if (!currentUser) return [];
-  const notifs = getSystemNotifications();
+  const notifs = (typeof getSystemNotifications === 'function' ? getSystemNotifications() : []) || [];
+  const requests = (typeof getRequestsFromDB === 'function' ? getRequestsFromDB() : []) || [];
   const userCat = String(currentUser.category || '').toUpperCase();
   const userArea = String(currentUser.area || '').toUpperCase();
   const userUname = String(currentUser.username || '').toUpperCase();
   const userFullName = String(currentUser.fullName || '').toUpperCase();
   const isSysAdmin = userCat === 'ADMIN' || userUname === 'ADMIN';
-
-  // JIKA LOGGED IN SEBAGAI ADMIN -> TIDAK MENAMPILKAN NOTIFIKASI
-  if (isSysAdmin) {
-    return [];
-  }
 
   let filtered = notifs.filter(n => {
     if (!n) return false;
@@ -346,13 +342,19 @@ function getAccessibleNotifications() {
 
     // 2. FILTER ROLE / PER LOGIN CATEGORY
     const targetRoles = Array.isArray(n.targetRoles) ? n.targetRoles.map(r => String(r).toUpperCase()) : [];
-    const roleMatch = (targetRoles.includes('ALL') || targetRoles.includes(userCat));
+    const roleMatch = (
+      targetRoles.includes('ALL') ||
+      targetRoles.includes(userCat) ||
+      targetRoles.includes('ADMIN') ||
+      (userCat === 'DM' && targetRoles.includes('SALES')) ||
+      (userCat === 'SALES' && targetRoles.includes('DM'))
+    );
     if (!roleMatch) return false;
 
-    // 3. STRICT TOKO / SALES FILTER: Only show notification if request belongs to this logged-in TOKO/SALES user
-    if (userCat === 'TOKO' || userCat === 'SALES') {
-      if (n.noSurat) {
-        const req = requests.find(r => r.noSurat === n.noSurat);
+    // 3. STRICT TOKO FILTER: Only filter TOKO user's own requests
+    if (userCat === 'TOKO') {
+      if (n.noSurat && Array.isArray(requests)) {
+        const req = requests.find(r => r && r.noSurat === n.noSurat);
         if (req) {
           const isMyRequest = (
             req.userId === currentUser.id ||
@@ -367,8 +369,8 @@ function getAccessibleNotifications() {
 
     // 4. STRICT SERVICE AREA FILTER: Only show notifications for requests in currentUser's area
     if (userCat === 'SERVICE') {
-      if (n.noSurat) {
-        const req = requests.find(r => r.noSurat === n.noSurat);
+      if (n.noSurat && Array.isArray(requests)) {
+        const req = requests.find(r => r && r.noSurat === n.noSurat);
         if (req && req.area && req.area.toUpperCase() !== userArea && userArea !== 'ALL') {
           return false;
         }
@@ -378,8 +380,32 @@ function getAccessibleNotifications() {
     return true;
   });
 
-  // SINTESIS STATUS TRANSAKSI PENDING UNTUK USER TOKO / SALES ONLY
-  if (userCat === 'TOKO' || userCat === 'SALES') {
+  // SINTESIS PERMINTAAN TUNGGU APPROVAL DM UNTUK USER DM / SALES / ADMIN
+  if (userCat === 'DM' || userCat === 'SALES' || isSysAdmin) {
+    const dmPendingReqs = requests.filter(r => {
+      const isAreaMatch = (!r.area || r.area.toUpperCase() === userArea || userArea === 'ALL' || isSysAdmin);
+      const isWaitingDm = (r.serviceApprove === true) && (r.status === 'PENDING' || String(r.status || '').toUpperCase().includes('DM'));
+      return isAreaMatch && isWaitingDm;
+    });
+
+    dmPendingReqs.forEach(r => {
+      const exists = filtered.some(n => n.noSurat === r.noSurat && String(n.message || '').includes('DM'));
+      if (!exists) {
+        filtered.unshift({
+          id: `NTF-DM-${r.noSurat}`,
+          targetRoles: ['DM', 'SALES', 'ADMIN'],
+          targetArea: r.area || userArea,
+          message: `MOHON APPROVAL DM: Permintaan #${r.noSurat} dari ${r.toko} telah disetujui Service & menanti Approval DM Anda.`,
+          noSurat: r.noSurat,
+          time: r.tanggalInput || r.createdAt || getFormattedDateDDMMYYYY(),
+          readBy: []
+        });
+      }
+    });
+  }
+
+  // SINTESIS STATUS TRANSAKSI PENDING UNTUK USER TOKO ONLY
+  if (userCat === 'TOKO') {
     const tokoPendingReqs = requests.filter(r => {
       const isMine = (
         r.userId === currentUser.id ||
@@ -443,9 +469,7 @@ function updateNotifBellCounter() {
   const badgeEl = document.getElementById('notifBellBadge');
   if (!bellBtn || !badgeEl) return;
 
-  const isSysAdmin = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
-
-  if (!currentUser || isSysAdmin || (document.getElementById('loginPage') && document.getElementById('loginPage').classList.contains('active'))) {
+  if (!currentUser || (document.getElementById('loginPage') && document.getElementById('loginPage').classList.contains('active'))) {
     bellBtn.style.setProperty('display', 'none', 'important');
     return;
   }
@@ -2033,11 +2057,10 @@ async function prosesLogin() {
     if (user) {
       currentUser = user;
 
+      appStorage.setItem(SESSION_KEY, JSON.stringify(user));
       if (remember) {
-        appStorage.setItem(SESSION_KEY, JSON.stringify(user));
         appStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, JSON.stringify({ username: u, password: p }));
       } else {
-        appStorage.removeItem(SESSION_KEY);
         appStorage.removeItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
       }
 
@@ -2055,10 +2078,14 @@ async function prosesLogin() {
       }, 150);
 
     } else {
+      currentUser = null;
+      appStorage.removeItem(SESSION_KEY);
       catatLogLogin(u, '-', '-', 'GAGAL - PASSWORD SALAH');
       showNotif('USERNAME ATAU PASSWORD SALAH!', 'error');
     }
   } catch (error) {
+    currentUser = null;
+    appStorage.removeItem(SESSION_KEY);
     console.error("Login error:", error);
     showNotif('GAGAL MEMPROSES LOGIN!', 'error');
   } finally {
@@ -3264,7 +3291,8 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
       showNotif(`PERMINTAAN #${noSurat} DATA BERHASIL DISIMPAN!`, 'success');
       bersihkanForm();
 
-      // REMINDER DIKIRIM HANYA VIA WHATSAPP (FONNTE API), TIDAK LEWAT SYSTEM BELL NOTIFIKASI
+      tambahNotifikasiSistem(['SERVICE', 'ADMIN', 'DM'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI TOKO ${toko} (PENDING).`, noSurat);
+
       const allUsers = getUsersFromDB();
       const serviceUsers = allUsers.filter(u => u.category === 'SERVICE' && (u.area === currentUser.area || u.area === 'ALL'));
       serviceUsers.forEach(srv => {
@@ -3691,7 +3719,8 @@ function approveService(noSurat) {
         saveRequestsToDB(requests);
         showNotif(`APPROVE BERHASIL`, 'info');
 
-        // REMINDER DIKIRIM HANYA VIA WHATSAPP (FONNTE API), TIDAK LEWAT SYSTEM BELL NOTIFIKASI
+        tambahNotifikasiSistem(['DM', 'ADMIN', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DISETUJUI SERVICE (${currentUser.fullName || currentUser.username}). MOHON APPROVAL DM.`, noSurat);
+
         const users = getUsersFromDB();
         const dmUsers = users.filter(u => u.category === 'DM' && (u.area === requests[idx].area || u.area === 'ALL'));
         dmUsers.forEach(dm => {
@@ -4140,10 +4169,10 @@ function lihatDetail(noSurat, fromDashboard = false) {
   if (!bodyBox) return;
 
   let headerInfoHtml = `
-    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; align-items: center !important; width: 100% !important; padding: 6px 12px !important; box-sizing: border-box !important;">
-      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; text-align: left !important; white-space: nowrap !important; flex: 0 0 auto !important;">
-        <span style="opacity: 0.85; font-weight: 500;">NO SURAT : </span>
-        <span class="noSuratValV2" style="color: var(--primary) !important; font-weight: 700 !important; margin-left: 4px;">${req.noSurat || '-'}</span>
+    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; align-items: center !important; width: 100% !important; padding: 6px 12px !important; box-sizing: border-box !important; background: transparent !important;">
+      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; text-align: left !important; white-space: nowrap !important; flex: 0 0 auto !important; background: transparent !important;">
+        <span style="opacity: 0.85; font-weight: 500; color: var(--text-main);">NO SURAT : </span>
+        <span class="noSuratValV2" style="color: var(--primary) !important; font-weight: 700 !important; margin-left: 4px; background: transparent !important;">${req.noSurat || '-'}</span>
       </div>
     </div>
   `;
@@ -4156,9 +4185,9 @@ function lihatDetail(noSurat, fromDashboard = false) {
     try { itemsList = JSON.parse(rawItems || '[]'); } catch (e) { itemsList = []; }
   }
 
-  const thStyleCenter = "width: 55px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid rgba(255,255,255,0.3) !important; position: sticky !important; top: 0 !important; z-index: 100 !important;";
-  const thStyleQty = "width: 60px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid rgba(255,255,255,0.3) !important; position: sticky !important; top: 0 !important; z-index: 100 !important;";
-  const thStyleLeft = (widthPct) => `width: ${widthPct} !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid rgba(255,255,255,0.3) !important; position: sticky !important; top: 0 !important; z-index: 100 !important;`;
+  const thStyleCenter = "width: 55px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; box-shadow: none !important; text-shadow: none !important;";
+  const thStyleQty = "width: 60px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; box-shadow: none !important; text-shadow: none !important;";
+  const thStyleLeft = (widthPct) => `width: ${widthPct} !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; box-shadow: none !important; text-shadow: none !important;`;
 
   const tdStyle = "padding: 7px 10px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; text-align: left !important;";
 

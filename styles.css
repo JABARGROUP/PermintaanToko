@@ -1222,7 +1222,7 @@ input:focus, select:focus, textarea:focus {
   border-bottom: 2px solid rgba(0, 0, 0, 0.2) !important;
   border-right: none !important;
   border-left: none !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  box-shadow: none !important;
   text-shadow: none !important;
   white-space: nowrap !important;
 }
@@ -1248,16 +1248,99 @@ input:focus, select:focus, textarea:focus {
   background: var(--table-hover) !important;
 }
 
+/* GUARANTEE LAST ROW IN ALL TABLES IS UNCOVERED */
+#riwayatData::after,
+#masterDbTableBody::after,
+.historyTable tbody::after,
+#tableMasterDb tbody::after {
+  content: "" !important;
+  display: block !important;
+  height: 90px !important;
+}
+
+.dashboardTable,
 .dashboardTable tr:last-child td,
+#lastData tr:last-child td,
+#lastData .lastItem:last-child {
+  padding-bottom: 1.5cm !important;
+  margin-bottom: 1.5cm !important;
+  border-bottom: none !important;
+}
+
+#userTableBody tr:last-child td,
+#tableUserMgmt tr:last-child td {
+  padding-bottom: 2mm !important;
+  border-bottom: none !important;
+}
+
+#riwayatData tr:last-child td,
 .historyTable tr:last-child td,
+#masterDbTableBody tr:last-child td,
 .masterDbTable tr:last-child td,
-#lastData tr:last-child td {
-  padding-bottom: 6mm !important;
+.detailTable2 tr:last-child td {
+  padding-bottom: 90px !important;
+  border-bottom: none !important;
 }
 
 #lastData {
   background: var(--bg-box) !important;
   color: var(--text-main) !important;
+  padding-bottom: 1.5cm !important;
+  margin-bottom: 1.5cm !important;
+}
+
+#detailDashboard,
+#detailDashboard .tableWrap {
+  padding-bottom: 1.5cm !important;
+  margin-bottom: 1.5cm !important;
+}
+
+#userTableBody tr:last-child td,
+#tableUserMgmt tr:last-child td {
+  padding-bottom: 8px !important;
+  border-bottom: none !important;
+}
+
+#userTableBody,
+#tableUserMgmt {
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#userManagementPage .box:last-of-type,
+#userManagementPage .tableWrap {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#userManagementPage {
+  padding-bottom: 85px !important;
+  margin-bottom: 0 !important;
+}
+
+#masterDbTableBody,
+#riwayatData {
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
+  padding-bottom: 90px !important;
+  margin-bottom: 90px !important;
+}
+
+#riwayatPage,
+#riwayatPage .riwayatContent,
+#masterDbPage {
+  padding-bottom: 100px !important;
+  margin-bottom: 100px !important;
+}
+
+.tableWrap,
+#riwayatPage .tableWrap,
+#masterDbPage .tableWrap {
+  padding-bottom: 40px !important;
+  margin-bottom: 95px !important;
+  max-height: calc(100vh - 280px) !important;
 }
 
 /* FULL SCREEN WIDTH AUTO-FIT GRID: 100% STRETCH & PERFECT VERTICAL COLUMN ALIGNMENT */
@@ -1367,11 +1450,25 @@ input:focus, select:focus, textarea:focus {
   text-align: center !important;
 }
 
-/* EXPLICIT LEFT ALIGNMENT FOR INPUT FORM HEADINGS */
+/* EXPLICIT LEFT ALIGNMENT FOR INPUT FORM HEADINGS & 1MM BOTTOM PADDING FOR #inputPage */
 #inputPage h3,
 #inputPage .box h3,
 #inputPage h3:nth-of-type(2) {
   text-align: left !important;
+}
+
+#inputPage,
+.page#inputPage,
+html body #inputPage {
+  padding-bottom: 1mm !important;
+}
+
+#inputPage .box {
+  padding-bottom: 1mm !important;
+}
+
+#inputPage #btnSimpan {
+  margin-bottom: 1mm !important;
 }
 
 /* DETAIL DATA / RIWAYAT TABLE STYLING - THEME MATCHED BACKGROUND WITH THIN BORDER LINES */
@@ -1395,10 +1492,11 @@ input:focus, select:focus, textarea:focus {
   font-weight: 700 !important;
   text-align: left !important;
   border-right: none !important;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.2) !important;
+  border-bottom: 1px solid var(--border-color) !important;
   padding: 10px 14px !important;
   white-space: nowrap !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
 }
 
 .historyTable th:last-child, #tableMasterDb th:last-child, #tableUserMgmt th:last-child {
@@ -1482,7 +1580,7 @@ tr.blink-row-red td strong,
 
 .historyTable tr:last-child td, #tableMasterDb tr:last-child td, #tableUserMgmt tr:last-child td, .dashboardTable tr:last-child td, .detailTable2 tr:last-child td {
   border-bottom: none !important;
-  padding-bottom: 6mm !important;
+  padding-bottom: 1cm !important;
 }
 
 .historyTable tbody tr:hover td, #tableMasterDb tbody tr:hover td, #tableUserMgmt tbody tr:hover td {
@@ -2080,7 +2178,7 @@ body.design-mode-3d-isometric .dashboardTable th {
 .popupBoxDetail,
 .popupBoxDetailV2,
 #detailContentContainer {
-  padding-bottom: 6mm !important;
+  padding-bottom: 1cm !important;
 }
 
 /* ENFORCE SINGLE LINE 1-ROW (NO WRAPTEXT) WITH HORIZONTAL SCROLL */
@@ -2138,11 +2236,28 @@ table th,
 .dashboardTable thead th,
 .detailTable2 th,
 .detailTableV2 th,
-.tableWrap th {
+.tableWrap th,
+.popupHeader,
+.popupHeaderV2,
+.detailHeaderV2,
+#popupDetail .popupHeader,
+#popupTitleV2 {
   box-shadow: none !important;
   text-shadow: none !important;
   filter: none !important;
   border-radius: 0 !important;
+  background: var(--primary) !important;
+}
+
+.noSuratWrapV2,
+.detailHeaderInfoV2,
+.noSuratValV2,
+#detailHeaderInfoV2 {
+  background: transparent !important;
+  color: var(--text-main) !important;
+  box-shadow: none !important;
+  border: none !important;
+  text-shadow: none !important;
 }
 
 .detailTable2 td {
@@ -2755,6 +2870,11 @@ table th,
     padding: 12px 6px 95px 6px !important;
   }
 
+  #inputPage,
+  .page#inputPage {
+    padding-bottom: 1mm !important;
+  }
+
   .header {
     flex-direction: column;
     align-items: flex-start;
@@ -2811,13 +2931,15 @@ table th,
     position: relative !important;
     height: calc(100vh - 310px) !important;
     max-height: calc(100vh - 310px) !important;
-    min-height: 240px !important;
+    min-height: 200px !important;
     overflow-x: auto !important;
     overflow-y: scroll !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y !important;
     border-radius: 10px !important;
     box-sizing: border-box !important;
+    margin-bottom: 1cm !important;
+    padding-bottom: 1cm !important;
   }
 
   .tableWrap,
@@ -2825,10 +2947,20 @@ table th,
   #masterDbPage .tableWrap {
     overflow-x: auto !important;
     overflow-y: auto !important;
-    max-height: calc(100vh - 180px) !important;
+    max-height: calc(100vh - 280px) !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: auto !important;
     border-radius: 10px !important;
+    margin-bottom: 95px !important;
+    padding-bottom: 40px !important;
+  }
+
+  #userManagementPage .tableWrap {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
   }
 
   .historyTable thead,
@@ -2868,8 +3000,8 @@ table th,
   .popupBoxDetail,
   .popupBoxDetailV2,
   #detailContentContainer {
-    padding: 0 0 6mm 0 !important;
-    padding-bottom: 6mm !important;
+    padding: 0 0 1cm 0 !important;
+    padding-bottom: 1cm !important;
     box-sizing: border-box !important;
   }
 
