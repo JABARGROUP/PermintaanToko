@@ -1662,7 +1662,8 @@ section#masterDbPage.page.active {
   overflow-x: auto !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  touch-action: pan-x pan-y !important;
+  touch-action: auto !important;
+  overscroll-behavior: contain !important;
   border-radius: 12px !important;
   box-sizing: border-box !important;
 }
@@ -2679,10 +2680,17 @@ section#masterDbPage.page.active {
     gap: 8px;
   }
 
-  .tableWrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    border-radius: 10px;
+  .tableWrap,
+  #detailDashboard .tableWrap,
+  #riwayatPage .tableWrap,
+  #masterDbPage .tableWrap {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    max-height: calc(100vh - 200px) !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: auto !important;
+    overscroll-behavior: contain !important;
+    border-radius: 10px !important;
   }
 
   .historyTable thead,
@@ -4104,12 +4112,14 @@ div.rowHighlightOrange {
   .tableWrap,
   .dashboardTableContainer,
   #detailDashboard .tableWrap,
+  #riwayatPage .tableWrap,
+  #masterDbPage .tableWrap,
   .tableCardV2,
   #popupDetailBarangV2 .tableWrap,
   #popupDetail .tableWrap {
     overflow-x: auto !important;
     overflow-y: auto !important;
-    max-height: calc(100vh - 240px) !important;
+    max-height: calc(100vh - 200px) !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: auto !important;
     overscroll-behavior: contain !important;
