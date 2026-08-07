@@ -248,11 +248,13 @@ body {
 
 .page.active {
   display: block;
-  height: calc(100vh - 56px) !important;
+  min-height: calc(100vh - 60px) !important;
+  height: auto !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
   box-sizing: border-box !important;
-  padding-bottom: 56px !important;
+  padding-bottom: 95px !important;
+  touch-action: auto !important;
 }
 
 section#riwayatPage.page.active,
@@ -3182,14 +3184,13 @@ button.btnKembali {
     box-shadow: none !important;
     box-sizing: border-box !important;
     flex: 0 0 auto !important;
-    max-height: 52vh !important;
+    max-height: 55vh !important;
     min-height: 220px !important;
     height: auto !important;
     overflow-y: auto !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: auto !important;
-    overscroll-behavior: contain !important;
   }
 
   .dashboardTable {
@@ -4162,8 +4163,9 @@ div.rowHighlightOrange {
 
   #detailDashboard .tableWrap {
     overflow-x: auto !important;
-    overflow-y: visible !important;
-    max-height: none !important;
+    overflow-y: auto !important;
+    max-height: 55vh !important;
+    min-height: 220px !important;
     height: auto !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: auto !important;
