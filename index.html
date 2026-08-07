@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260807_v1002">
-  <script src="app.js?v=20260807_v1002"></script>
+  <link rel="stylesheet" href="styles.css?v=20260807_v1011">
+  <script src="app.js?v=20260807_v1011"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -200,8 +200,8 @@
       </div>
 
       <!-- TITLE DATA DASHBOARD DI LUAR KOTAK (DI ATAS TABEL) -->
-      <h3 id="dashboardRecentTitle" style="margin: 6px 0 8px 2px !important; font-size: 18px !important; font-weight: 900 !important; color: var(--text-main); text-align: left !important; display: flex; align-items: center; gap: 8px; letter-spacing: 0.5px;">
-        <span class="material-symbols-rounded" style="color: var(--primary); font-size: 22px;">format_list_bulleted</span>
+      <h3 id="dashboardRecentTitle" style="margin: 6px 0 8px 2px !important; font-size: 13.5px !important; font-weight: 700 !important; color: var(--text-main); text-align: left !important; display: flex; align-items: center; gap: 8px; letter-spacing: 0.5px;">
+        <span class="material-symbols-rounded" style="color: var(--primary); font-size: 18px;">format_list_bulleted</span>
         PERMINTAAN PENDING
       </h3>
 
@@ -792,7 +792,7 @@
     <div class="popupBoxDetailV2" style="width: calc(100vw - 2mm) !important; min-width: calc(100vw - 2mm) !important; max-width: calc(100vw - 2mm) !important; margin: auto 1mm !important; box-sizing: border-box !important;">
       <div class="popupHeaderV2" style="background: var(--primary) !important; color: #ffffff !important; padding: 14px 18px !important; border-bottom: 1px solid rgba(255,255,255,0.2) !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important; border-radius: 18px 18px 0 0 !important;">
         <span id="popupTitleV2" style="font-weight: 800 !important; text-align: center !important; font-size: 16px !important; letter-spacing: 0.5px !important; text-transform: uppercase !important; color: #ffffff !important; margin: 0 auto !important;">DETAIL PERMINTAAN</span>
-        <button type="button" class="popupCloseV2" onclick="tutupDetailBarangV2()" title="TUTUP" style="position: absolute !important; right: 14px !important; top: 50% !important; transform: translateY(-50%) !important; font-size: 28px !important; font-weight: 900 !important; color: #ef4444 !important; background: transparent !important; border: none !important; cursor: pointer !important; line-height: 1 !important;">&times;</button>
+        <button type="button" class="popupCloseV2" onclick="tutupDetailBarangV2()" title="TUTUP" style="position: absolute !important; right: 14px !important; top: 50% !important; transform: translateY(-50%) !important; font-size: 28px !important; font-weight: 900 !important; color: #ffffff !important; background: transparent !important; border: none !important; cursor: pointer !important; line-height: 1 !important;">&times;</button>
       </div>
       <div id="popupBodyV2">
         <!-- Injected Dynamically by JS -->
@@ -909,14 +909,13 @@
   </div>
 
   <!-- 10. POPUP PDF DOCUMENT PREVIEW MODAL -->
-  <div id="pdfModal" class="popupOverlay">
-    <div class="popupBox">
-      <div class="popupHeader">
-        <button type="button" class="btnPrintHeader" onclick="cetakDokumenPdf()" title="CETAK PDF / PRINT" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #ffffff; color: #0284c7; border: none; border-radius: 6px; font-weight: 800; font-size: 12.5px; cursor: pointer; transform: none !important; animation: none !important;">
+  <div id="pdfModal" class="popupOverlay" onclick="if(event.target === this) tutupPdfModal();">
+    <div class="popupBox" style="position: relative;">
+      <div class="popupHeader" style="position: relative; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; min-height: 48px;">
+        <button type="button" class="btnPrintHeader" onclick="cetakDokumenPdf()" title="CETAK PDF / PRINT" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #ffffff; color: #0284c7; border: none; border-radius: 6px; font-weight: 800; font-size: 12.5px; cursor: pointer; transform: none !important; animation: none !important; transition: none !important;">
           <span class="material-symbols-rounded" style="font-size: 18px; transform: none !important; animation: none !important;">print</span> PRINT
         </button>
-        <span style="font-size: 15px; font-weight: 800; color: #fff; text-align: center;">PREVIEW SURAT DOKUMEN PERMINTAAN</span>
-        <button type="button" class="popupClose" onclick="tutupPdfModal()">&times;</button>
+        <button type="button" class="popupClose" onclick="tutupPdfModal()" style="position: absolute !important; right: 14px !important; top: 10px !important; transform: none !important; transition: none !important; animation: none !important; font-size: 26px !important; font-weight: 900 !important; color: #ffffff !important; background: var(--primary) !important; border: 2px solid rgba(255, 255, 255, 0.4) !important; border-radius: 50% !important; width: 34px !important; height: 34px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35) !important; z-index: 999999 !important;" title="TUTUP PDF">&times;</button>
       </div>
       <div class="popupContent" id="pdfDocumentContent" style="flex: 1; overflow-y: auto; background: #f8fafc; padding: 14px;">
         <!-- Injected dynamically -->

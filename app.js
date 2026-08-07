@@ -822,11 +822,13 @@ function checkAndTriggerPendingReminders(forceNow = false) {
 
   const notifs = getSystemNotifications();
   const allUsers = getUsersFromDB();
+
   const pendingServiceReqs = requests.filter(r => r && r.status === 'PENDING' && !r.serviceApprove);
   const pendingDMReqs = requests.filter(r => r && r.status === 'PENDING' && r.serviceApprove);
 
   let hasNewReminder = false;
 
+  // 1. COMBINED REMINDER FOR SERVICE USERS (1 CHAT PER USER FOR MULTIPLE REQUESTS WITH REGISTERED FULL NAME)
   if (pendingServiceReqs.length > 0) {
     pendingServiceReqs.forEach(r => {
       const message = `REMINDER PENDING SERVICE [JAM ${scheduledTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE SERVICE!`;
@@ -834,25 +836,29 @@ function checkAndTriggerPendingReminders(forceNow = false) {
       if (!duplicate || forceNow) {
         tambahNotifikasiSistem(['SERVICE'], r.area, message, r.noSurat);
         hasNewReminder = true;
+      }
+    });
 
-        const serviceUsers = allUsers.filter(u => u && (u.category === 'SERVICE' || u.category === 'HODS') && (u.area === r.area || u.area === 'ALL'));
-        serviceUsers.forEach(srv => {
-          if (srv.phone && srv.phone !== '-') {
-            kirimNotifikasiWA(srv.phone,
-              `Yth. Tim Service (${srv.area}),\n\n` +
-              `PEMBERITAHUAN REMINDER OTOMATIS (JAM ${scheduledTime}):\n` +
-              `Pengajuan permintaan barang berikut MASIH PENDING dan membutuhkan persetujuan Service:\n` +
-              `• No Surat : #${r.noSurat}\n` +
-              `• Toko : ${r.toko} (${r.area})\n` +
-              `• Jenis : ${r.jenis}\n\n` +
-              `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`
-            );
-          }
-        });
+    const serviceUsers = allUsers.filter(u => u && (u.category === 'SERVICE' || u.category === 'HODS') && u.phone && u.phone !== '-');
+    serviceUsers.forEach(srv => {
+      const userPendingReqs = pendingServiceReqs.filter(r => r.area === srv.area || srv.area === 'ALL');
+      if (userPendingReqs.length > 0) {
+        const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
+        const itemsListStr = userPendingReqs.map((r, idx) => `  ${idx + 1}. #${r.noSurat} - TOKO ${r.toko} (${r.area}) [${r.jenis}]`).join('\n');
+        
+        const combinedMessage = 
+          `Yth. Bapak/Ibu ${srvName},\n\n` +
+          `PEMBERITAHUAN REMINDER OTOMATIS (JAM ${scheduledTime}):\n` +
+          `Terdapat ${userPendingReqs.length} pengajuan permintaan barang MASIH PENDING dan membutuhkan persetujuan Service:\n\n` +
+          `${itemsListStr}\n\n` +
+          `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`;
+
+        kirimNotifikasiWA(srv.phone, combinedMessage);
       }
     });
   }
 
+  // 2. COMBINED REMINDER FOR DM USERS (1 CHAT PER USER FOR MULTIPLE REQUESTS WITH REGISTERED FULL NAME)
   if (pendingDMReqs.length > 0) {
     pendingDMReqs.forEach(r => {
       const message = `REMINDER PENDING DM [JAM ${scheduledTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE DM!`;
@@ -860,21 +866,24 @@ function checkAndTriggerPendingReminders(forceNow = false) {
       if (!duplicate || forceNow) {
         tambahNotifikasiSistem(['DM'], 'ALL', message, r.noSurat);
         hasNewReminder = true;
+      }
+    });
 
-        const dmUsers = allUsers.filter(u => u && u.category === 'DM' && (u.area === r.area || u.area === 'ALL'));
-        dmUsers.forEach(dm => {
-          if (dm.phone && dm.phone !== '-') {
-            kirimNotifikasiWA(dm.phone,
-              `Yth. District Manager (${dm.area}),\n\n` +
-              `PEMBERITAHUAN REMINDER OTOMATIS (JAM ${scheduledTime}):\n` +
-              `Pengajuan permintaan barang berikut SUDAH DI-APPROVE SERVICE & MENUNGGU APPROVAL DM:\n` +
-              `• No Surat : #${r.noSurat}\n` +
-              `• Toko : ${r.toko} (${r.area})\n` +
-              `• Jenis : ${r.jenis}\n\n` +
-              `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`
-            );
-          }
-        });
+    const dmUsers = allUsers.filter(u => u && u.category === 'DM' && u.phone && u.phone !== '-');
+    dmUsers.forEach(dm => {
+      const userPendingReqs = pendingDMReqs.filter(r => r.area === dm.area || dm.area === 'ALL');
+      if (userPendingReqs.length > 0) {
+        const dmName = dm.fullName || dm.username || 'Bapak/Ibu DM';
+        const itemsListStr = userPendingReqs.map((r, idx) => `  ${idx + 1}. #${r.noSurat} - TOKO ${r.toko} (${r.area}) [${r.jenis}]`).join('\n');
+        
+        const combinedMessage = 
+          `Yth. Bapak/Ibu ${dmName},\n\n` +
+          `PEMBERITAHUAN REMINDER OTOMATIS (JAM ${scheduledTime}):\n` +
+          `Terdapat ${userPendingReqs.length} pengajuan permintaan barang SUDAH DI-APPROVE SERVICE & MENUNGGU APPROVAL DM:\n\n` +
+          `${itemsListStr}\n\n` +
+          `Mohon dapat segera diperiksa dan di-approve pada aplikasi. Terima kasih.`;
+
+        kirimNotifikasiWA(dm.phone, combinedMessage);
       }
     });
   }
@@ -3144,18 +3153,18 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
 
       // REMINDER DIKIRIM HANYA VIA WHATSAPP (FONNTE API), TIDAK LEWAT SYSTEM BELL NOTIFIKASI
       const allUsers = getUsersFromDB();
-      const serviceUsers = allUsers.filter(u => u.category === 'SERVICE' && u.area === currentUser.area);
+      const serviceUsers = allUsers.filter(u => u.category === 'SERVICE' && (u.area === currentUser.area || u.area === 'ALL'));
       serviceUsers.forEach(srv => {
-        if (srv.phone) {
+        if (srv.phone && srv.phone !== '-') {
+          const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
           kirimNotifikasiWA(srv.phone,
-            `Yth. Tim Service,\n\n` +
+            `Yth. Bapak/Ibu ${srvName},\n\n` +
             `Pemberitahuan Sistem Permintaan Barang:\n` +
             `Telah dibuat pengajuan permintaan barang baru dengan rincian berikut:\n` +
             `• Nomor Dokumen : #${noSurat}\n` +
             `• Toko / Pemohon : ${toko} (${currentUser.area})\n` +
             `• Waktu Pengajuan : ${newRecord.createdAt}\n\n` +
-            `Mohon untuk segera melakukan pemeriksaan dan proses verifikasi pada sistem aplikasi.\n\n` +
-            `Terima kasih.`
+            `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`
           );
         }
       });
@@ -3562,17 +3571,17 @@ function approveService(noSurat) {
 
         // REMINDER DIKIRIM HANYA VIA WHATSAPP (FONNTE API), TIDAK LEWAT SYSTEM BELL NOTIFIKASI
         const users = getUsersFromDB();
-        const dmUsers = users.filter(u => u.category === 'DM');
+        const dmUsers = users.filter(u => u.category === 'DM' && (u.area === requests[idx].area || u.area === 'ALL'));
         dmUsers.forEach(dm => {
-          if (dm.phone) {
+          if (dm.phone && dm.phone !== '-') {
+            const dmName = dm.fullName || dm.username || 'Bapak/Ibu DM';
             kirimNotifikasiWA(dm.phone,
-              `Yth. Bapak/Ibu District Manager (DM),\n\n` +
+              `Yth. Bapak/Ibu ${dmName},\n\n` +
               `Pemberitahuan Sistem Permintaan Barang:\n` +
-              `Pengajuan permintaan barang berikut telah DISETUJUI oleh Tim Service (${currentUser.fullName}):\n` +
+              `Pengajuan permintaan barang berikut telah DISETUJUI oleh Service (${currentUser.fullName || currentUser.username}):\n` +
               `• Nomor Dokumen : #${noSurat}\n` +
               `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n\n` +
-              `Mohon berkenan untuk melakukan peninjauan dan persetujuan (approval) tingkat DM melalui sistem aplikasi.\n\n` +
-              `Terima kasih.`
+              `Mohon berkenan untuk melakukan peninjauan dan persetujuan (approval) tingkat DM melalui sistem aplikasi. Terima kasih.`
             );
           }
         });
@@ -3625,13 +3634,14 @@ function approveDM(noSurat) {
 
         tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI DM. SILAKAN DIPROSES.`, noSurat);
         const users = getUsersFromDB();
-        const serviceUsers = users.filter(u => u.category === 'SERVICE' && u.area === requests[idx].area);
+        const serviceUsers = users.filter(u => u.category === 'SERVICE' && (u.area === requests[idx].area || u.area === 'ALL'));
         serviceUsers.forEach(srv => {
-          if (srv.phone) {
+          if (srv.phone && srv.phone !== '-') {
+            const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
             kirimNotifikasiWA(srv.phone,
-              `Yth. Bapak/Ibu,\n\n` +
+              `Yth. Bapak/Ibu ${srvName},\n\n` +
               `Pemberitahuan Sistem Permintaan Barang:\n` +
-              `Pengajuan permintaan barang berikut telah DISETUJUI oleh DM:\n` +
+              `Pengajuan permintaan barang berikut telah DISETUJUI OLEH DM:\n` +
               `• Nomor Dokumen : #${noSurat}\n` +
               `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
               `• Status : DISETUJUI (APPROVE)\n\n` +
@@ -3921,14 +3931,10 @@ function lihatDetail(noSurat, fromDashboard = false) {
   if (!bodyBox) return;
 
   let headerInfoHtml = `
-    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; padding: 6px 12px !important; box-sizing: border-box !important;">
+    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; align-items: center !important; width: 100% !important; padding: 6px 12px !important; box-sizing: border-box !important;">
       <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; text-align: left !important; white-space: nowrap !important; flex: 0 0 auto !important;">
         <span style="opacity: 0.85; font-weight: 500;">NO SURAT : </span>
-        <span class="noSuratValV2" style="color: var(--primary) !important; font-weight: 700 !important;">${req.noSurat || '-'}</span>
-      </div>
-      <div class="tokoWrapV2" style="display: inline-flex !important; align-items: center !important; text-align: right !important; white-space: nowrap !important; flex: 0 0 auto !important; margin-left: auto !important;">
-        <span style="opacity: 0.85; font-weight: 500;">TOKO : </span>
-        <span class="tokoValV2" style="font-weight: 700 !important; color: var(--text-main) !important;">${req.toko || '-'}</span>
+        <span class="noSuratValV2" style="color: var(--primary) !important; font-weight: 700 !important; margin-left: 4px;">${req.noSurat || '-'}</span>
       </div>
     </div>
   `;
@@ -3941,9 +3947,9 @@ function lihatDetail(noSurat, fromDashboard = false) {
     try { itemsList = JSON.parse(rawItems || '[]'); } catch (e) { itemsList = []; }
   }
 
-  const thStyleCenter = "width: 55px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid rgba(255,255,255,0.3) !important; position: sticky !important; top: 0 !important; z-index: 50 !important;";
-  const thStyleQty = "width: 60px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid rgba(255,255,255,0.3) !important; position: sticky !important; top: 0 !important; z-index: 50 !important;";
-  const thStyleLeft = (widthPct) => `width: ${widthPct} !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid rgba(255,255,255,0.3) !important; position: sticky !important; top: 0 !important; z-index: 50 !important;`;
+  const thStyleCenter = "width: 55px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid rgba(255,255,255,0.3) !important; position: sticky !important; top: 0 !important; z-index: 100 !important;";
+  const thStyleQty = "width: 60px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid rgba(255,255,255,0.3) !important; position: sticky !important; top: 0 !important; z-index: 100 !important;";
+  const thStyleLeft = (widthPct) => `width: ${widthPct} !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid rgba(255,255,255,0.3) !important; position: sticky !important; top: 0 !important; z-index: 100 !important;`;
 
   const tdStyle = "padding: 7px 10px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; text-align: left !important;";
 
@@ -4106,8 +4112,8 @@ function lihatDetail(noSurat, fromDashboard = false) {
     <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 8px 0px 12px 0px !important; display: flex !important; flex-direction: column !important; gap: 6px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 18px 18px !important; overflow: hidden !important;">
       ${headerInfoHtml}
       
-      <div class="tableCardV2" style="display: block !important; border-top: 1px solid var(--border-color) !important; border-bottom: 1px solid var(--border-color) !important; border-left: none !important; border-right: none !important; border-radius: 0 !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important; max-height: 65vh !important; background: var(--bg-box) !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 0 !important;">
-        <table class="detailTableV2" style="width: 100% !important; min-width: 750px !important; table-layout: auto !important; border-collapse: collapse !important; margin: 0 !important; padding: 0 !important;">
+      <div class="tableCardV2" style="display: block !important; border-top: 1px solid var(--border-color) !important; border-bottom: 1px solid var(--border-color) !important; border-left: none !important; border-right: none !important; border-radius: 0 !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important; max-height: 65vh !important; background: var(--bg-box) !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 0 !important; position: relative !important;">
+        <table class="detailTableV2" style="width: 100% !important; min-width: 750px !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
           ${tableHeaderHtml}
           <tbody>
             ${itemsHtml}
@@ -4122,11 +4128,23 @@ function lihatDetail(noSurat, fromDashboard = false) {
   const popupDetailV2 = document.getElementById('popupDetailBarangV2');
   if (popupDetailV2) popupDetailV2.style.display = 'flex';
 
+  try {
+    history.pushState({ popupDetailOpen: true }, '');
+  } catch(e) {}
+
   const activePageId = typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : 'dashboardPage';
   if (typeof aturTampilanLonceng === 'function') {
     aturTampilanLonceng(activePageId);
   }
 }
+
+// LISTEN FOR MOBILE DEVICE / BROWSER BACK BUTTON TO CLOSE POPUP DETAIL
+window.addEventListener('popstate', (e) => {
+  const popupDetailV2 = document.getElementById('popupDetailBarangV2');
+  if (popupDetailV2 && popupDetailV2.style.display !== 'none' && popupDetailV2.style.display !== '') {
+    tutupDetailBarangV2();
+  }
+});
 
 function closeDetail() {
   const detailModal = document.getElementById('popupDetail');
@@ -6941,6 +6959,26 @@ function confirmYes() {
     cb();
   }
 }
+
+// LISTEN FOR KEYBOARD ENTER KEY TO TRIGGER CONFIRMATION "YA, LANJUT" OR OK NOTIFICATION
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.keyCode === 13) {
+    const confirmOverlay = document.getElementById('confirmOverlay');
+    if (confirmOverlay && confirmOverlay.style.display !== 'none' && confirmOverlay.style.display !== '') {
+      e.preventDefault();
+      e.stopPropagation();
+      confirmYes();
+      return;
+    }
+    const popupNotif = document.getElementById('popupNotif');
+    if (popupNotif && popupNotif.style.display !== 'none' && popupNotif.style.display !== '') {
+      e.preventDefault();
+      e.stopPropagation();
+      closePopup();
+      return;
+    }
+  }
+});
 
 function showNotif(msg, type = 'info') {
   const notifOverlay = document.getElementById('popupNotif');

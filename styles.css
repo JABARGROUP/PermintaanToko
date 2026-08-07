@@ -2039,16 +2039,17 @@ section#masterDbPage.page.active {
   -webkit-overflow-scrolling: touch !important;
 }
 
-/* ALL POPUP CLOSE BUTTONS (BOLD BRIGHT RED 'X') */
+/* ALL POPUP CLOSE BUTTONS (THEME ADAPTIVE 'X') */
 .popupClose,
 .closeViewer,
 .chatClose,
+.popupCloseV2,
 .popupHeader button,
 .popupHeader .popupClose,
 .detailHeader button {
   background: transparent !important;
   border: none !important;
-  color: #ef4444 !important;
+  color: var(--text-main) !important;
   font-size: 26px !important;
   font-weight: 900 !important;
   line-height: 1 !important;
@@ -2057,7 +2058,6 @@ section#masterDbPage.page.active {
   margin: 0 !important;
   outline: none !important;
   box-shadow: none !important;
-  text-shadow: 0 0 6px rgba(239, 68, 68, 0.5) !important;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -2065,13 +2065,21 @@ section#masterDbPage.page.active {
   opacity: 0.95;
 }
 
+.popupHeader .popupClose,
+.popupHeaderV2 .popupCloseV2,
+.popupHeader button {
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
 .popupClose:hover,
 .closeViewer:hover,
 .chatClose:hover,
+.popupCloseV2:hover,
 .popupHeader button:hover,
 .detailHeader button:hover {
   transform: scale(1.25) rotate(90deg) !important;
-  color: var(--primary-hover) !important;
+  color: var(--primary) !important;
   opacity: 1;
 }
 
@@ -3111,8 +3119,8 @@ button.btnKembali {
 
   #dashboardRecentTitle {
     margin: 6px 0 8px 2px !important;
-    font-size: 18px !important;
-    font-weight: 900 !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
     color: var(--text-main) !important;
     display: flex !important;
     align-items: center !important;
@@ -4043,19 +4051,36 @@ div.rowHighlightOrange {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y !important;
+    position: relative !important;
   }
 
   .detailTableV2 {
     width: 100% !important;
     min-width: 580px !important;
     font-size: 11px !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
   }
 
-  .detailTableV2 th {
+  .detailTableV2 thead,
+  .detailTableV2 thead tr {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+  }
+
+  .detailTableV2 th,
+  .detailTableV2 thead th {
     padding: 6px 8px !important;
     font-size: 10.5px !important;
     letter-spacing: 0px !important;
     white-space: nowrap !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    background: var(--primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
   }
 
   .detailTableV2 td {
