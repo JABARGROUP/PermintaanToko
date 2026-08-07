@@ -220,7 +220,10 @@ function getAccessibleNotifications() {
   const userFullName = String(currentUser.fullName || '').toUpperCase();
   const isSysAdmin = userCat === 'ADMIN' || userUname === 'ADMIN';
 
-  const requests = getRequestsFromDB();
+  // JIKA LOGGED IN SEBAGAI ADMIN -> TIDAK MENAMPILKAN NOTIFIKASI
+  if (isSysAdmin) {
+    return [];
+  }
 
   let filtered = notifs.filter(n => {
     if (!n) return false;
@@ -331,8 +334,10 @@ function updateNotifBellCounter() {
   const badgeEl = document.getElementById('notifBellBadge');
   if (!bellBtn || !badgeEl) return;
 
-  if (!currentUser || (document.getElementById('loginPage') && document.getElementById('loginPage').classList.contains('active'))) {
-    bellBtn.style.display = 'none';
+  const isSysAdmin = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+
+  if (!currentUser || isSysAdmin || (document.getElementById('loginPage') && document.getElementById('loginPage').classList.contains('active'))) {
+    bellBtn.style.setProperty('display', 'none', 'important');
     return;
   }
 
@@ -796,6 +801,7 @@ function checkAndTriggerPendingReminders() {
   if (!requests.length) return;
 
   const notifs = getSystemNotifications();
+  const allUsers = getUsersFromDB();
   const pendingServiceReqs = requests.filter(r => r.status === 'PENDING' && !r.serviceApprove);
   const pendingDMReqs = requests.filter(r => r.status === 'PENDING' && r.serviceApprove);
 
@@ -807,6 +813,13 @@ function checkAndTriggerPendingReminders() {
       if (!duplicate) {
         tambahNotifikasiSistem(['SERVICE'], r.area, message, r.noSurat);
         hasNewReminder = true;
+
+        const serviceUsers = allUsers.filter(u => (u.category === 'SERVICE' || u.category === 'HODS') && (u.area === r.area || u.area === 'ALL'));
+        serviceUsers.forEach(srv => {
+          if (srv.phone && srv.phone !== '-') {
+            kirimNotifikasiWA(srv.phone, message);
+          }
+        });
       }
     });
   }
@@ -818,6 +831,13 @@ function checkAndTriggerPendingReminders() {
       if (!duplicate) {
         tambahNotifikasiSistem(['DM'], 'ALL', message, r.noSurat);
         hasNewReminder = true;
+
+        const dmUsers = allUsers.filter(u => u.category === 'DM' && (u.area === r.area || u.area === 'ALL'));
+        dmUsers.forEach(dm => {
+          if (dm.phone && dm.phone !== '-') {
+            kirimNotifikasiWA(dm.phone, message);
+          }
+        });
       }
     });
   }
@@ -1160,9 +1180,110 @@ async function syncSupabaseRequestsToLocalCache() {
   }
 }
 
+async function syncSupabaseNotifsAndChatToLocalCache() {
+  if (typeof supabase === 'undefined' || !supabase) return;
+
+  // 1. SYNC NOTIFICATIONS FROM SUPABASE
+  try {
+    const { data: notifData, error: notifErr } = await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!notifErr && Array.isArray(notifData) && notifData.length > 0) {
+      const formattedNotifs = notifData.map(n => ({
+        id: n.id,
+        targetUser: n.target_user || n.targetUser || null,
+        targetArea: n.target_area || n.targetArea || null,
+        targetRole: n.target_role || n.targetRole || null,
+        noSurat: n.no_surat || n.noSurat || '',
+        title: n.title || '',
+        message: n.message || '',
+        type: n.type || 'info',
+        isRead: n.is_read !== undefined ? n.is_read : (n.isRead || false),
+        createdAt: n.created_at || n.createdAt || ''
+      }));
+      appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(formattedNotifs));
+    }
+  } catch (err) {
+    console.warn('[SUPABASE NOTIFICATIONS SYNC NOTICE]:', err);
+  }
+
+  // 2. SYNC CHAT MESSAGES & ROOMS FROM SUPABASE
+  try {
+    let chatData = null;
+    const { data: mainChat, error: mainChatErr } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (!mainChatErr && Array.isArray(mainChat)) {
+      chatData = mainChat;
+    } else {
+      const { data: altChat, error: altErr } = await supabase
+        .from('chat')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (!altErr && Array.isArray(altChat)) {
+        chatData = altChat;
+      }
+    }
+
+    if (Array.isArray(chatData)) {
+      const formattedChats = chatData.map(c => ({
+        id: c.id,
+        room: c.room,
+        user: c.user,
+        userArea: c.user_area || c.userArea || 'BDG',
+        pengirim: c.pengirim,
+        senderId: c.sender_id || c.senderId,
+        senderUsername: c.sender_username || c.senderUsername,
+        senderName: c.sender_name || c.senderName,
+        pesan: c.pesan,
+        tanggal: c.tanggal || c.created_at
+      }));
+
+      appStorage.setItem(CHAT_DB_KEY, JSON.stringify(formattedChats));
+
+      // REBUILD CHAT ROOMS LOCALLY FROM SUPABASE CHAT MESSAGES
+      const roomMap = new Map();
+      formattedChats.forEach(c => {
+        const rName = c.room || ('ROOM_' + (c.user || '').toUpperCase());
+        const rUser = c.user || c.senderUsername || 'USER';
+        const lastMsg = (c.pengirim === 'SERVICE' ? 'SERVICE TSM: ' : '') + c.pesan;
+        const isUnreadUser = (c.pengirim === 'SERVICE' && !c.isRead) ? 1 : 0;
+        const isUnreadAdmin = (c.pengirim === 'USER' && !c.isRead) ? 1 : 0;
+
+        if (!roomMap.has(rName)) {
+          roomMap.set(rName, {
+            room: rName,
+            user: rUser,
+            userArea: c.userArea || 'BDG',
+            last: lastMsg,
+            unreadAdmin: isUnreadAdmin,
+            unreadUser: isUnreadUser,
+            lastTime: c.tanggal
+          });
+        } else {
+          const rm = roomMap.get(rName);
+          rm.last = lastMsg;
+          rm.lastTime = c.tanggal;
+          if (isUnreadAdmin) rm.unreadAdmin = (rm.unreadAdmin || 0) + 1;
+          if (isUnreadUser) rm.unreadUser = (rm.unreadUser || 0) + 1;
+        }
+      });
+
+      appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(Array.from(roomMap.values())));
+    }
+  } catch (err) {
+    console.warn('[SUPABASE CHAT SYNC NOTICE]:', err);
+  }
+}
+
 async function syncAllDataToCache() {
   try {
     await syncSupabaseRequestsToLocalCache();
+    await syncSupabaseNotifsAndChatToLocalCache();
 
     if (dbFirestore) {
       try {
@@ -1176,13 +1297,10 @@ async function syncAllDataToCache() {
           }
         }
 
-        // 3. SYNC APP SETTINGS, NOTIFICATIONS, CHATS, ROOMS, THEMES, TOKENS
+        // 3. SYNC APP SETTINGS, THEMES, TOKENS
         const configDoc = await dbFirestore.collection('app_settings').doc('config').get();
         if (configDoc.exists) {
           const cfg = configDoc.data() || {};
-          if (cfg.notifications) appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(cfg.notifications));
-          if (cfg.chatMessages) appStorage.setItem(CHAT_DB_KEY, JSON.stringify(cfg.chatMessages));
-          if (cfg.chatRooms) appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(cfg.chatRooms));
           if (cfg.theme) {
             appStorage.setItem(THEME_KEY, cfg.theme);
             if (typeof loadSavedTheme === 'function') loadSavedTheme();
@@ -1208,10 +1326,81 @@ async function syncAllDataToCache() {
 
 async function pushCentralCloudDB() {
   try {
+    const requests = getRequestsFromDB();
+    if (typeof supabase !== 'undefined' && supabase) {
+      try {
+        const supaPayloads = requests.map(r => ({
+          id: String(r.noSurat || '').replace(/[\/\.]/g, '_'),
+          no_surat: r.noSurat,
+          tanggal: r.tanggal,
+          toko: r.toko,
+          area: r.area,
+          jenis: r.jenis,
+          catatan: r.catatan || '',
+          items: r.items || [],
+          photos: r.photos || [],
+          status: r.status,
+          service_approve: !!r.serviceApprove,
+          service_user_name: r.serviceUserName || '',
+          service_ttd: r.serviceTTD || '',
+          dm_user_name: r.dmUserName || '',
+          dm_ttd: r.dmTTD || '',
+          created_by: r.createdBy || '',
+          created_at: r.createdAt || '',
+          user_id: r.userId || '',
+          log: r.log || []
+        }));
+        if (supaPayloads.length > 0) {
+          supabase.from('permintaan_toko').upsert(supaPayloads).then(({ error }) => {
+            if (error) {
+              supabase.from('requests').upsert(requests).catch(() => {});
+            }
+          });
+        }
+
+        // PUSH NOTIFICATIONS & CHATS TO SUPABASE
+        const notifs = JSON.parse(appStorage.getItem(NOTIFICATIONS_DB_KEY) || '[]');
+        if (notifs.length > 0) {
+          const supaNotifPayloads = notifs.map(n => ({
+            id: String(n.id || `NOTIF-${Date.now()}`),
+            target_user: n.targetUser || null,
+            target_area: n.targetArea || null,
+            target_role: n.targetRole || null,
+            no_surat: n.noSurat || '',
+            title: n.title || '',
+            message: n.message || '',
+            type: n.type || 'info',
+            is_read: !!n.isRead,
+            created_at: n.createdAt || new Date().toISOString()
+          }));
+          supabase.from('notifications').upsert(supaNotifPayloads).catch(() => {});
+        }
+
+        const chats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+        if (chats.length > 0) {
+          const supaChatPayloads = chats.map(c => ({
+            id: String(c.id || `CHAT-${Date.now()}`),
+            room: c.room,
+            user: c.user,
+            user_area: c.userArea || 'BDG',
+            pengirim: c.pengirim,
+            sender_id: c.senderId || '',
+            sender_username: c.senderUsername || '',
+            sender_name: c.senderName || '',
+            pesan: c.pesan,
+            tanggal: c.tanggal || '',
+            created_at: new Date().toISOString()
+          }));
+          supabase.from('chat_messages').upsert(supaChatPayloads).catch(() => {});
+        }
+      } catch (sbErr) {
+        console.warn('[SUPABASE PUSH NOTICE]:', sbErr);
+      }
+    }
+
     if (dbFirestore) {
       try {
         // 1. PUSH REQUESTS
-        const requests = getRequestsFromDB();
         const reqBatch = dbFirestore.batch();
         requests.forEach(r => {
           if (r && r.noSurat) {
@@ -1575,13 +1764,10 @@ function loadFonteToken() {
 }
 
 function kirimNotifikasiWA(targetPhone, message) {
-  if (!targetPhone || targetPhone === '-') return false;
+  if (!targetPhone || targetPhone === '-' || String(targetPhone).trim() === '') return false;
 
   const token = getFonteToken();
-  if (!token) {
-    console.log(`[WA NOTIF SIMULATED - TOKEN BELUM DIISI] To: ${targetPhone} Msg: ${message}`);
-    return false;
-  }
+  if (!token) return false;
 
   let cleanPhone = String(targetPhone).replace(/[^0-9]/g, '');
   if (!cleanPhone) return false;
@@ -1891,7 +2077,11 @@ function aturTampilanLonceng(pageId) {
   }
 
   if (notifBtn) {
-    notifBtn.style.display = isLoggedIn ? 'flex' : 'none';
+    if (isDashboard) {
+      notifBtn.style.setProperty('display', 'flex', 'important');
+    } else {
+      notifBtn.style.setProperty('display', 'none', 'important');
+    }
   }
   
   if (helpBtn) {
@@ -3415,7 +3605,7 @@ function approveDM(noSurat) {
         saveRequestsToDB(requests);
         showNotif(`APPROVE BERHASIL`, 'info');
 
-        tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI DM PUSAT. SILAKAN DIPROSES.`, noSurat);
+        tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI DM. SILAKAN DIPROSES.`, noSurat);
         const users = getUsersFromDB();
         const serviceUsers = users.filter(u => u.category === 'SERVICE' && u.area === requests[idx].area);
         serviceUsers.forEach(srv => {
@@ -3423,7 +3613,7 @@ function approveDM(noSurat) {
             kirimNotifikasiWA(srv.phone,
               `Yth. Bapak/Ibu,\n\n` +
               `Pemberitahuan Sistem Permintaan Barang:\n` +
-              `Pengajuan permintaan barang berikut telah DISETUJUI oleh DM Pusat:\n` +
+              `Pengajuan permintaan barang berikut telah DISETUJUI oleh DM:\n` +
               `• Nomor Dokumen : #${noSurat}\n` +
               `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
               `• Status : DISETUJUI (APPROVE)\n\n` +
@@ -3693,13 +3883,9 @@ function tutupDetailBarangV2() {
   }
 
   setTimeout(() => {
-    const notifBtn = document.getElementById('notifBellBtn');
-    const helpBtn = document.getElementById('helpButton');
-    const dashboardPage = document.getElementById('dashboardPage');
-    
-    if (dashboardPage && dashboardPage.classList.contains('active')) {
-      if (notifBtn) notifBtn.style.setProperty('display', 'flex', 'important');
-      if (helpBtn) helpBtn.style.setProperty('display', 'flex', 'important');
+    const activePageId = typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : 'dashboardPage';
+    if (typeof aturTampilanLonceng === 'function') {
+      aturTampilanLonceng(activePageId);
     }
   }, 100);
 }
@@ -3718,12 +3904,12 @@ function lihatDetail(noSurat, fromDashboard = false) {
   if (!bodyBox) return;
 
   let headerInfoHtml = `
-    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; padding: 6px 14px !important; margin: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; font-size: 13px !important; color: var(--text-main) !important; box-sizing: border-box !important;">
-      <div class="noSuratWrapV2" style="text-align: left !important; white-space: nowrap !important; flex-shrink: 0 !important;">
+    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; padding: 6px 12px !important; box-sizing: border-box !important;">
+      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; text-align: left !important; white-space: nowrap !important; flex: 0 0 auto !important;">
         <span style="opacity: 0.85; font-weight: 500;">NO SURAT : </span>
         <span class="noSuratValV2" style="color: var(--primary) !important; font-weight: 700 !important;">${req.noSurat || '-'}</span>
       </div>
-      <div class="tokoWrapV2" style="text-align: right !important; white-space: nowrap !important; flex-shrink: 0 !important; margin-left: auto !important;">
+      <div class="tokoWrapV2" style="display: inline-flex !important; align-items: center !important; text-align: right !important; white-space: nowrap !important; flex: 0 0 auto !important; margin-left: auto !important;">
         <span style="opacity: 0.85; font-weight: 500;">TOKO : </span>
         <span class="tokoValV2" style="font-weight: 700 !important; color: var(--text-main) !important;">${req.toko || '-'}</span>
       </div>
@@ -3823,7 +4009,7 @@ function lihatDetail(noSurat, fromDashboard = false) {
     }
   }
 
-  const isPdfVisible = (req.status === 'APPROVE' || req.status === 'DONE' || (isAdminUser && req.status !== 'REJECT'));
+  const isPdfVisible = true;
   if (isPdfVisible) {
     actionButtons.push(`
       <button type="button" class="btnIcon btnPdf btnIconOnly" title="CETAK PDF" onclick="tutupDetailBarangV2(); bukaPdfModal('${req.noSurat}');">
@@ -3919,10 +4105,10 @@ function lihatDetail(noSurat, fromDashboard = false) {
   const popupDetailV2 = document.getElementById('popupDetailBarangV2');
   if (popupDetailV2) popupDetailV2.style.display = 'flex';
 
-  const notifBtn = document.getElementById('notifBellBtn');
-  const helpBtn = document.getElementById('helpButton');
-  if (notifBtn) notifBtn.style.setProperty('display', 'flex', 'important');
-  if (helpBtn) helpBtn.style.setProperty('display', 'flex', 'important');
+  const activePageId = typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : 'dashboardPage';
+  if (typeof aturTampilanLonceng === 'function') {
+    aturTampilanLonceng(activePageId);
+  }
 }
 
 function closeDetail() {
@@ -4106,20 +4292,20 @@ function renderFullPdfPreviewDocument(modelId) {
         </thead>
         <tbody>
           <tr>
-            <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0;">1</td>
-            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">AC DAIKIN 2 PK</td>
-            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">SN-889920112</td>
-            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">UNIT INDOOR AC 2PK</td>
-            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">KOMPRESOR BOCOR FREON</td>
-            <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0; font-weight:bold;">1</td>
+            <td style="text-align:center; padding:6px 8px; border: 1px solid #cbd5e1;">1</td>
+            <td style="padding:6px 8px; border: 1px solid #cbd5e1;">AC DAIKIN 2 PK</td>
+            <td style="padding:6px 8px; border: 1px solid #cbd5e1;">SN-889920112</td>
+            <td style="padding:6px 8px; border: 1px solid #cbd5e1;">UNIT INDOOR AC 2PK</td>
+            <td style="padding:6px 8px; border: 1px solid #cbd5e1;">KOMPRESOR BOCOR FREON</td>
+            <td style="text-align:center; padding:6px 8px; border: 1px solid #cbd5e1; font-weight:bold;">1</td>
           </tr>
           <tr>
-            <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0;">2</td>
-            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">KULKAS 2 PINTU</td>
-            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">SN-776655100</td>
-            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">UNIT KULKAS INVERTER</td>
-            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">KARET PINTU LONGGAR</td>
-            <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0; font-weight:bold;">1</td>
+            <td style="text-align:center; padding:6px 8px; border: 1px solid #cbd5e1;">2</td>
+            <td style="padding:6px 8px; border: 1px solid #cbd5e1;">KULKAS 2 PINTU</td>
+            <td style="padding:6px 8px; border: 1px solid #cbd5e1;">SN-776655100</td>
+            <td style="padding:6px 8px; border: 1px solid #cbd5e1;">UNIT KULKAS INVERTER</td>
+            <td style="padding:6px 8px; border: 1px solid #cbd5e1;">KARET PINTU LONGGAR</td>
+            <td style="text-align:center; padding:6px 8px; border: 1px solid #cbd5e1; font-weight:bold;">1</td>
           </tr>
         </tbody>
       </table>
@@ -4174,14 +4360,14 @@ function bukaPdfModal(noSurat) {
   const activeModel = getActivePdfModel();
 
   let itemRowsHtml = req.items.map((i, idx) => `
-    <tr>
-      <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0;">${idx + 1}</td>
-      <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.type}</td>
-      <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.seri}</td>
-      ${req.jenis === 'DUS' ? `<td style="padding:6px 8px; border-bottom:1px solid #e2e8f0; color:#d97706;">${i.dus || '-'}</td>` : ''}
-      <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.barang}</td>
-      <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.alasan}</td>
-      <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #e2e8f0;">${i.qty}</td>
+    <tr style="border-bottom:1px solid #cbd5e1;">
+      <td style="text-align:center; padding:7px 8px; border:1px solid #cbd5e1;">${idx + 1}</td>
+      <td style="padding:7px 8px; border:1px solid #cbd5e1;">${i.type}</td>
+      <td style="padding:7px 8px; border:1px solid #cbd5e1;">${i.seri}</td>
+      ${req.jenis === 'DUS' ? `<td style="padding:7px 8px; border:1px solid #cbd5e1; color:#d97706; font-weight:600;">${i.dus || '-'}</td>` : ''}
+      <td style="padding:7px 8px; border:1px solid #cbd5e1;">${i.barang}</td>
+      <td style="padding:7px 8px; border:1px solid #cbd5e1;">${i.alasan}</td>
+      <td style="text-align:center; padding:7px 8px; border:1px solid #cbd5e1; font-weight:bold;">${i.qty}</td>
     </tr>
   `).join('');
 
@@ -4388,6 +4574,70 @@ function tutupPdfModal() {
 }
 
 function cetakDokumenPdf() {
+  const content = document.getElementById('pdfDocumentContent');
+  if (!content) {
+    window.print();
+    return;
+  }
+
+  try {
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>DOKUMEN PERMINTAAN TOKO</title>
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+            <style>
+              * {
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
+              body {
+                margin: 0;
+                padding: 20px;
+                background: #ffffff;
+                color: #0f172a;
+                font-family: 'Poppins', sans-serif;
+              }
+              .pdf-paper {
+                width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+              }
+              table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+              }
+              @page {
+                size: A4 portrait;
+                margin: 10mm;
+              }
+            </style>
+          </head>
+          <body>
+            ${content.innerHTML}
+          </body>
+        </html>
+      `);
+
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 350);
+      return;
+    }
+  } catch (e) {
+    console.warn('[PRINT WINDOW NOTICE]: Fallback ke window.print()', e);
+  }
+
   window.print();
 }
 
@@ -4939,98 +5189,157 @@ function kirimPesanChat() {
   const pesan = txt.value.trim().toUpperCase();
   if (!pesan) return;
 
-  const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-  const rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
   const senderId = currentUser.id;
   const senderUsername = currentUser.username;
   const now = new Date();
   const timeStr = getFormattedDateDDMMYYYY(now) + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
 
-  if (isAdminChat) {
-    const targetUser = currentChatUser || 'USER';
-    const roomTarget = currentRoom || ('ROOM_' + String(targetUser).toUpperCase());
-    const roomUpper = String(roomTarget).toUpperCase();
+  let targetUser = 'USER';
+  let roomTarget = '';
+  let pengirimType = 'USER';
 
-    allChats.push({
+  if (isAdminChat) {
+    targetUser = currentChatUser || 'USER';
+    roomTarget = currentRoom || ('ROOM_' + String(targetUser).toUpperCase());
+    pengirimType = 'SERVICE';
+  } else {
+    targetUser = currentUser.username;
+    roomTarget = 'ROOM_' + String(currentUser.username).toUpperCase();
+    pengirimType = 'USER';
+  }
+
+  const newChatId = `CHAT-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+  const newChatRow = {
+    id: newChatId,
+    room: roomTarget,
+    user: targetUser,
+    user_area: currentUser.area || 'BDG',
+    pengirim: pengirimType,
+    sender_id: senderId,
+    sender_username: senderUsername,
+    sender_name: `${currentUser.fullName || currentUser.username} (${currentUser.toko || currentUser.area})`,
+    pesan: pesan,
+    tanggal: timeStr,
+    created_at: new Date().toISOString()
+  };
+
+  // 1. SUPABASE DIRECT PUSH FOR CHAT MESSAGE
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      supabase.from('chat_messages').upsert(newChatRow).then(({ error }) => {
+        if (error) console.warn('[SUPABASE CHAT MESSAGE ERROR]:', error.message);
+      });
+      supabase.from('chat').upsert(newChatRow).catch(() => {});
+    } catch(sbErr) {
+      console.warn('[SUPABASE CHAT SAVE ERROR]:', sbErr);
+    }
+  }
+
+  // 2. LOCAL STORAGE UPDATE & REFRESH UI
+  const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+  const rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
+
+  allChats.push({
+    id: newChatId,
+    room: roomTarget,
+    user: targetUser,
+    userArea: currentUser.area || 'BDG',
+    pengirim: pengirimType,
+    senderId,
+    senderUsername,
+    senderName: `${currentUser.fullName || currentUser.username} (${currentUser.toko || currentUser.area})`,
+    pesan,
+    tanggal: timeStr
+  });
+
+  const roomUpper = String(roomTarget).toUpperCase();
+  const rIdx = rooms.findIndex(x => String(x.room).toUpperCase() === roomUpper || String(x.user).toUpperCase() === String(targetUser).toUpperCase());
+  if (rIdx !== -1) {
+    rooms[rIdx].last = (pengirimType === 'SERVICE' ? `SERVICE TSM: ${pesan}` : pesan);
+    if (pengirimType === 'SERVICE') rooms[rIdx].unreadUser = (rooms[rIdx].unreadUser || 0) + 1;
+    else rooms[rIdx].unreadAdmin = (rooms[rIdx].unreadAdmin || 0) + 1;
+    rooms[rIdx].lastTime = timeStr;
+  } else {
+    rooms.push({
       room: roomTarget,
       user: targetUser,
-      pengirim: 'SERVICE',
-      senderId,
-      senderUsername,
-      senderName: `SERVICE TSM (${currentUser.fullName || currentUser.username})`,
-      pesan,
-      tanggal: timeStr
+      userArea: currentUser.area || 'BDG',
+      last: (pengirimType === 'SERVICE' ? `SERVICE TSM: ${pesan}` : pesan),
+      unreadAdmin: pengirimType === 'USER' ? 1 : 0,
+      unreadUser: pengirimType === 'SERVICE' ? 1 : 0,
+      lastTime: timeStr
     });
+  }
 
-    const rIdx = rooms.findIndex(x => String(x.room).toUpperCase() === roomUpper || String(x.user).toUpperCase() === String(targetUser).toUpperCase());
-    if (rIdx !== -1) {
-      rooms[rIdx].last = `SERVICE TSM: ${pesan}`;
-      rooms[rIdx].unreadUser = (rooms[rIdx].unreadUser || 0) + 1;
-      rooms[rIdx].lastTime = timeStr;
-    } else {
-      rooms.push({
-        room: roomTarget,
-        user: targetUser,
-        userArea: 'TSM',
-        last: `SERVICE TSM: ${pesan}`,
-        unreadAdmin: 0,
-        unreadUser: 1,
-        lastTime: timeStr
-      });
-    }
+  appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
+  appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
 
-    appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
-    appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
-    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
+  txt.value = '';
 
-    txt.value = '';
+  if (isAdminChat) {
     loadChatAdmin(roomTarget);
   } else {
-    const myUsernameUpper = String(currentUser.username).toUpperCase();
-    const room = 'ROOM_' + myUsernameUpper;
-    const roomUpper = room.toUpperCase();
-
-    allChats.push({
-      room,
-      user: currentUser.username,
-      userArea: currentUser.area,
-      pengirim: 'USER',
-      senderId,
-      senderUsername,
-      senderName: `${currentUser.fullName || currentUser.username} (${currentUser.toko || currentUser.area})`,
-      pesan,
-      tanggal: timeStr
-    });
-
-    const rIdx = rooms.findIndex(x => String(x.room).toUpperCase() === roomUpper || String(x.user).toUpperCase() === myUsernameUpper);
-    if (rIdx !== -1) {
-      rooms[rIdx].last = pesan;
-      rooms[rIdx].unreadAdmin = (rooms[rIdx].unreadAdmin || 0) + 1;
-      rooms[rIdx].lastTime = timeStr;
-      rooms[rIdx].userArea = currentUser.area;
-    } else {
-      rooms.push({
-        room,
-        user: currentUser.username,
-        userArea: currentUser.area,
-        last: pesan,
-        unreadAdmin: 1,
-        unreadUser: 0,
-        lastTime: timeStr
-      });
-    }
-
-    appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
-    appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
-    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
-
-    txt.value = '';
     loadChatUser();
   }
 
   if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
   if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
 }
+
+function hapusChatRoom(roomTarget, userTarget) {
+  const roomUpper = String(roomTarget || '').toUpperCase();
+  const userUpper = String(userTarget || '').toUpperCase();
+
+  showConfirm(`HAPUS RIWAYAT CHAT ROOM DENGAN USER '${userTarget || roomTarget}'?`, () => {
+    showLoading('MENGHAPUS CHAT ROOM...');
+    setTimeout(async () => {
+      try {
+        // 1. DELETE FROM SUPABASE
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            await supabase.from('chat_messages').delete().eq('room', roomTarget);
+            await supabase.from('chat_messages').delete().eq('user', userTarget);
+            await supabase.from('chat').delete().eq('room', roomTarget);
+            await supabase.from('chat').delete().eq('user', userTarget);
+          } catch(sbErr) {
+            console.warn('[SUPABASE CHAT DELETE NOTICE]:', sbErr);
+          }
+        }
+
+        // 2. DELETE FROM LOCAL STORAGE
+        let allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+        let rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
+
+        allChats = allChats.filter(c => 
+          String(c.room || '').toUpperCase() !== roomUpper && 
+          String(c.user || '').toUpperCase() !== userUpper &&
+          String(c.senderUsername || '').toUpperCase() !== userUpper
+        );
+        rooms = rooms.filter(r => 
+          String(r.room || '').toUpperCase() !== roomUpper && 
+          String(r.user || '').toUpperCase() !== userUpper
+        );
+
+        appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
+        appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
+
+        hideLoading();
+        showNotif(`CHAT ROOM DENGAN '${userTarget || roomTarget}' BERHASIL DIHAPUS!`, 'success');
+
+        if (isAdminChat) {
+          kembaliKeDaftarAdmin();
+        } else {
+          loadChatUser();
+        }
+      } catch(err) {
+        hideLoading();
+        console.error('[HAPUS CHAT ROOM ERROR]:', err);
+        showNotif('GAGAL MENGHAPUS CHAT ROOM: ' + (err.message || err), 'error');
+      }
+    }, 300);
+  });
+}
+window.hapusChatRoom = hapusChatRoom;
 
 function kembaliKeDaftarAdmin() {
   const chatList = document.getElementById('chatList');
@@ -6660,6 +6969,12 @@ let initialPanY = 0;
 function applyImageTransform(isSmooth = false) {
   const img = document.getElementById('viewerImage');
   if (!img) return;
+
+  if (currentZoom <= 1) {
+    panX = 0;
+    panY = 0;
+  }
+
   img.style.transition = isSmooth ? 'transform 0.18s cubic-bezier(0.1, 0.9, 0.2, 1)' : 'none';
   img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
   img.style.cursor = isPanningImage ? 'grabbing' : (currentZoom > 1 ? 'grab' : 'pointer');
@@ -6812,7 +7127,8 @@ function zoomImage(step) {
   currentZoom += step;
   if (currentZoom < 0.2) currentZoom = 0.2;
   if (currentZoom > 8) currentZoom = 8;
-  if (currentZoom === 1) {
+  if (currentZoom <= 1.05 && step < 0) {
+    currentZoom = 1;
     panX = 0;
     panY = 0;
   }

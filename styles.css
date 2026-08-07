@@ -1122,8 +1122,8 @@ input:focus, select:focus, textarea:focus {
   border-collapse: separate !important;
   border-spacing: 0 !important;
   font-size: 12.5px !important;
-  color: #0f172a !important;
-  background: #ffffff !important;
+  color: var(--text-main) !important;
+  background: var(--bg-box) !important;
   table-layout: auto !important;
   margin: 0 !important;
 }
@@ -1162,13 +1162,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 .dashboardTable tbody tr {
-  background: #ffffff !important;
+  background: var(--bg-box) !important;
 }
 
 .dashboardTable td {
-  background: #ffffff !important;
-  color: #0f172a !important;
-  border-bottom: 1px solid #e2e8f0 !important;
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
+  border-bottom: 1px solid var(--border-color) !important;
   border-right: none !important;
   border-left: none !important;
   white-space: nowrap !important;
@@ -1179,11 +1179,16 @@ input:focus, select:focus, textarea:focus {
 }
 
 .dashboardTable tr:hover td {
-  background: #f1f5f9 !important;
+  background: var(--table-hover) !important;
 }
 
 .dashboardTable tr:last-child td {
   border-bottom: none !important;
+}
+
+#lastData {
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
 }
 
 /* FULL SCREEN WIDTH AUTO-FIT GRID: 100% STRETCH & PERFECT VERTICAL COLUMN ALIGNMENT */
@@ -1305,9 +1310,9 @@ input:focus, select:focus, textarea:focus {
   width: 100% !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
-  border: 1px solid #cbd5e1 !important;
+  border: 1px solid var(--border-color) !important;
   border-radius: 8px !important;
-  background: #ffffff !important;
+  background: var(--bg-box) !important;
   overflow: visible !important;
 }
 
@@ -1330,23 +1335,31 @@ input:focus, select:focus, textarea:focus {
   border-right: none !important;
 }
 
-.historyTable tbody tr, #tableMasterDb tbody tr, #tableUserMgmt tbody tr {
-  background: #ffffff !important;
+.historyTable tbody tr, #tableMasterDb tbody tr, #tableUserMgmt tbody tr, #riwayatData, #riwayatData tr {
+  background: var(--bg-box) !important;
 }
 
-/* NORMAL (NON-BOLD) FONT FOR ALL TABLE DATA CELLS & NO VERTICAL BORDER LINES */
+/* NORMAL (NON-BOLD) FONT FOR ALL TABLE DATA CELLS & THEME-MATCHED BACKGROUND */
 .historyTable td,
 #tableMasterDb td,
 #tableUserMgmt td,
 .dashboardTable td,
-.detailTable2 td {
+.detailTable2 td,
+#riwayatData td {
   font-weight: 400 !important;
   padding: 10px 14px !important;
   border-right: none !important;
   border-left: none !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  color: #0f172a !important;
-  background: #ffffff !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-main) !important;
+  background: var(--bg-box) !important;
+}
+
+.historyTable tbody tr:hover td,
+#tableMasterDb tbody tr:hover td,
+#tableUserMgmt tbody tr:hover td,
+#riwayatData tr:hover td {
+  background: var(--table-hover) !important;
 }
 
 /* ACTION BUTTONS & ICONS STAY NORMAL WEIGHT (NOT BOLD) */
@@ -3967,6 +3980,40 @@ div.rowHighlightOrange {
   flex-wrap: wrap !important;
 }
 
+.detailHeaderInfoV2 {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  padding: 8px 14px !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  color: var(--text-main) !important;
+  box-sizing: border-box !important;
+}
+
+.noSuratWrapV2 {
+  display: flex !important;
+  align-items: center !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  flex: 0 0 auto !important;
+}
+
+.tokoWrapV2 {
+  display: flex !important;
+  align-items: center !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+}
+
 /* RESPONSIVE SCALING & AUTOMATIC SHRINKING ON MOBILE / PHONE SCREENS */
 @media (max-width: 600px) {
   #popupDetailBarangV2 .popupBoxDetailV2,
@@ -3979,13 +4026,33 @@ div.rowHighlightOrange {
   }
 
   .detailHeaderInfoV2 {
-    font-size: 11px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
     padding: 6px 10px !important;
+    font-size: 11px !important;
+    width: 100% !important;
   }
 
-  .detailHeaderInfoV2 .noSuratWrapV2,
-  .detailHeaderInfoV2 .tokoWrapV2 {
+  .noSuratWrapV2,
+  .detailHeaderInfoV2 .noSuratWrapV2 {
+    display: inline-flex !important;
     font-size: 11px !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+  }
+
+  .tokoWrapV2,
+  .detailHeaderInfoV2 .tokoWrapV2 {
+    display: inline-flex !important;
+    font-size: 11px !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
   }
 
   .tableCardV2 {
@@ -4019,5 +4086,223 @@ div.rowHighlightOrange {
   .popupDetailActionsV2 {
     padding: 6px 10px !important;
     gap: 8px !important;
+  }
+
+  /* STICKY STILL TABLE HEADER ON MOBILE HP (DIAM ATAS/BAWAH, BISA SCROLL KANAN/KIRI) */
+  .tableWrap,
+  .dashboardTableContainer {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    max-height: calc(100vh - 280px) !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y !important;
+    position: relative !important;
+  }
+
+  .dashboardTable,
+  .historyTable,
+  .masterDbTable {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+
+  .dashboardTable thead,
+  .dashboardTable thead tr,
+  .dashboardTable thead th,
+  .historyTable thead,
+  .historyTable thead tr,
+  .historyTable thead th,
+  .lastHeader {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    background: var(--primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  }
+}
+
+/* FULL HEIGHT TOP TO BOTTOM PDF MODAL VIEW & RESPONSIVE MOBILE RATA KANAN-KIRI ATAS-BAWAH */
+#pdfModal {
+  position: fixed !important;
+  inset: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  z-index: 999999 !important;
+}
+
+#pdfModal .popupBox {
+  width: 820px !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: #cbd5e1 !important;
+  box-shadow: 0 0 50px rgba(0,0,0,0.5) !important;
+  overflow: hidden !important;
+}
+
+#pdfModal .popupHeader {
+  position: sticky !important;
+  top: 0 !important;
+  flex-shrink: 0 !important;
+  z-index: 999999 !important;
+  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+  padding: 12px 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.2) !important;
+}
+
+#pdfDocumentContent {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding: 16px !important;
+  background: #cbd5e1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+#pdfDocumentContent .pdf-paper {
+  width: 100% !important;
+  max-width: 780px !important;
+  min-height: calc(100vh - 65px) !important;
+  margin: 0 auto !important;
+  padding: 24px 28px !important;
+  box-sizing: border-box !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+  border-radius: 6px !important;
+}
+
+.btnPrintHeader {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 6px 14px !important;
+  background: #ffffff !important;
+  color: #0284c7 !important;
+  border: 1.5px solid #ffffff !important;
+  border-radius: 6px !important;
+  font-weight: 800 !important;
+  font-size: 12.5px !important;
+  cursor: pointer !important;
+  animation: none !important;
+  transform: none !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+
+.btnPrintHeader:hover {
+  background: #f0f9ff !important;
+  color: #0369a1 !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+.btnPrintHeader span,
+.btnPrintHeader .material-symbols-rounded,
+.btnPrintHeader * {
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+/* MOBILE PHONE SCREENS (RATA KANAN KIRI & ATAS BAWAH PERFECT FIT) */
+@media (max-width: 600px) {
+  #pdfModal .popupBox {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  #pdfModal .popupHeader {
+    padding: 10px 12px !important;
+  }
+
+  #pdfModal .popupHeader span {
+    font-size: 13px !important;
+  }
+
+  #pdfDocumentContent {
+    padding: 6px !important;
+    width: 100% !important;
+  }
+
+  #pdfDocumentContent .pdf-paper {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    padding: 14px 10px !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #pdfDocumentContent table {
+    font-size: 10.5px !important;
+  }
+
+  #pdfDocumentContent th,
+  #pdfDocumentContent td {
+    padding: 5px 6px !important;
+  }
+}
+
+/* PRINT MEDIA PRESERVATION - FULL COLOR TEMPLATE HEADERS & ACCURATE PDF OUTPUT */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  #pdfModal .popupHeader,
+  .btnPrintHeader,
+  .popupClose,
+  #topHeaderActions,
+  #bottomMenu,
+  .page:not(#pdfModal) {
+    display: none !important;
+  }
+  #pdfModal {
+    position: static !important;
+    padding: 0 !important;
+    background: transparent !important;
+    display: block !important;
+  }
+  #pdfModal .popupBox {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+  #pdfDocumentContent {
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+  .pdf-paper {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
   }
 }

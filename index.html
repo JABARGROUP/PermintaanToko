@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260807_v60">
-  <script src="app.js?v=20260807_v577"></script>
+  <link rel="stylesheet" href="styles.css?v=20260807_v82">
+  <script src="app.js?v=20260807_v599"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -906,11 +906,11 @@
   </div>
 
   <!-- 10. POPUP PDF DOCUMENT PREVIEW MODAL -->
-  <div id="pdfModal" class="popupOverlay" style="align-items: flex-start; padding-top: 25px;">
-    <div class="popupBox" style="width: 720px; max-width: 95vw; max-height: 86vh; display: flex; flex-direction: column; border-radius: 8px;">
-      <div class="popupHeader" style="background: #0284c7; position: relative; padding: 14px 20px;">
-        <button type="button" class="btnPrintHeader" onclick="cetakDokumenPdf()" title="CETAK PDF / PRINT">
-          <span class="material-symbols-rounded">print</span> PRINT
+  <div id="pdfModal" class="popupOverlay">
+    <div class="popupBox">
+      <div class="popupHeader">
+        <button type="button" class="btnPrintHeader" onclick="cetakDokumenPdf()" title="CETAK PDF / PRINT" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #ffffff; color: #0284c7; border: none; border-radius: 6px; font-weight: 800; font-size: 12.5px; cursor: pointer; transform: none !important; animation: none !important;">
+          <span class="material-symbols-rounded" style="font-size: 18px; transform: none !important; animation: none !important;">print</span> PRINT
         </button>
         <span style="font-size: 15px; font-weight: 800; color: #fff; text-align: center;">PREVIEW SURAT DOKUMEN PERMINTAAN</span>
         <button type="button" class="popupClose" onclick="tutupPdfModal()">&times;</button>
