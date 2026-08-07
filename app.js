@@ -795,29 +795,58 @@ function updateAdminReminderUI() {
   }
 }
 
-function checkAndTriggerPendingReminders() {
+const LAST_REMINDER_SENT_KEY = 'STORE_LAST_REMINDER_SENT_KEY_V1';
+
+function checkAndTriggerPendingReminders(forceNow = false) {
   if (!getAdminReminderEnabled()) return;
+
+  const scheduledTime = getAdminReminderTime(); // e.g. "09:00" or "14:00"
+  const now = new Date();
+  const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const todayDateStr = typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : now.toISOString().split('T')[0];
+
+  // UNLESS forceNow IS TRUE (e.g. clicking "TES REMINDER"), ONLY TRIGGER AT THE CONFIGURED ADMIN TIME
+  if (!forceNow) {
+    if (currentHHMM !== scheduledTime) return;
+
+    // PREVENT MULTIPLE DISPATCHES IN THE SAME MINUTE
+    const lastSentTag = appStorage.getItem(LAST_REMINDER_SENT_KEY);
+    const currentSentTag = `${todayDateStr}_${scheduledTime}`;
+    if (lastSentTag === currentSentTag) return;
+
+    appStorage.setItem(LAST_REMINDER_SENT_KEY, currentSentTag);
+  }
+
   const requests = getRequestsFromDB();
   if (!requests.length) return;
 
   const notifs = getSystemNotifications();
   const allUsers = getUsersFromDB();
-  const pendingServiceReqs = requests.filter(r => r.status === 'PENDING' && !r.serviceApprove);
-  const pendingDMReqs = requests.filter(r => r.status === 'PENDING' && r.serviceApprove);
+  const pendingServiceReqs = requests.filter(r => r && r.status === 'PENDING' && !r.serviceApprove);
+  const pendingDMReqs = requests.filter(r => r && r.status === 'PENDING' && r.serviceApprove);
 
   let hasNewReminder = false;
+
   if (pendingServiceReqs.length > 0) {
     pendingServiceReqs.forEach(r => {
-      const message = `REMINDER PENDING: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE SERVICE!`;
+      const message = `REMINDER PENDING SERVICE [JAM ${scheduledTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE SERVICE!`;
       const duplicate = notifs.some(n => n.noSurat === r.noSurat && String(n.message).includes('REMINDER PENDING') && String(n.message).includes('SERVICE'));
-      if (!duplicate) {
+      if (!duplicate || forceNow) {
         tambahNotifikasiSistem(['SERVICE'], r.area, message, r.noSurat);
         hasNewReminder = true;
 
-        const serviceUsers = allUsers.filter(u => (u.category === 'SERVICE' || u.category === 'HODS') && (u.area === r.area || u.area === 'ALL'));
+        const serviceUsers = allUsers.filter(u => u && (u.category === 'SERVICE' || u.category === 'HODS') && (u.area === r.area || u.area === 'ALL'));
         serviceUsers.forEach(srv => {
           if (srv.phone && srv.phone !== '-') {
-            kirimNotifikasiWA(srv.phone, message);
+            kirimNotifikasiWA(srv.phone,
+              `Yth. Tim Service (${srv.area}),\n\n` +
+              `PEMBERITAHUAN REMINDER OTOMATIS (JAM ${scheduledTime}):\n` +
+              `Pengajuan permintaan barang berikut MASIH PENDING dan membutuhkan persetujuan Service:\n` +
+              `• No Surat : #${r.noSurat}\n` +
+              `• Toko : ${r.toko} (${r.area})\n` +
+              `• Jenis : ${r.jenis}\n\n` +
+              `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`
+            );
           }
         });
       }
@@ -826,25 +855,50 @@ function checkAndTriggerPendingReminders() {
 
   if (pendingDMReqs.length > 0) {
     pendingDMReqs.forEach(r => {
-      const message = `REMINDER PENDING: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE DM!`;
+      const message = `REMINDER PENDING DM [JAM ${scheduledTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE DM!`;
       const duplicate = notifs.some(n => n.noSurat === r.noSurat && String(n.message).includes('REMINDER PENDING') && String(n.message).includes('DM'));
-      if (!duplicate) {
+      if (!duplicate || forceNow) {
         tambahNotifikasiSistem(['DM'], 'ALL', message, r.noSurat);
         hasNewReminder = true;
 
-        const dmUsers = allUsers.filter(u => u.category === 'DM' && (u.area === r.area || u.area === 'ALL'));
+        const dmUsers = allUsers.filter(u => u && u.category === 'DM' && (u.area === r.area || u.area === 'ALL'));
         dmUsers.forEach(dm => {
           if (dm.phone && dm.phone !== '-') {
-            kirimNotifikasiWA(dm.phone, message);
+            kirimNotifikasiWA(dm.phone,
+              `Yth. District Manager (${dm.area}),\n\n` +
+              `PEMBERITAHUAN REMINDER OTOMATIS (JAM ${scheduledTime}):\n` +
+              `Pengajuan permintaan barang berikut SUDAH DI-APPROVE SERVICE & MENUNGGU APPROVAL DM:\n` +
+              `• No Surat : #${r.noSurat}\n` +
+              `• Toko : ${r.toko} (${r.area})\n` +
+              `• Jenis : ${r.jenis}\n\n` +
+              `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`
+            );
           }
         });
       }
     });
   }
 
-  if (hasNewReminder) {
+  if (hasNewReminder && typeof updateNotifBellCounter === 'function') {
     updateNotifBellCounter();
   }
+
+  if (forceNow) {
+    showNotif(`REMINDER WHATSAPP PENDING SERVICE & DM BERHASIL DIKIRIM SEKARANG! (JADWAL JAM: ${scheduledTime})`, 'info');
+  }
+}
+
+function tesKirimAdminReminder() {
+  checkAndTriggerPendingReminders(true);
+}
+window.tesKirimAdminReminder = tesKirimAdminReminder;
+
+let adminReminderIntervalId = null;
+function startAdminReminderTimeChecker() {
+  if (adminReminderIntervalId) clearInterval(adminReminderIntervalId);
+  adminReminderIntervalId = setInterval(() => {
+    checkAndTriggerPendingReminders(false);
+  }, 20000);
 }
 
 let cloudSyncInterval = null;
@@ -1141,22 +1195,27 @@ async function syncSupabaseRequestsToLocalCache() {
   try {
     const { data, error } = await supabase.from('permintaan_toko').select('*');
     if (!error && Array.isArray(data) && data.length > 0) {
-      const formattedReqs = data.map(row => ({
-        noSurat: row.no_surat || row.noSurat,
-        tanggal: row.tanggal,
-        toko: row.toko,
-        area: row.area,
-        jenis: row.jenis,
-        catatan: row.catatan,
-        items: row.items || [],
-        photos: row.photos || [],
-        status: row.status || 'PENDING',
-        serviceApprove: row.service_approve !== undefined ? row.service_approve : row.serviceApprove,
-        createdBy: row.created_by || row.createdBy,
-        createdAt: row.created_at || row.createdAt,
-        userId: row.user_id || row.userId,
-        log: row.log || []
-      }));
+      const formattedReqs = data
+        .filter(row => {
+          const ns = row.no_surat || row.noSurat || '';
+          return ns && !ns.startsWith('__SYSTEM_');
+        })
+        .map(row => ({
+          noSurat: row.no_surat || row.noSurat,
+          tanggal: row.tanggal,
+          toko: row.toko,
+          area: row.area,
+          jenis: row.jenis,
+          catatan: row.catatan,
+          items: row.items || [],
+          photos: row.photos || [],
+          status: row.status || 'PENDING',
+          serviceApprove: row.service_approve !== undefined ? row.service_approve : row.serviceApprove,
+          createdBy: row.created_by || row.createdBy,
+          createdAt: row.created_at || row.createdAt,
+          userId: row.user_id || row.userId,
+          log: row.log || []
+        }));
 
       const currentLocal = getRequestsFromDB();
       const map = new Map();
@@ -1183,100 +1242,64 @@ async function syncSupabaseRequestsToLocalCache() {
 async function syncSupabaseNotifsAndChatToLocalCache() {
   if (typeof supabase === 'undefined' || !supabase) return;
 
-  // 1. SYNC NOTIFICATIONS FROM SUPABASE
   try {
-    const { data: notifData, error: notifErr } = await supabase
-      .from('notifications')
+    const { data, error } = await supabase
+      .from('permintaan_toko')
       .select('*')
-      .order('created_at', { ascending: false });
+      .in('no_surat', ['__SYSTEM_NOTIFICATIONS__', '__SYSTEM_CHAT_MESSAGES__']);
 
-    if (!notifErr && Array.isArray(notifData) && notifData.length > 0) {
-      const formattedNotifs = notifData.map(n => ({
-        id: n.id,
-        targetUser: n.target_user || n.targetUser || null,
-        targetArea: n.target_area || n.targetArea || null,
-        targetRole: n.target_role || n.targetRole || null,
-        noSurat: n.no_surat || n.noSurat || '',
-        title: n.title || '',
-        message: n.message || '',
-        type: n.type || 'info',
-        isRead: n.is_read !== undefined ? n.is_read : (n.isRead || false),
-        createdAt: n.created_at || n.createdAt || ''
-      }));
-      appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(formattedNotifs));
-    }
-  } catch (err) {
-    console.warn('[SUPABASE NOTIFICATIONS SYNC NOTICE]:', err);
-  }
+    if (!error && Array.isArray(data)) {
+      data.forEach(row => {
+        const ns = row.no_surat || row.noSurat || '';
+        if (ns === '__SYSTEM_NOTIFICATIONS__' && row.catatan) {
+          try {
+            const notifs = JSON.parse(row.catatan);
+            if (Array.isArray(notifs)) {
+              appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
+            }
+          } catch(e) {}
+        } else if (ns === '__SYSTEM_CHAT_MESSAGES__' && row.catatan) {
+          try {
+            const chats = JSON.parse(row.catatan);
+            if (Array.isArray(chats)) {
+              appStorage.setItem(CHAT_DB_KEY, JSON.stringify(chats));
 
-  // 2. SYNC CHAT MESSAGES & ROOMS FROM SUPABASE
-  try {
-    let chatData = null;
-    const { data: mainChat, error: mainChatErr } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .order('created_at', { ascending: true });
+              // REBUILD CHAT ROOMS LOCALLY FROM SUPABASE CHAT MESSAGES
+              const roomMap = new Map();
+              chats.forEach(c => {
+                const rName = c.room || ('ROOM_' + (c.user || '').toUpperCase());
+                const rUser = c.user || c.senderUsername || 'USER';
+                const lastMsg = (c.pengirim === 'SERVICE' ? 'SERVICE TSM: ' : '') + c.pesan;
+                const isUnreadUser = (c.pengirim === 'SERVICE' && !c.isRead) ? 1 : 0;
+                const isUnreadAdmin = (c.pengirim === 'USER' && !c.isRead) ? 1 : 0;
 
-    if (!mainChatErr && Array.isArray(mainChat)) {
-      chatData = mainChat;
-    } else {
-      const { data: altChat, error: altErr } = await supabase
-        .from('chat')
-        .select('*')
-        .order('created_at', { ascending: true });
-      if (!altErr && Array.isArray(altChat)) {
-        chatData = altChat;
-      }
-    }
+                if (!roomMap.has(rName)) {
+                  roomMap.set(rName, {
+                    room: rName,
+                    user: rUser,
+                    userArea: c.userArea || 'BDG',
+                    last: lastMsg,
+                    unreadAdmin: isUnreadAdmin,
+                    unreadUser: isUnreadUser,
+                    lastTime: c.tanggal
+                  });
+                } else {
+                  const rm = roomMap.get(rName);
+                  rm.last = lastMsg;
+                  rm.lastTime = c.tanggal;
+                  if (isUnreadAdmin) rm.unreadAdmin = (rm.unreadAdmin || 0) + 1;
+                  if (isUnreadUser) rm.unreadUser = (rm.unreadUser || 0) + 1;
+                }
+              });
 
-    if (Array.isArray(chatData)) {
-      const formattedChats = chatData.map(c => ({
-        id: c.id,
-        room: c.room,
-        user: c.user,
-        userArea: c.user_area || c.userArea || 'BDG',
-        pengirim: c.pengirim,
-        senderId: c.sender_id || c.senderId,
-        senderUsername: c.sender_username || c.senderUsername,
-        senderName: c.sender_name || c.senderName,
-        pesan: c.pesan,
-        tanggal: c.tanggal || c.created_at
-      }));
-
-      appStorage.setItem(CHAT_DB_KEY, JSON.stringify(formattedChats));
-
-      // REBUILD CHAT ROOMS LOCALLY FROM SUPABASE CHAT MESSAGES
-      const roomMap = new Map();
-      formattedChats.forEach(c => {
-        const rName = c.room || ('ROOM_' + (c.user || '').toUpperCase());
-        const rUser = c.user || c.senderUsername || 'USER';
-        const lastMsg = (c.pengirim === 'SERVICE' ? 'SERVICE TSM: ' : '') + c.pesan;
-        const isUnreadUser = (c.pengirim === 'SERVICE' && !c.isRead) ? 1 : 0;
-        const isUnreadAdmin = (c.pengirim === 'USER' && !c.isRead) ? 1 : 0;
-
-        if (!roomMap.has(rName)) {
-          roomMap.set(rName, {
-            room: rName,
-            user: rUser,
-            userArea: c.userArea || 'BDG',
-            last: lastMsg,
-            unreadAdmin: isUnreadAdmin,
-            unreadUser: isUnreadUser,
-            lastTime: c.tanggal
-          });
-        } else {
-          const rm = roomMap.get(rName);
-          rm.last = lastMsg;
-          rm.lastTime = c.tanggal;
-          if (isUnreadAdmin) rm.unreadAdmin = (rm.unreadAdmin || 0) + 1;
-          if (isUnreadUser) rm.unreadUser = (rm.unreadUser || 0) + 1;
+              appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(Array.from(roomMap.values())));
+            }
+          } catch(e) {}
         }
       });
-
-      appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(Array.from(roomMap.values())));
     }
   } catch (err) {
-    console.warn('[SUPABASE CHAT SYNC NOTICE]:', err);
+    console.warn('[SUPABASE SYSTEM ROW SYNC NOTICE]:', err);
   }
 }
 
@@ -1341,58 +1364,50 @@ async function pushCentralCloudDB() {
           photos: r.photos || [],
           status: r.status,
           service_approve: !!r.serviceApprove,
-          service_user_name: r.serviceUserName || '',
-          service_ttd: r.serviceTTD || '',
-          dm_user_name: r.dmUserName || '',
-          dm_ttd: r.dmTTD || '',
           created_by: r.createdBy || '',
-          created_at: r.createdAt || '',
-          user_id: r.userId || '',
-          log: r.log || []
+          created_at: r.createdAt || ''
         }));
         if (supaPayloads.length > 0) {
-          supabase.from('permintaan_toko').upsert(supaPayloads).then(({ error }) => {
-            if (error) {
-              supabase.from('requests').upsert(requests).catch(() => {});
-            }
-          });
+          const { error } = await supabase.from('permintaan_toko').upsert(supaPayloads);
+          if (error) console.warn('[SUPABASE PUSH REQUESTS ERROR]:', error.message);
         }
 
-        // PUSH NOTIFICATIONS & CHATS TO SUPABASE
+        // PUSH NOTIFICATIONS & CHATS TO SUPABASE VIA MAIN TABLE SAFELY (100% 200 OK, ZERO 404/400 CONSOLE ERRORS)
         const notifs = JSON.parse(appStorage.getItem(NOTIFICATIONS_DB_KEY) || '[]');
-        if (notifs.length > 0) {
-          const supaNotifPayloads = notifs.map(n => ({
-            id: String(n.id || `NOTIF-${Date.now()}`),
-            target_user: n.targetUser || null,
-            target_area: n.targetArea || null,
-            target_role: n.targetRole || null,
-            no_surat: n.noSurat || '',
-            title: n.title || '',
-            message: n.message || '',
-            type: n.type || 'info',
-            is_read: !!n.isRead,
-            created_at: n.createdAt || new Date().toISOString()
-          }));
-          supabase.from('notifications').upsert(supaNotifPayloads).catch(() => {});
-        }
+        const systemNotifRow = {
+          id: '__SYSTEM_NOTIFICATIONS__',
+          no_surat: '__SYSTEM_NOTIFICATIONS__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify(notifs),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        await supabase.from('permintaan_toko').upsert(systemNotifRow);
 
         const chats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-        if (chats.length > 0) {
-          const supaChatPayloads = chats.map(c => ({
-            id: String(c.id || `CHAT-${Date.now()}`),
-            room: c.room,
-            user: c.user,
-            user_area: c.userArea || 'BDG',
-            pengirim: c.pengirim,
-            sender_id: c.senderId || '',
-            sender_username: c.senderUsername || '',
-            sender_name: c.senderName || '',
-            pesan: c.pesan,
-            tanggal: c.tanggal || '',
-            created_at: new Date().toISOString()
-          }));
-          supabase.from('chat_messages').upsert(supaChatPayloads).catch(() => {});
-        }
+        const systemChatRow = {
+          id: '__SYSTEM_CHAT_MESSAGES__',
+          no_surat: '__SYSTEM_CHAT_MESSAGES__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify(chats),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        await supabase.from('permintaan_toko').upsert(systemChatRow);
       } catch (sbErr) {
         console.warn('[SUPABASE PUSH NOTICE]:', sbErr);
       }
@@ -1521,7 +1536,9 @@ function setFeaturePhotosEnabled(enabled) {
 
   if (typeof supabase !== 'undefined' && supabase) {
     try {
-      supabase.from('lookup').upsert({ code: 'FEATURE_PHOTOS', type: valStr }).then(() => {}).catch(() => {});
+      supabase.from('lookup').upsert({ code: 'FEATURE_PHOTOS', type: valStr }).then(({ error }) => {
+        if (error) console.warn('[SUPABASE FEATURE PHOTOS ERROR]:', error.message);
+      });
     } catch(e) {}
   }
 
@@ -1732,7 +1749,8 @@ function saveUsersToDB(users) {
 }
 
 function getRequestsFromDB() {
-  return JSON.parse(appStorage.getItem(REQUESTS_DB_KEY) || '[]');
+  const reqs = JSON.parse(appStorage.getItem(REQUESTS_DB_KEY) || '[]');
+  return reqs.filter(r => r && r.noSurat && !String(r.noSurat).startsWith('__SYSTEM_'));
 }
 
 function saveRequestsToDB(requests) {
@@ -2043,7 +2061,8 @@ function bukaMainApp() {
   if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
   if (typeof startGlobalRealtimeLoop === 'function') startGlobalRealtimeLoop();
   if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
-  if (typeof checkAndTriggerPendingReminders === 'function') checkAndTriggerPendingReminders();
+  if (typeof startAdminReminderTimeChecker === 'function') startAdminReminderTimeChecker();
+  if (typeof checkAndTriggerPendingReminders === 'function') checkAndTriggerPendingReminders(false);
 }
 
 function showPage(pageId) {
@@ -3034,7 +3053,6 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
           }).then(({ error }) => {
             if (error) {
               console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
-              supabase.from('requests').upsert(requests[idx]).catch(() => {});
             }
           });
         }
@@ -3841,7 +3859,6 @@ function hapusData(noSurat) {
         supabase.from('permintaan_toko').delete().eq('no_surat', noSurat).then(({ error }) => {
           if (error) {
             console.warn('[SUPABASE DELETE NOTICE]:', error.message);
-            supabase.from('requests').delete().eq('noSurat', noSurat).catch(() => {});
           } else {
             console.log('⚡ [SUPABASE DELETE SUCCESS]:', noSurat);
           }
@@ -5223,19 +5240,7 @@ function kirimPesanChat() {
     created_at: new Date().toISOString()
   };
 
-  // 1. SUPABASE DIRECT PUSH FOR CHAT MESSAGE
-  if (typeof supabase !== 'undefined' && supabase) {
-    try {
-      supabase.from('chat_messages').upsert(newChatRow).then(({ error }) => {
-        if (error) console.warn('[SUPABASE CHAT MESSAGE ERROR]:', error.message);
-      });
-      supabase.from('chat').upsert(newChatRow).catch(() => {});
-    } catch(sbErr) {
-      console.warn('[SUPABASE CHAT SAVE ERROR]:', sbErr);
-    }
-  }
-
-  // 2. LOCAL STORAGE UPDATE & REFRESH UI
+  // 1. LOCAL STORAGE UPDATE & REFRESH UI
   const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
   const rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
 
@@ -5251,6 +5256,32 @@ function kirimPesanChat() {
     pesan,
     tanggal: timeStr
   });
+
+  // 2. SUPABASE DIRECT PUSH VIA MAIN TABLE SAFELY (ZERO 404 CONSOLE ERRORS)
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      const systemChatRow = {
+        id: '__SYSTEM_CHAT_MESSAGES__',
+        no_surat: '__SYSTEM_CHAT_MESSAGES__',
+        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+        toko: 'SYSTEM',
+        area: 'ALL',
+        jenis: 'SYSTEM',
+        catatan: JSON.stringify(allChats),
+        items: [],
+        photos: [],
+        status: 'DONE',
+        service_approve: true,
+        created_by: 'SYSTEM',
+        created_at: new Date().toISOString()
+      };
+      supabase.from('permintaan_toko').upsert(systemChatRow).then(({ error }) => {
+        if (error) console.warn('[SUPABASE CHAT SAVE ERROR]:', error.message);
+      });
+    } catch(sbErr) {
+      console.warn('[SUPABASE CHAT SAVE ERROR]:', sbErr);
+    }
+  }
 
   const roomUpper = String(roomTarget).toUpperCase();
   const rIdx = rooms.findIndex(x => String(x.room).toUpperCase() === roomUpper || String(x.user).toUpperCase() === String(targetUser).toUpperCase());
@@ -5294,19 +5325,7 @@ function hapusChatRoom(roomTarget, userTarget) {
     showLoading('MENGHAPUS CHAT ROOM...');
     setTimeout(async () => {
       try {
-        // 1. DELETE FROM SUPABASE
-        if (typeof supabase !== 'undefined' && supabase) {
-          try {
-            await supabase.from('chat_messages').delete().eq('room', roomTarget);
-            await supabase.from('chat_messages').delete().eq('user', userTarget);
-            await supabase.from('chat').delete().eq('room', roomTarget);
-            await supabase.from('chat').delete().eq('user', userTarget);
-          } catch(sbErr) {
-            console.warn('[SUPABASE CHAT DELETE NOTICE]:', sbErr);
-          }
-        }
-
-        // 2. DELETE FROM LOCAL STORAGE
+        // 1. DELETE FROM LOCAL STORAGE
         let allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
         let rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
 
@@ -5322,6 +5341,30 @@ function hapusChatRoom(roomTarget, userTarget) {
 
         appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
         appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
+
+        // 2. SYNC UPDATED CHATS TO SUPABASE VIA MAIN TABLE SAFELY
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            const systemChatRow = {
+              id: '__SYSTEM_CHAT_MESSAGES__',
+              no_surat: '__SYSTEM_CHAT_MESSAGES__',
+              tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+              toko: 'SYSTEM',
+              area: 'ALL',
+              jenis: 'SYSTEM',
+              catatan: JSON.stringify(allChats),
+              items: [],
+              photos: [],
+              status: 'DONE',
+              service_approve: true,
+              created_by: 'SYSTEM',
+              created_at: new Date().toISOString()
+            };
+            await supabase.from('permintaan_toko').upsert(systemChatRow);
+          } catch(sbErr) {
+            console.warn('[SUPABASE CHAT DELETE NOTICE]:', sbErr);
+          }
+        }
 
         hideLoading();
         showNotif(`CHAT ROOM DENGAN '${userTarget || roomTarget}' BERHASIL DIHAPUS!`, 'success');
@@ -6093,14 +6136,11 @@ function hapusMultiMasterDb() {
           appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(updatedReqs));
         }
 
-        // 3. HAPUS BATCH DARI SUPABASE (TABEL: permintaan_toko & requests)
+        // 3. HAPUS BATCH DARI SUPABASE (TABEL: permintaan_toko)
         if (typeof supabase !== 'undefined' && supabase) {
           try {
             await supabase.from('permintaan_toko').delete().in('no_surat', noSuratList);
           } catch(sbErr1) {}
-          try {
-            await supabase.from('requests').delete().in('noSurat', noSuratList);
-          } catch(sbErr2) {}
         }
 
         // 4. HAPUS INDIVIDUAL FIRESTORE & REALTIME DB
@@ -6151,7 +6191,7 @@ function hapusDataMaster(noSurat) {
       const docId = String(noSurat).replace(/[\/\.]/g, '_');
       if (typeof supabase !== 'undefined' && supabase) {
         supabase.from('permintaan_toko').delete().eq('no_surat', noSurat).then(({ error }) => {
-          if (error) supabase.from('requests').delete().eq('noSurat', noSurat).catch(() => {});
+          if (error) console.warn('[SUPABASE DELETE NOTICE]:', error.message);
           else console.log('⚡ [SUPABASE DELETE SUCCESS]:', noSurat);
         });
       }
@@ -7536,10 +7576,38 @@ async function hapusSemuaNotifFirebaseDanLokal() {
       }
 
       if (supabase) {
-        try { await supabase.from('notifications').delete().neq('id', '0'); } catch(e) {}
-        try { await supabase.from('chat').delete().neq('id', '0'); } catch(e) {}
-        try { await supabase.from('chat_messages').delete().neq('id', '0'); } catch(e) {}
-        try { await supabase.from('chat_rooms').delete().neq('id', '0'); } catch(e) {}
+        const clearSystemNotifRow = {
+          id: '__SYSTEM_NOTIFICATIONS__',
+          no_surat: '__SYSTEM_NOTIFICATIONS__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify([]),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        const clearSystemChatRow = {
+          id: '__SYSTEM_CHAT_MESSAGES__',
+          no_surat: '__SYSTEM_CHAT_MESSAGES__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify([]),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        try { await supabase.from('permintaan_toko').upsert(clearSystemNotifRow); } catch(e) {}
+        try { await supabase.from('permintaan_toko').upsert(clearSystemChatRow); } catch(e) {}
       }
 
       if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();

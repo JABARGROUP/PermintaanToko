@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260807_v82">
-  <script src="app.js?v=20260807_v599"></script>
+  <link rel="stylesheet" href="styles.css?v=20260807_v1002">
+  <script src="app.js?v=20260807_v1002"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -414,17 +414,20 @@
             <span class="material-symbols-rounded">notifications_active</span> REMINDER OTOMATIS PENDING SERVICE & DM
           </h3>
           <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
-            KIRIM NOTIFIKASI REMINDER OTOMATIS KE SERVICE AREA & DM JIKA ADA PERMINTAAN BARU YANG BELUM DI-APPROVE.
+            FONTE WA HANYA DIKIRIM KE SERVICE & DM PADA JAM TERJADWAL YANG DIATUR DI BAWAH INI.
           </p>
         </div>
-        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 6px;">
             <label style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 0;">JAM WA:</label>
             <input type="time" id="adminReminderTimeInput" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border-color);" onchange="simpanAdminReminderTime()">
           </div>
           <span id="reminderFeatureStatusText" style="font-size: 13px; font-weight: 800; color: #10b981;">AKTIF (ON)</span>
-          <button type="button" class="btnDownload" style="background: #7c3aed; height: 38px; padding: 0 16px;" onclick="toggleAdminReminderFeature()">
+          <button type="button" class="btnDownload" style="background: #7c3aed; height: 38px; padding: 0 14px;" onclick="toggleAdminReminderFeature()">
             <span class="material-symbols-rounded">toggle_on</span> ON / OFF
+          </button>
+          <button type="button" class="btnDownload" style="background: #0284c7; height: 38px; padding: 0 14px; font-weight: 800;" onclick="tesKirimAdminReminder()" title="TES KIRIM REMINDER WA SEKARANG">
+            <span class="material-symbols-rounded">send</span> TES REMINDER
           </button>
         </div>
       </div>

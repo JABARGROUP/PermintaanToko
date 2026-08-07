@@ -1117,8 +1117,25 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* STRENGTHENED STYLING FOR DASHBOARD TABLE (HTML TABLE WITH THEAD & TBODY) WITH FIXED STICKY HEADER */
+/* DASHBOARD RECENT TABLE STYLING - STICKY TOP HEADER, SCROLL HORIZONTAL LEFT-RIGHT ONLY FOR HEADER */
+#detailDashboard .tableWrap,
+.dashboardTableContainer {
+  width: 100% !important;
+  display: block !important;
+  position: relative !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  max-height: 480px !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  background: var(--bg-box) !important;
+}
+
 .dashboardTable {
   width: 100% !important;
+  min-width: 580px !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
   font-size: 12.5px !important;
@@ -1132,7 +1149,7 @@ input:focus, select:focus, textarea:focus {
 .dashboardTable thead tr {
   position: sticky !important;
   top: 0 !important;
-  z-index: 10 !important;
+  z-index: 100 !important;
 }
 
 .dashboardTable th,
@@ -1153,12 +1170,13 @@ input:focus, select:focus, textarea:focus {
   text-transform: uppercase !important;
   position: sticky !important;
   top: 0 !important;
-  z-index: 10 !important;
+  z-index: 100 !important;
   border-bottom: 2px solid rgba(0, 0, 0, 0.2) !important;
   border-right: none !important;
   border-left: none !important;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
   text-shadow: none !important;
+  white-space: nowrap !important;
 }
 
 .dashboardTable tbody tr {
@@ -1305,7 +1323,7 @@ input:focus, select:focus, textarea:focus {
   text-align: left !important;
 }
 
-/* DETAIL DATA / RIWAYAT TABLE STYLING - WHITE BACKGROUND WITH THIN BORDER LINES */
+/* DETAIL DATA / RIWAYAT TABLE STYLING - THEME MATCHED BACKGROUND WITH THIN BORDER LINES */
 .historyTable, #tableMasterDb, #tableUserMgmt {
   width: 100% !important;
   border-collapse: separate !important;
@@ -1313,6 +1331,7 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--border-color) !important;
   border-radius: 8px !important;
   background: var(--bg-box) !important;
+  color: var(--text-main) !important;
   overflow: visible !important;
 }
 
@@ -1337,6 +1356,7 @@ input:focus, select:focus, textarea:focus {
 
 .historyTable tbody tr, #tableMasterDb tbody tr, #tableUserMgmt tbody tr, #riwayatData, #riwayatData tr {
   background: var(--bg-box) !important;
+  color: var(--text-main) !important;
 }
 
 /* NORMAL (NON-BOLD) FONT FOR ALL TABLE DATA CELLS & THEME-MATCHED BACKGROUND */
@@ -1415,7 +1435,7 @@ tr.blink-row-red td strong,
 }
 
 .historyTable tbody tr:hover td, #tableMasterDb tbody tr:hover td, #tableUserMgmt tbody tr:hover td {
-  background: #f1f5f9 !important;
+  background: var(--table-hover) !important;
 }
 
 /* DYNAMIC FORM GRID ROWS */
@@ -1560,11 +1580,11 @@ section#masterDbPage.page.active {
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y !important;
-  border: 1px solid #cbd5e1 !important;
+  border: 1px solid var(--border-color) !important;
   border-radius: 10px !important;
   position: relative !important;
   box-sizing: border-box !important;
-  background: #ffffff !important;
+  background: var(--bg-box) !important;
   margin-bottom: 1mm !important;
   padding-bottom: 0 !important;
 }
@@ -1971,14 +1991,14 @@ section#masterDbPage.page.active {
 }
 
 .popupTableScroll {
-  border: 1px solid #cbd5e1 !important;
+  border: 1px solid var(--border-color) !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
   max-height: 58vh !important;
   -webkit-overflow-scrolling: touch !important;
   box-sizing: border-box !important;
-  background: #ffffff !important;
+  background: var(--bg-box) !important;
 }
 
 .detailTable2 {
@@ -3436,17 +3456,16 @@ div.rowHighlightOrange {
 #popupDetail .popupBoxDetail,
 .popupOverlay #popupDetail .popupBoxDetail,
 .popupBoxDetail {
-  width: 840px !important;
-  max-width: calc(100vw - 2mm) !important;
-  height: auto !important;
-  max-height: 85vh !important;
-  margin: auto !important;
-  padding: 0 !important;
+#popupDetail .popupBox {
+  width: 95% !important;
+  max-width: 950px !important;
+  max-height: 88vh !important;
   border-radius: 14px !important;
   overflow: hidden !important;
   border: 1px solid var(--border-color) !important;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3) !important;
-  background: #ffffff !important;
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
@@ -3499,7 +3518,8 @@ div.rowHighlightOrange {
   padding: 0 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
-  background: #ffffff !important;
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -3523,11 +3543,11 @@ div.rowHighlightOrange {
   padding: 10px 18px !important;
   margin-top: 2mm !important;
   margin-bottom: 0 !important;
-  border-bottom: 1px solid #e2e8f0 !important;
+  border-bottom: 1px solid var(--border-color) !important;
   font-size: 13px !important;
-  color: #0f172a !important;
+  color: var(--text-main) !important;
   flex-shrink: 0 !important;
-  background: #ffffff !important;
+  background: var(--bg-box) !important;
   width: 100% !important;
   box-sizing: border-box !important;
   white-space: nowrap !important;
@@ -3555,7 +3575,7 @@ div.rowHighlightOrange {
 
 .detailHeaderInfo .tokoVal {
   font-weight: 700 !important;
-  color: #0f172a !important;
+  color: var(--text-main) !important;
 }
 
 /* FLAT NON-3D TABLE & THIN BORDER GRIDLINES FOR #popupMessage */
@@ -3571,7 +3591,7 @@ div.rowHighlightOrange {
   border-spacing: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-  border: 1px solid #e2e8f0 !important;
+  border: 1px solid var(--border-color) !important;
   box-shadow: none !important;
   text-shadow: none !important;
   filter: none !important;
@@ -3590,56 +3610,18 @@ div.rowHighlightOrange {
   filter: none !important;
 }
 
-#popupMessage table th,
-#popupMessage .detailTable2 th,
 #popupDetail table.detailTable2 th,
-.detailTable2 th {
-  background: var(--primary) !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
-  font-size: 12px !important;
-  letter-spacing: 0.3px !important;
-  padding: 6px 14px !important;
-  height: auto !important;
-  line-height: 1.2 !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
-  filter: none !important;
-  outline: none !important;
-  border-radius: 0 !important;
-  text-transform: uppercase !important;
-  text-align: center !important;
-  vertical-align: middle !important;
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 10 !important;
-  white-space: nowrap !important;
-  width: auto !important;
-}
-
-#popupMessage table tr,
-#popupMessage .detailTable2 tr,
-#popupDetail table.detailTable2 tr,
-.detailTable2 tr {
-  height: auto !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
-  filter: none !important;
-}
-
-#popupMessage table td,
-#popupMessage .detailTable2 td,
 #popupDetail table.detailTable2 td,
+.detailTable2 th,
 .detailTable2 td {
   padding: 6px 14px !important;
   height: auto !important;
   line-height: 1.2 !important;
   font-size: 12px !important;
   font-weight: 400 !important;
-  border: 1px solid #e2e8f0 !important;
-  background: #ffffff !important;
-  color: #0f172a !important;
+  border: 1px solid var(--border-color) !important;
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
   text-align: left !important;
   vertical-align: middle !important;
   white-space: nowrap !important;
