@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260807_v1035">
-  <script src="app.js?v=20260807_v1035"></script>
+  <link rel="stylesheet" href="styles.css?v=20260807_v1048">
+  <script src="app.js?v=20260807_v1048"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -136,15 +136,18 @@
     </section>
 
     <!-- ==========================================================================
-         2. DASHBOARD PAGE (RICH VIVID COLORED METRIC CARDS & FILTERABLE LIST)
+         DASHBOARD PAGE (USER NAME & STAT CARDS FIXED AT TOP, ONLY TABLE SCROLLS)
          ========================================================================== -->
     <section id="dashboardPage" class="page">
       <div class="dashboardTop">
-        <div class="header" style="text-align: left !important; justify-content: flex-start !important;">
-          <div style="text-align: left !important;">
-            <h3 id="namaUser" style="text-align: left !important;">ADMINISTRATOR PUSAT</h3>
-            <small id="areaUser" style="text-align: left !important; display: block !important;">ADMIN - ALL AREA</small>
+        <div class="header">
+          <div>
+            <h3 id="namaUser">ADMINISTRATOR PUSAT</h3>
+            <small id="areaUser">ADMIN - ALL AREA</small>
           </div>
+          <button type="button" onclick="location.reload()" title="REFRESH APLIKASI" style="background: none; border: none; cursor: pointer; color: var(--text-main);">
+            <span class="material-symbols-rounded">refresh</span>
+          </button>
         </div>
 
         <!-- 4 Vibrant Glassmorphism Metric Cards (PENDING, APPROVE, REJECT, DONE) -->
@@ -661,10 +664,10 @@
 
 
 
-      <!-- 2 EQUAL BUTTONS: GANTI DESAIN (5 DESAIN 3D) & GANTI TEMA -->
+      <!-- 2 EQUAL BUTTONS: REFRESH APLIKASI & GANTI TEMA -->
       <div style="margin-top: 10px; margin-bottom: 12px; display: flex; gap: 8px; width: 100%;">
-        <button type="button" class="design-icon-btn" onclick="toggleDesignMode()" title="GANTI MODE DESAIN UI (5 DESAIN 3D)" style="flex: 1; height: 40px; padding: 8px; border-radius: 10px; border: 1px solid var(--border-color); background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">
-          <span class="material-symbols-rounded" style="font-size: 18px;">view_in_ar</span> <span id="designModeBtnText">DESAIN: NORMAL</span>
+        <button type="button" class="refresh-icon-btn" onclick="window.location.reload()" title="REFRESH / MUAT ULANG APLIKASI WEB" style="flex: 1; height: 40px; padding: 8px; border-radius: 10px; border: 1px solid var(--border-color); background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+          <span class="material-symbols-rounded" style="font-size: 18px;">refresh</span> REFRESH APLIKASI
         </button>
         <button type="button" class="theme-icon-btn" onclick="toggleTheme()" title="GANTI TEMA TAMPILAN" style="flex: 1; height: 40px; padding: 8px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">
           <span class="material-symbols-rounded" style="font-size: 18px;">palette</span> GANTI TEMA

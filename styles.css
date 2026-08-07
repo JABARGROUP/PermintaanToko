@@ -248,13 +248,25 @@ body {
 
 .page.active {
   display: block !important;
-  min-height: calc(100vh - 60px) !important;
-  height: auto !important;
+  height: calc(100vh - 60px) !important;
+  max-height: calc(100vh - 60px) !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
   box-sizing: border-box !important;
   padding-bottom: 95px !important;
-  touch-action: auto !important;
+}
+
+#userManagementPage.active,
+#inputPage.active {
+  display: block !important;
+  height: calc(100vh - 60px) !important;
+  max-height: calc(100vh - 60px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  box-sizing: border-box !important;
+  padding-bottom: 95px !important;
 }
 
 section#riwayatPage.page.active,
@@ -855,8 +867,8 @@ input:focus, select:focus, textarea:focus {
   margin-right: 4px !important;
   color: #ffffff !important;
   pointer-events: auto !important;
-  position: relative !important;
-  z-index: 15 !important;
+  position: static !important;
+  z-index: 1 !important;
   flex-shrink: 0 !important;
   transition: transform 0.15s ease, opacity 0.15s ease !important;
 }
@@ -1719,20 +1731,39 @@ section#masterDbPage.page.active {
   margin-bottom: 0 !important;
 }
 
-.historyTable thead {
+.historyTable thead,
+.historyTable thead tr,
+.dashboardTable thead,
+.dashboardTable thead tr,
+#riwayatPage .historyTable thead,
+#masterDbPage .historyTable thead {
   position: sticky !important;
   top: 0 !important;
-  z-index: 999 !important;
+  z-index: 99999 !important;
+  isolation: isolate !important;
 }
 
 .historyTable th,
 .historyTable thead th,
 #riwayatPage .historyTable th,
-#riwayatPage .historyTable thead th {
+#riwayatPage .historyTable thead th,
+#masterDbPage .historyTable th,
+#masterDbPage .historyTable thead th,
+.dashboardTable th,
+.dashboardTable thead th,
+#tableUserMgmt th,
+#tableUserMgmt thead th,
+.detailTable2 th,
+.detailTable2 thead th,
+.detailTableV2 th,
+.detailTableV2 thead th {
   position: sticky !important;
   top: 0 !important;
-  z-index: 999 !important;
-  background: var(--primary) !important;
+  z-index: 99999 !important;
+  isolation: isolate !important;
+  background-color: var(--primary) !important;
+  background-image: none !important;
+  opacity: 1 !important;
   color: #ffffff !important;
   font-weight: 700 !important;
   font-size: 12px !important;
@@ -1743,10 +1774,27 @@ section#masterDbPage.page.active {
   white-space: nowrap !important;
   border: none !important;
   outline: none !important;
-  box-shadow: none !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.35) !important;
   text-shadow: none !important;
   filter: none !important;
   backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* SOLID IMPENETRABLE TABLE HEADERS FOR ALL 3D DESIGN MODES */
+body.design-mode-3d-neumorphism .historyTable th,
+body.design-mode-3d-glassmorphism .historyTable th,
+body.design-mode-3d-embossed .historyTable th,
+body.design-mode-3d-isometric .historyTable th,
+body.design-mode-3d-neumorphism .dashboardTable th,
+body.design-mode-3d-glassmorphism .dashboardTable th,
+body.design-mode-3d-embossed .dashboardTable th,
+body.design-mode-3d-isometric .dashboardTable th {
+  background: var(--primary) !important;
+  background-color: var(--primary) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* NORMAL AUTO-FIT AKSI COLUMN (UNLOCKED HORIZONTALLY) */
@@ -2026,6 +2074,13 @@ section#masterDbPage.page.active {
 
 .popupOverlay {
   padding: 8px 1mm !important;
+}
+
+#popupDetail .popupBoxDetail,
+.popupBoxDetail,
+.popupBoxDetailV2,
+#detailContentContainer {
+  padding-bottom: 6mm !important;
 }
 
 /* ENFORCE SINGLE LINE 1-ROW (NO WRAPTEXT) WITH HORIZONTAL SCROLL */
@@ -2792,8 +2847,11 @@ section#masterDbPage.page.active {
   }
 
   #popupDetail .popupBoxDetail,
-  .popupBoxDetail {
-    padding: 0 0 1mm 0 !important;
+  .popupBoxDetail,
+  .popupBoxDetailV2,
+  #detailContentContainer {
+    padding: 0 0 6mm 0 !important;
+    padding-bottom: 6mm !important;
     box-sizing: border-box !important;
   }
 
@@ -4238,7 +4296,8 @@ div.rowHighlightOrange {
   .lastHeader {
     position: sticky !important;
     top: 0 !important;
-    z-index: 100 !important;
+    z-index: 99999 !important;
+    isolation: isolate !important;
     background: var(--primary) !important;
     color: #ffffff !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
@@ -4431,139 +4490,13 @@ div.rowHighlightOrange {
 }
 
 /* ======================================================
-   5 VISUAL 3D DESIGN MODES (HIGH CONTRAST & STRIKING VISUAL DIFFERENCES)
+   NORMAL DESIGN MODE (DEFAULT CLASSIC APP UI)
    ====================================================== */
-
-/* 1. MODE NORMAL (Default Style) */
-body.design-mode-normal {
-  /* Standard default aesthetics */
-}
-
-/* 2. MODE 3D NEUMORPHISM (Soft Extruded 3D Dual Shadows & Pillow Cards) */
-body.design-mode-3d-neumorphism .cardStat,
-body.design-mode-3d-neumorphism .box,
-body.design-mode-3d-neumorphism .tableWrap,
-body.design-mode-3d-neumorphism .popupBox,
-body.design-mode-3d-neumorphism .akunBox,
-body.design-mode-3d-neumorphism .confirmBox,
-body.design-mode-3d-neumorphism .detailRow {
-  background: var(--bg-box) !important;
-  box-shadow: 12px 12px 28px rgba(0, 0, 0, 0.75), -10px -10px 24px rgba(255, 255, 255, 0.12), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.25) !important;
-  border: 2px solid rgba(255, 255, 255, 0.15) !important;
-  border-radius: 22px !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-body.design-mode-3d-neumorphism .cardStat:hover,
-body.design-mode-3d-neumorphism .box:hover {
-  transform: translateY(-4px) scale(1.02) !important;
-  box-shadow: 16px 16px 34px rgba(0, 0, 0, 0.85), -12px -12px 28px rgba(255, 255, 255, 0.16) !important;
-}
-
-body.design-mode-3d-neumorphism button {
-  box-shadow: 6px 6px 16px rgba(0, 0, 0, 0.5), -4px -4px 12px rgba(255, 255, 255, 0.15) !important;
-  border-radius: 12px !important;
-}
-
-body.design-mode-3d-neumorphism button:active {
-  box-shadow: inset 5px 5px 12px rgba(0, 0, 0, 0.7), inset -4px -4px 10px rgba(255, 255, 255, 0.12) !important;
-  transform: translateY(2px) !important;
-}
-
-/* 3. MODE 3D GLASS & GLOW (Vivid Translucent Glass & Neon Outer Halo Glow) */
-body.design-mode-3d-glassmorphism .cardStat,
-body.design-mode-3d-glassmorphism .box,
-body.design-mode-3d-glassmorphism .tableWrap,
-body.design-mode-3d-glassmorphism .popupBox,
-body.design-mode-3d-glassmorphism .akunBox,
-body.design-mode-3d-glassmorphism .confirmBox {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.88)) !important;
-  backdrop-filter: blur(20px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.5), inset 0 -2px 4px rgba(0, 0, 0, 0.5), 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 25px var(--primary) !important;
-  border: 2px solid rgba(255, 255, 255, 0.35) !important;
-  border-radius: 24px !important;
-  transition: all 0.25s ease !important;
-}
-
-body.light-mode.design-mode-3d-glassmorphism .cardStat,
-body.light-mode.design-mode-3d-glassmorphism .box,
-body.light-mode.design-mode-3d-glassmorphism .tableWrap,
-body.light-mode.design-mode-3d-glassmorphism .popupBox,
-body.light-mode.design-mode-3d-glassmorphism .akunBox {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(241, 245, 249, 0.95)) !important;
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 1), 0 16px 36px rgba(0, 0, 0, 0.2), 0 0 25px rgba(37, 99, 235, 0.35) !important;
-  border: 2px solid rgba(37, 99, 235, 0.4) !important;
-}
-
-body.design-mode-3d-glassmorphism .cardNum {
-  text-shadow: 0 0 15px var(--primary), 0 0 30px var(--primary) !important;
-}
-
-body.design-mode-3d-glassmorphism button {
-  box-shadow: 0 0 20px var(--primary), inset 0 1px 2px #ffffff !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.4) !important;
-}
-
-/* 4. MODE 3D EMBOSSED METALLIC (Heavy Beveled Chiseled Metallic Edges & Deep Insets) */
-body.design-mode-3d-embossed .cardStat,
-body.design-mode-3d-embossed .box,
-body.design-mode-3d-embossed .tableWrap,
-body.design-mode-3d-embossed .popupBox,
-body.design-mode-3d-embossed .akunBox,
-body.design-mode-3d-embossed .confirmBox {
-  border-top: 4px solid rgba(255, 255, 255, 0.6) !important;
-  border-left: 3.5px solid rgba(255, 255, 255, 0.45) !important;
-  border-bottom: 6px solid rgba(0, 0, 0, 0.85) !important;
-  border-right: 5px solid rgba(0, 0, 0, 0.7) !important;
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.75), inset 0 2px 4px rgba(255, 255, 255, 0.35) !important;
-  border-radius: 12px !important;
-  transition: all 0.2s ease !important;
-}
-
-body.design-mode-3d-embossed button {
-  border-top: 3px solid rgba(255, 255, 255, 0.6) !important;
-  border-left: 2.5px solid rgba(255, 255, 255, 0.45) !important;
-  border-bottom: 5px solid rgba(0, 0, 0, 0.8) !important;
-  border-right: 4px solid rgba(0, 0, 0, 0.7) !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.65) !important;
-  transition: all 0.15s ease !important;
-}
-
-body.design-mode-3d-embossed button:active {
-  transform: translateY(3px) !important;
-  border-top: 2px solid rgba(0, 0, 0, 0.8) !important;
-  border-left: 2px solid rgba(0, 0, 0, 0.7) !important;
-  border-bottom: 3px solid rgba(255, 255, 255, 0.4) !important;
-  border-right: 3px solid rgba(255, 255, 255, 0.3) !important;
-  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.7) !important;
-}
-
-/* 5. MODE 3D ISOMETRIC SHADOW (Floating Perspective Tilt & Thick 8px Primary 3D Base Edge) */
-body.design-mode-3d-isometric .cardStat,
-body.design-mode-3d-isometric .box,
-body.design-mode-3d-isometric .tableWrap,
-body.design-mode-3d-isometric .popupBox,
-body.design-mode-3d-isometric .akunBox,
-body.design-mode-3d-isometric .confirmBox {
-  border-bottom: 8px solid var(--primary) !important;
-  border-right: 4px solid rgba(0, 0, 0, 0.65) !important;
-  border-top: 2px solid rgba(255, 255, 255, 0.3) !important;
-  border-left: 2px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 18px 38px -4px rgba(0, 0, 0, 0.85), 0 8px 16px -2px rgba(0, 0, 0, 0.5) !important;
-  border-radius: 18px !important;
-  transform: perspective(800px) rotateX(3deg) translateY(-5px) !important;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-}
-
-body.design-mode-3d-isometric .cardStat:hover,
-body.design-mode-3d-isometric .box:hover {
-  transform: perspective(800px) rotateX(0deg) translateY(-9px) scale(1.02) !important;
-  box-shadow: 0 26px 48px -5px rgba(0, 0, 0, 0.9), 0 0 25px var(--primary) !important;
-}
-
-body.design-mode-3d-isometric button {
-  border-bottom: 5px solid rgba(0, 0, 0, 0.55) !important;
-  border-right: 2px solid rgba(0, 0, 0, 0.4) !important;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45) !important;
+html body.design-mode-normal .cardStat,
+html body.design-mode-normal .box,
+html body.design-mode-normal .tableWrap,
+html body.design-mode-normal .popupBox,
+html body.design-mode-normal .akunBox,
+html body.design-mode-normal .confirmBox {
+  border-radius: 16px !important;
 }

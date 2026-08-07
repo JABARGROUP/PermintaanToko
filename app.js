@@ -107,26 +107,39 @@ const SESSION_KEY = 'STORE_ACTIVE_SESSION_V7_CLEAN';
 const THEME_KEY = 'STORE_ACTIVE_THEME_V7_CLEAN';
 const DESIGN_MODE_KEY = 'STORE_DESIGN_MODE_V7_CLEAN';
 
-// 5 VISUAL 3D DESIGN MODES
+// NORMAL DESIGN MODE ONLY
 const DESIGN_MODES = [
-  { id: 'normal', btnName: 'DESAIN: NORMAL', name: '1. DESAIN NORMAL' },
-  { id: '3d-neumorphism', btnName: 'DESAIN: 3D NEUMORPH', name: '2. 3D NEUMORPHISM' },
-  { id: '3d-glassmorphism', btnName: 'DESAIN: 3D GLASS', name: '3. 3D GLASS & GLOW' },
-  { id: '3d-embossed', btnName: 'DESAIN: 3D EMBOSSED', name: '4. 3D EMBOSSED METALLIC' },
-  { id: '3d-isometric', btnName: 'DESAIN: 3D ISOMETRIC', name: '5. 3D ISOMETRIC SHADOW' }
+  { id: 'normal', btnName: 'DESAIN: NORMAL', name: 'DESAIN NORMAL' }
 ];
 
 function getSavedDesignMode() {
-  const saved = appStorage.getItem(DESIGN_MODE_KEY);
-  if (saved && DESIGN_MODES.some(m => m.id === saved)) {
-    return saved;
-  }
   return 'normal';
 }
 
+function updateBodyClasses() {
+  const savedTheme = (typeof localStorage !== 'undefined' ? localStorage.getItem('APP_SELECTED_THEME') : null) || appStorage.getItem(THEME_KEY) || 'dark-mode';
+  
+  if (typeof THEME_MODES !== 'undefined' && Array.isArray(THEME_MODES)) {
+    THEME_MODES.forEach(t => document.body.classList.remove(t.id));
+  }
+  
+  // Clean all potential design mode class names & inline background styles
+  document.body.classList.remove('design-mode-normal', 'design-mode-3d-kayu-gold', 'design-mode-3d-emerald-glass', 'design-mode-3d-stealth-black', 'design-mode-3d-neumorphism', 'design-mode-3d-glassmorphism', 'design-mode-3d-embossed', 'design-mode-3d-isometric');
+  document.body.style.background = '';
+  document.body.style.color = '';
+
+  document.body.classList.add(savedTheme);
+  document.body.classList.add('design-mode-normal');
+
+  if (typeof THEME_MODES !== 'undefined' && Array.isArray(THEME_MODES)) {
+    const idx = THEME_MODES.findIndex(t => t.id === savedTheme);
+    currentThemeIndex = idx !== -1 ? idx : 0;
+  }
+  updateThemeIcon();
+}
+
 function loadSavedDesignMode() {
-  const mode = getSavedDesignMode();
-  gantiDesignMode(mode, false);
+  updateBodyClasses();
 }
 
 function toggleDesignMode() {
@@ -139,9 +152,13 @@ function toggleDesignMode() {
 
 function updateDesignModeButtonUI(mode) {
   const btnText = document.getElementById('designModeBtnText');
+  const headerBtnText = document.getElementById('headerDesignModeText');
   const found = DESIGN_MODES.find(m => m.id === mode) || DESIGN_MODES[0];
   if (btnText) {
     btnText.textContent = found.btnName;
+  }
+  if (headerBtnText) {
+    headerBtnText.textContent = found.btnName;
   }
 }
 
@@ -150,16 +167,16 @@ function gantiDesignMode(newMode, userInitiated = true) {
     newMode = 'normal';
   }
 
-  DESIGN_MODES.forEach(m => {
-    document.body.classList.remove(`design-mode-${m.id}`);
-  });
-
-  document.body.classList.add(`design-mode-${newMode}`);
   appStorage.setItem(DESIGN_MODE_KEY, newMode);
+  updateBodyClasses();
 
-  updateDesignModeButtonUI(newMode);
+  const found = DESIGN_MODES.find(m => m.id === newMode) || DESIGN_MODES[0];
 
   if (userInitiated) {
+    if (typeof showNotif === 'function') {
+      showNotif(`MODE DESAIN DIUBAH KE: ${found.name.toUpperCase()}`, 'success');
+    }
+
     if (currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'))) {
       if (typeof pushCentralCloudDB === 'function') {
         try { pushCentralCloudDB(); } catch(e) {}
@@ -171,6 +188,7 @@ window.getSavedDesignMode = getSavedDesignMode;
 window.loadSavedDesignMode = loadSavedDesignMode;
 window.gantiDesignMode = gantiDesignMode;
 window.toggleDesignMode = toggleDesignMode;
+window.updateBodyClasses = updateBodyClasses;
 const STORES_DB_KEY = 'STORE_CUSTOM_TOKO_LIST_V7_CLEAN';
 const DELETED_STORES_KEY = 'STORE_DELETED_TOKO_LIST_V7_CLEAN';
 const NOTIFICATIONS_DB_KEY = 'STORE_SYSTEM_NOTIFICATIONS_V7_CLEAN';
@@ -1923,25 +1941,20 @@ function kirimNotifikasiWA(targetPhone, message) {
 }
 
 function loadSavedTheme() {
-  const saved = (typeof localStorage !== 'undefined' ? localStorage.getItem('APP_SELECTED_THEME') : null) || appStorage.getItem(THEME_KEY) || 'dark-mode';
-  document.body.className = saved;
-  const idx = THEME_MODES.findIndex(t => t.id === saved);
-  currentThemeIndex = idx !== -1 ? idx : 0;
-  updateThemeIcon();
+  updateBodyClasses();
 }
 
 function toggleTheme() {
   currentThemeIndex = (currentThemeIndex + 1) % THEME_MODES.length;
   const t = THEME_MODES[currentThemeIndex];
-  document.body.className = t.id;
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('APP_SELECTED_THEME', t.id);
     }
   } catch(e) {}
   appStorage.setItem(THEME_KEY, t.id);
-  updateThemeIcon();
-  pushCentralCloudDB();
+  updateBodyClasses();
+  if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
 }
 
 function updateThemeIcon() {
@@ -2130,6 +2143,8 @@ function logout() {
 }
 
 function bukaMainApp() {
+  updateBodyClasses();
+
   const loginPage = document.getElementById('loginPage');
   if (loginPage) loginPage.classList.remove('active');
   
