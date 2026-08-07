@@ -2686,16 +2686,36 @@ section#masterDbPage.page.active {
     gap: 8px;
   }
 
+  #dashboardPage {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    height: auto !important;
+    min-height: calc(100vh - 60px) !important;
+    padding-bottom: 95px !important;
+    touch-action: auto !important;
+  }
+
+  #detailDashboard .tableWrap {
+    width: 100% !important;
+    display: block !important;
+    position: relative !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: auto !important;
+    border-radius: 10px !important;
+  }
+
   .tableWrap,
-  #detailDashboard .tableWrap,
   #riwayatPage .tableWrap,
   #masterDbPage .tableWrap {
     overflow-x: auto !important;
     overflow-y: auto !important;
-    max-height: calc(100vh - 200px) !important;
+    max-height: calc(100vh - 180px) !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: auto !important;
-    overscroll-behavior: contain !important;
     border-radius: 10px !important;
   }
 
@@ -4126,7 +4146,6 @@ div.rowHighlightOrange {
   /* STICKY STILL TABLE HEADER ON MOBILE HP (DIAM ATAS/BAWAH, BISA SCROLL KANAN/KIRI) */
   .tableWrap,
   .dashboardTableContainer,
-  #detailDashboard .tableWrap,
   #riwayatPage .tableWrap,
   #masterDbPage .tableWrap,
   .tableCardV2,
@@ -4138,7 +4157,16 @@ div.rowHighlightOrange {
     min-height: 220px !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: auto !important;
-    overscroll-behavior: contain !important;
+    position: relative !important;
+  }
+
+  #detailDashboard .tableWrap {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: auto !important;
     position: relative !important;
   }
 
