@@ -2119,12 +2119,30 @@ body.design-mode-3d-isometric .dashboardTable th {
 }
 
 .detailTable2 th {
-  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+  background: var(--primary) !important;
   color: #ffffff !important;
   font-weight: 800 !important;
   letter-spacing: 0.5px !important;
   text-transform: uppercase !important;
   border: 1px solid var(--border-color) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+/* FLAT MODERN DATA TABLE HEADERS (NO 3D SHADOWS, GRADIENTS, OR BEVELS) */
+table th,
+.historyTable th,
+.historyTable thead th,
+.dashboardTable th,
+.dashboardTable thead th,
+.detailTable2 th,
+.detailTableV2 th,
+.tableWrap th {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  border-radius: 0 !important;
 }
 
 .detailTable2 td {

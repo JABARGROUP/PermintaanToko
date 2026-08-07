@@ -3380,13 +3380,10 @@ function filterRiwayat() {
         aksi += `
           <button class="btnIcon btnApprove" onclick="approveDM('${r.noSurat}')" title="APPROVE DM"><span class="material-symbols-rounded">check_circle</span></button>
           <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'DM')" title="REJECT DM"><span class="material-symbols-rounded">cancel</span></button>
-          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
         `;
       } else if (r.status === 'APPROVE') {
         aksi += `
           <button class="btnIcon btnDone" onclick="doneService('${r.noSurat}')" title="DONE"><span class="material-symbols-rounded">task_alt</span></button>
-          <button class="btnIcon" onclick="batalApproveDM('${r.noSurat}')" title="BATAL APPROVE DM" style="background: #f97316 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
-          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
         `;
       }
     } else if (role === 'SERVICE') {
@@ -3395,14 +3392,9 @@ function filterRiwayat() {
           <button class="btnIcon btnApprove" onclick="approveService('${r.noSurat}')" title="APPROVE SERVICE"><span class="material-symbols-rounded">check_circle</span></button>
           <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'SERVICE')" title="REJECT SERVICE"><span class="material-symbols-rounded">cancel</span></button>
         `;
-      } else if (r.serviceApprove && r.status === 'PENDING') {
-        aksi += `
-          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
-        `;
       } else if (r.status === 'APPROVE') {
         aksi += `
           <button class="btnIcon btnDone" onclick="doneService('${r.noSurat}')" title="DONE"><span class="material-symbols-rounded">task_alt</span></button>
-          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
         `;
       }
     } else if (role === 'DM') {
@@ -3410,11 +3402,6 @@ function filterRiwayat() {
         aksi += `
           <button class="btnIcon btnApprove" onclick="approveDM('${r.noSurat}')" title="APPROVE DM"><span class="material-symbols-rounded">check_circle</span></button>
           <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'DM')" title="REJECT DM"><span class="material-symbols-rounded">cancel</span></button>
-          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
-        `;
-      } else if (r.status === 'APPROVE') {
-        aksi += `
-          <button class="btnIcon" onclick="batalApproveDM('${r.noSurat}')" title="BATAL APPROVE DM" style="background: #f97316 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
         `;
       }
     }
@@ -3433,6 +3420,20 @@ function filterRiwayat() {
       aksi += `
         <button class="btnIcon btnDelete" onclick="hapusData('${r.noSurat}')" title="HAPUS PERMINTAAN"><span class="material-symbols-rounded">delete</span></button>
       `;
+    }
+
+    // TOMBOL KHUSUS LOGIN ADMIN TERLETAK DI SEBELAH TOMBOL HAPUS DATA
+    if (isAdminUser) {
+      if (r.serviceApprove) {
+        aksi += `
+          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE (KHUSUS ADMIN)" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
+        `;
+      }
+      if (r.status === 'APPROVE' || r.dmUserName || r.dmTTD) {
+        aksi += `
+          <button class="btnIcon" onclick="batalApproveDM('${r.noSurat}')" title="BATAL APPROVE DM (KHUSUS ADMIN)" style="background: #f97316 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
+        `;
+      }
     }
 
     aksi += `
