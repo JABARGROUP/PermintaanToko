@@ -40,6 +40,31 @@ function updateGlobalConnectionDotStatus() {
 }
 window.updateGlobalConnectionDotStatus = updateGlobalConnectionDotStatus;
 
+// PARSE PHOTOS HELPER FUNCTION (HANDLES ARRAYS, JSON STRINGS, SINGLE URLS)
+function parsePhotosArray(rawPhotos) {
+  if (!rawPhotos) return [];
+  if (Array.isArray(rawPhotos)) {
+    return rawPhotos.map(p => typeof p === 'string' ? p.trim() : (p ? String(p) : '')).filter(p => p.length > 0);
+  }
+  if (typeof rawPhotos === 'string') {
+    const trimmed = rawPhotos.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.map(p => typeof p === 'string' ? p.trim() : (p ? String(p) : '')).filter(p => p.length > 0);
+        }
+      } catch (e) {}
+    }
+    if (trimmed.startsWith('http') || trimmed.startsWith('data:') || trimmed.startsWith('/')) {
+      return [trimmed];
+    }
+  }
+  return [];
+}
+window.parsePhotosArray = parsePhotosArray;
+
 // CLEAN KEEP-ALIVE PING (PREVENTS 404 & 401 CONSOLE ERRORS)
 async function pingSupabaseKeepAlive() {
   if (supabase) {
@@ -1217,7 +1242,7 @@ async function syncSupabaseRequestsToLocalCache() {
           jenis: row.jenis,
           catatan: row.catatan,
           items: row.items || [],
-          photos: row.photos || [],
+          photos: parsePhotosArray(row.photos || row.foto),
           status: row.status || 'PENDING',
           serviceApprove: row.service_approve !== undefined ? row.service_approve : row.serviceApprove,
           createdBy: row.created_by || row.createdBy,
@@ -2908,7 +2933,7 @@ function renderPhotoGrid() {
     const div = document.createElement('div');
     div.className = 'photo-preview-card';
     div.title = "KLIK UNTUK BUKA FOTO & GESER (ZOOM & PAN)";
-    div.onclick = () => zoomFoto(src);
+    div.onclick = () => zoomFoto(currentPhotos, idx);
     div.innerHTML = `
       <img src="${src}" alt="Foto ${idx + 1}">
       <button class="photo-del-btn" onclick="event.stopPropagation(); hapusFotoItem(${idx})">✕</button>
@@ -3364,15 +3389,10 @@ function lihatFotoByNoSurat(noSurat) {
     return;
   }
   const requests = getRequestsFromDB();
-  const req = requests.find(r => r.noSurat === noSurat);
-  if (req && req.photos && req.photos.length > 0) {
-    viewerPhotos = req.photos;
-    viewerCurrentIndex = 0;
-    tampilkanFotoViewerAktif();
-    
-    if (typeof pushPopupHistoryState === 'function') {
-      pushPopupHistoryState();
-    }
+  const req = requests.find(r => r.noSurat === noSurat || r.id === noSurat);
+  const photos = parsePhotosArray(req ? req.photos : null);
+  if (photos && photos.length > 0) {
+    bukaViewGambar(photos, 0);
   } else {
     showNotif('TIDAK ADA FOTO UNTUK PERMINTAAN INI!', 'warning');
   }
@@ -4068,9 +4088,8 @@ function lihatDetail(noSurat, fromDashboard = false) {
   }
 
   if (req.photos && Array.isArray(req.photos) && req.photos.length > 0) {
-    const firstPhoto = req.photos[0];
     actionButtons.push(`
-      <button type="button" class="btnIcon btnPhotoView btnIconOnly" title="LIHAT FOTO BUKTI BARANG (${req.photos.length})" onclick="tutupDetailBarangV2(); zoomFoto('${firstPhoto}');">
+      <button type="button" class="btnIcon btnPhotoView btnIconOnly" title="LIHAT FOTO BUKTI BARANG (${req.photos.length})" onclick="tutupDetailBarangV2(); lihatFotoByNoSurat('${req.noSurat || req.id}');">
         <span class="material-symbols-rounded">image</span>
       </button>
     `);
@@ -4112,7 +4131,7 @@ function lihatDetail(noSurat, fromDashboard = false) {
     <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 8px 0px 12px 0px !important; display: flex !important; flex-direction: column !important; gap: 6px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 18px 18px !important; overflow: hidden !important;">
       ${headerInfoHtml}
       
-      <div class="tableCardV2" style="display: block !important; border-top: 1px solid var(--border-color) !important; border-bottom: 1px solid var(--border-color) !important; border-left: none !important; border-right: none !important; border-radius: 0 !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important; max-height: 65vh !important; background: var(--bg-box) !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 0 !important; position: relative !important;">
+      <div class="tableCardV2 tableWrap" style="display: block !important; border-top: 1px solid var(--border-color) !important; border-bottom: 1px solid var(--border-color) !important; border-left: none !important; border-right: none !important; border-radius: 0 !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: auto !important; overscroll-behavior: contain !important; max-height: 55vh !important; background: var(--bg-box) !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 0 !important; position: relative !important;">
         <table class="detailTableV2" style="width: 100% !important; min-width: 750px !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
           ${tableHeaderHtml}
           <tbody>
@@ -6960,7 +6979,7 @@ function confirmYes() {
   }
 }
 
-// LISTEN FOR KEYBOARD ENTER KEY TO TRIGGER CONFIRMATION "YA, LANJUT" OR OK NOTIFICATION
+// LISTEN FOR KEYBOARD ENTER KEY TO TRIGGER CONFIRMATION "YA, LANJUT" OR OK NOTIFICATION & ARROW KEYS FOR IMAGE VIEWER
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.keyCode === 13) {
     const confirmOverlay = document.getElementById('confirmOverlay');
@@ -6976,6 +6995,16 @@ window.addEventListener('keydown', (e) => {
       e.stopPropagation();
       closePopup();
       return;
+    }
+  } else if (e.key === 'ArrowLeft') {
+    const viewer = document.getElementById('imageViewer');
+    if (viewer && viewer.style.display !== 'none' && viewer.style.display !== '') {
+      gantiFotoViewer(-1);
+    }
+  } else if (e.key === 'ArrowRight') {
+    const viewer = document.getElementById('imageViewer');
+    if (viewer && viewer.style.display !== 'none' && viewer.style.display !== '') {
+      gantiFotoViewer(1);
     }
   }
 });
@@ -7129,7 +7158,8 @@ function updateViewerCounter() {
   const navLeft = document.getElementById('navViewerLeft');
   const navRight = document.getElementById('navViewerRight');
 
-  const total = currentViewerPhotos.length || 1;
+  const photos = parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
+  const total = photos.length || 1;
   const current = (currentViewerIndex || 0) + 1;
 
   if (counter) counter.textContent = `${current} / ${total}`;
@@ -7139,41 +7169,46 @@ function updateViewerCounter() {
 }
 
 function gantiFotoViewer(direction) {
-  if (!currentViewerPhotos || currentViewerPhotos.length <= 1) return;
-  currentViewerIndex = (currentViewerIndex + direction + currentViewerPhotos.length) % currentViewerPhotos.length;
+  const photos = parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
+  if (!photos || photos.length <= 1) return;
+  
+  currentViewerIndex = (currentViewerIndex + direction + photos.length) % photos.length;
+  viewerCurrentIndex = currentViewerIndex;
+  currentViewerPhotos = photos;
+  viewerPhotos = photos;
   
   resetZoom();
   
   const img = document.getElementById('viewerImage');
   if (img) {
-    img.src = currentViewerPhotos[currentViewerIndex];
+    img.src = photos[currentViewerIndex];
     applyImageTransform(false);
   }
   updateViewerCounter();
 }
 
-function bukaViewGambar(src) {
-  if (!src) return;
+function bukaViewGambar(src, startIdx = 0) {
+  const photoList = parsePhotosArray(src);
+  if (!photoList || photoList.length === 0) {
+    showNotif('TIDAK ADA FOTO BUKTI PENDUKUNG!', 'warning');
+    return;
+  }
+
+  currentViewerPhotos = photoList;
+  viewerPhotos = photoList;
+  currentViewerIndex = Math.max(0, Math.min(startIdx, photoList.length - 1));
+  viewerCurrentIndex = currentViewerIndex;
 
   currentZoom = 1;
   panX = 0;
   panY = 0;
   isPanningImage = false;
 
-  if (Array.isArray(src)) {
-    currentViewerPhotos = src;
-    currentViewerIndex = 0;
-    src = currentViewerPhotos[0];
-  } else if (typeof src === 'string') {
-    currentViewerPhotos = [src];
-    currentViewerIndex = 0;
-  }
-
   const modal = document.getElementById('imageViewer');
   const img = document.getElementById('viewerImage');
 
   if (img) {
-    img.src = src;
+    img.src = photoList[currentViewerIndex];
   }
 
   if (modal) {
