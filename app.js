@@ -2052,7 +2052,7 @@ function logout() {
     pindahHalaman('loginPage');
     if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
     
-    showNotif('BERHASIL LOGOUT & MEMBERSIHKAN CACHE!', 'success');
+    showNotif('BERHASIL LOGOUT!', 'success');
   });
 }
 
@@ -4857,7 +4857,7 @@ function simpanTTD() {
     }
     
     pushCentralCloudDB();
-    showNotif('TANDA TANGAN BERHASIL DISIMPAN PADA PENYIMPANAN LOKAL PERANGKAT & CLOUD!', 'info');
+    showNotif('TANDA TANGAN BERHASIL DISIMPAN!', 'info');
     tutupTTD();
   });
 }
@@ -6366,7 +6366,7 @@ function prosesUploadExcelLookup(event) {
         hideLoading();
         showNotif(`BERHASIL MEMPERBARUI ${count} KODE SERI BARANG & TERSINKRON KE DATABASE!`, 'info');
         const statusEl = document.getElementById('lookupUploadStatus');
-        if (statusEl) statusEl.textContent = `✓ ${count} KODE SERI BERHASIL DITAMBAHKAN & TERKIRIM KE CLOUD DATABASE!`;
+        if (statusEl) statusEl.textContent = `✅ ${count} KODE SERI BERHASIL DITAMBAHKAN!`;
       } else {
         hideLoading();
         showNotif('TIDAK ADA DATA VALID DENGAN 2 KOLOM (KOLOM A & KOLOM B)!', 'warning');
@@ -7399,7 +7399,7 @@ function initAllDraggableButtons() {
 })();
 
 function hapusSemuaDataLokal() {
-  showConfirm('YAKIN INGIN MENGHAPUS SEMUA DATA LOKAL & CACHE? (Aplikasi akan keluar dan dimuat ulang)', () => {
+  showConfirm('YAKIN INGIN MENGHAPUS SEMUA DATA PERANGKAT? (Aplikasi akan keluar dan dimuat ulang)', () => {
     showLoading('');
     
     setTimeout(async () => {
@@ -7624,7 +7624,7 @@ async function hapusSemuaNotifFirebaseDanLokal() {
     return;
   }
 
-  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI & CHAT DI DATABASE FIREBASE DAN SEMUA PERANGKAT?\n\n(Semua notifikasi dan pesan chat di cloud Firebase & lokal semua perangkat akan dibersihkan total!)', async () => {
+  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI & CHAT DI DATABASE DAN SEMUA PERANGKAT?\n\n(Semua notifikasi dan pesan chat di semua perangkat akan dibersihkan total!)', async () => {
     showLoading('MENGHAPUS SEMUA NOTIFIKASI & CHAT DATABASE...');
 
     try {
