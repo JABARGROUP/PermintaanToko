@@ -105,6 +105,72 @@ const CHAT_ROOM_DB_KEY = 'STORE_CHAT_ROOM_DB_V7_CLEAN';
 const TTD_DB_KEY = 'STORE_TTD_DB_V7_CLEAN';
 const SESSION_KEY = 'STORE_ACTIVE_SESSION_V7_CLEAN';
 const THEME_KEY = 'STORE_ACTIVE_THEME_V7_CLEAN';
+const DESIGN_MODE_KEY = 'STORE_DESIGN_MODE_V7_CLEAN';
+
+// 5 VISUAL 3D DESIGN MODES
+const DESIGN_MODES = [
+  { id: 'normal', btnName: 'DESAIN: NORMAL', name: '1. DESAIN NORMAL' },
+  { id: '3d-neumorphism', btnName: 'DESAIN: 3D NEUMORPH', name: '2. 3D NEUMORPHISM' },
+  { id: '3d-glassmorphism', btnName: 'DESAIN: 3D GLASS', name: '3. 3D GLASS & GLOW' },
+  { id: '3d-embossed', btnName: 'DESAIN: 3D EMBOSSED', name: '4. 3D EMBOSSED METALLIC' },
+  { id: '3d-isometric', btnName: 'DESAIN: 3D ISOMETRIC', name: '5. 3D ISOMETRIC SHADOW' }
+];
+
+function getSavedDesignMode() {
+  const saved = appStorage.getItem(DESIGN_MODE_KEY);
+  if (saved && DESIGN_MODES.some(m => m.id === saved)) {
+    return saved;
+  }
+  return 'normal';
+}
+
+function loadSavedDesignMode() {
+  const mode = getSavedDesignMode();
+  gantiDesignMode(mode, false);
+}
+
+function toggleDesignMode() {
+  const currentMode = getSavedDesignMode();
+  const currentIndex = DESIGN_MODES.findIndex(m => m.id === currentMode);
+  const nextIndex = (currentIndex + 1) % DESIGN_MODES.length;
+  const nextMode = DESIGN_MODES[nextIndex].id;
+  gantiDesignMode(nextMode, true);
+}
+
+function updateDesignModeButtonUI(mode) {
+  const btnText = document.getElementById('designModeBtnText');
+  const found = DESIGN_MODES.find(m => m.id === mode) || DESIGN_MODES[0];
+  if (btnText) {
+    btnText.textContent = found.btnName;
+  }
+}
+
+function gantiDesignMode(newMode, userInitiated = true) {
+  if (!newMode || !DESIGN_MODES.some(m => m.id === newMode)) {
+    newMode = 'normal';
+  }
+
+  DESIGN_MODES.forEach(m => {
+    document.body.classList.remove(`design-mode-${m.id}`);
+  });
+
+  document.body.classList.add(`design-mode-${newMode}`);
+  appStorage.setItem(DESIGN_MODE_KEY, newMode);
+
+  updateDesignModeButtonUI(newMode);
+
+  if (userInitiated) {
+    if (currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'))) {
+      if (typeof pushCentralCloudDB === 'function') {
+        try { pushCentralCloudDB(); } catch(e) {}
+      }
+    }
+  }
+}
+window.getSavedDesignMode = getSavedDesignMode;
+window.loadSavedDesignMode = loadSavedDesignMode;
+window.gantiDesignMode = gantiDesignMode;
+window.toggleDesignMode = toggleDesignMode;
 const STORES_DB_KEY = 'STORE_CUSTOM_TOKO_LIST_V7_CLEAN';
 const DELETED_STORES_KEY = 'STORE_DELETED_TOKO_LIST_V7_CLEAN';
 const NOTIFICATIONS_DB_KEY = 'STORE_SYSTEM_NOTIFICATIONS_V7_CLEAN';
@@ -727,6 +793,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
+    loadSavedDesignMode();
     autoLogin();
 
     if (typeof currentUser !== 'undefined' && currentUser) {
@@ -1038,6 +1105,10 @@ function initFirebaseDB() {
               if (cfg.theme) {
                 appStorage.setItem(THEME_KEY, cfg.theme);
                 if (typeof loadSavedTheme === 'function') loadSavedTheme();
+              }
+              if (cfg.designMode) {
+                appStorage.setItem(DESIGN_MODE_KEY, cfg.designMode);
+                if (typeof loadSavedDesignMode === 'function') loadSavedDesignMode();
               }
               if (cfg.fonteToken) appStorage.setItem(FONTE_TOKEN_KEY, cfg.fonteToken);
               if (cfg.featurePhotos !== undefined) {
@@ -1477,6 +1548,7 @@ async function pushCentralCloudDB() {
         const chatMsgs = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
         const chatRooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
         const theme = appStorage.getItem(THEME_KEY) || 'dark-mode';
+        const designMode = getSavedDesignMode();
         const fonteToken = getFonteToken();
         const adminReminder = getAdminReminderEnabled();
         const adminReminderTime = getAdminReminderTime();
@@ -1492,6 +1564,7 @@ async function pushCentralCloudDB() {
           chatMessages: chatMsgs,
           chatRooms: chatRooms,
           theme: theme,
+          designMode: designMode,
           fonteToken: fonteToken,
           adminReminder: adminReminder,
           adminReminderTime: adminReminderTime,
@@ -6405,6 +6478,10 @@ function prosesBukaAkun() {
   if (elNama) elNama.value = currentUser.fullName || '';
   if (elHP) elHP.value = currentUser.phone || '-';
   if (elArea) elArea.value = `${currentUser.area} - ${AREA_MAP[currentUser.area] || currentUser.area}`;
+
+  if (typeof updateDesignModeButtonUI === 'function' && typeof getSavedDesignMode === 'function') {
+    updateDesignModeButtonUI(getSavedDesignMode());
+  }
   if (elKat) elKat.value = currentUser.category || '';
   if (elPass) elPass.value = '';
 
