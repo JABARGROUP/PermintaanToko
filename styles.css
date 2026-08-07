@@ -204,11 +204,14 @@ button .material-symbols-rounded,
 }
 
 html, body {
-  overflow: hidden !important;
-  height: 100vh !important;
-  width: 100vw !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  min-height: 100% !important;
+  width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: auto !important;
 }
 
 body {
@@ -220,9 +223,12 @@ body {
 }
 
 #app {
-  height: 100vh !important;
-  width: 100vw !important;
-  overflow: hidden !important;
+  min-height: 100vh !important;
+  width: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: auto !important;
 }
 
 /* UTILITY CLASSES */
@@ -2749,23 +2755,32 @@ section#masterDbPage.page.active {
 
 @media(max-width: 480px) {
   html, body {
-    overflow: hidden !important;
-    position: fixed !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    position: relative !important;
     width: 100% !important;
-    height: 100% !important;
-    touch-action: pan-x pan-y;
+    min-height: 100% !important;
+    height: auto !important;
+    touch-action: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   #app {
-    height: 100vh !important;
-    overflow-y: hidden !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: auto !important;
   }
 
   .page.active {
-    height: calc(100vh - 60px) !important;
+    height: auto !important;
+    min-height: calc(100vh - 60px) !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
-    padding-bottom: 70px !important;
+    padding-bottom: 85px !important;
+    touch-action: auto !important;
   }
 
   .header h3 {
