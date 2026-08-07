@@ -7073,6 +7073,8 @@ let startPointerY = 0;
 let initialPanX = 0;
 let initialPanY = 0;
 
+let currentRotation = 0;
+
 function applyImageTransform(isSmooth = false) {
   const img = document.getElementById('viewerImage');
   if (!img) return;
@@ -7082,10 +7084,17 @@ function applyImageTransform(isSmooth = false) {
     panY = 0;
   }
 
-  img.style.transition = isSmooth ? 'transform 0.18s cubic-bezier(0.1, 0.9, 0.2, 1)' : 'none';
-  img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+  img.style.transition = isSmooth ? 'transform 0.22s cubic-bezier(0.1, 0.9, 0.2, 1)' : 'none';
+  img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom}) rotate(${currentRotation}deg)`;
   img.style.cursor = isPanningImage ? 'grabbing' : (currentZoom > 1 ? 'grab' : 'pointer');
 }
+
+function toggleRotation() {
+  currentRotation = (currentRotation + 90) % 360;
+  applyImageTransform(true);
+}
+window.toggleRotation = toggleRotation;
+window.rotateImage = toggleRotation;
 
 function initImagePanListeners() {
   const canvas = document.getElementById('imageViewerCanvas');
@@ -7250,6 +7259,7 @@ function zoomImage(step) {
 
 function resetZoom() {
   currentZoom = 1;
+  currentRotation = 0;
   panX = 0;
   panY = 0;
   isPanningImage = false;
