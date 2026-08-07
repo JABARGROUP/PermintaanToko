@@ -3380,10 +3380,13 @@ function filterRiwayat() {
         aksi += `
           <button class="btnIcon btnApprove" onclick="approveDM('${r.noSurat}')" title="APPROVE DM"><span class="material-symbols-rounded">check_circle</span></button>
           <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'DM')" title="REJECT DM"><span class="material-symbols-rounded">cancel</span></button>
+          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
         `;
       } else if (r.status === 'APPROVE') {
         aksi += `
           <button class="btnIcon btnDone" onclick="doneService('${r.noSurat}')" title="DONE"><span class="material-symbols-rounded">task_alt</span></button>
+          <button class="btnIcon" onclick="batalApproveDM('${r.noSurat}')" title="BATAL APPROVE DM" style="background: #f97316 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
+          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
         `;
       }
     } else if (role === 'SERVICE') {
@@ -3392,9 +3395,14 @@ function filterRiwayat() {
           <button class="btnIcon btnApprove" onclick="approveService('${r.noSurat}')" title="APPROVE SERVICE"><span class="material-symbols-rounded">check_circle</span></button>
           <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'SERVICE')" title="REJECT SERVICE"><span class="material-symbols-rounded">cancel</span></button>
         `;
+      } else if (r.serviceApprove && r.status === 'PENDING') {
+        aksi += `
+          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
+        `;
       } else if (r.status === 'APPROVE') {
         aksi += `
           <button class="btnIcon btnDone" onclick="doneService('${r.noSurat}')" title="DONE"><span class="material-symbols-rounded">task_alt</span></button>
+          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
         `;
       }
     } else if (role === 'DM') {
@@ -3402,6 +3410,11 @@ function filterRiwayat() {
         aksi += `
           <button class="btnIcon btnApprove" onclick="approveDM('${r.noSurat}')" title="APPROVE DM"><span class="material-symbols-rounded">check_circle</span></button>
           <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'DM')" title="REJECT DM"><span class="material-symbols-rounded">cancel</span></button>
+          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
+        `;
+      } else if (r.status === 'APPROVE') {
+        aksi += `
+          <button class="btnIcon" onclick="batalApproveDM('${r.noSurat}')" title="BATAL APPROVE DM" style="background: #f97316 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
         `;
       }
     }
@@ -3800,6 +3813,93 @@ function doneService(noSurat) {
   });
 }
 
+function batalApproveService(noSurat) {
+  if (!noSurat) return;
+  showConfirm(`BATALKAN APPROVAL SERVICE UNTUK PERMINTAAN #${noSurat}?`, () => {
+    showLoading('');
+    setTimeout(async () => {
+      hideLoading();
+      const requests = getRequestsFromDB();
+      const idx = requests.findIndex(r => r.noSurat === noSurat);
+      if (idx !== -1) {
+        requests[idx].serviceApprove = false;
+        requests[idx].serviceUserName = '';
+        requests[idx].serviceTTD = '';
+        requests[idx].status = 'PENDING';
+
+        if (!requests[idx].log) requests[idx].log = [];
+        requests[idx].log.push({
+          action: 'BATAL_APPROVE_SERVICE',
+          user: currentUser ? currentUser.fullName : 'ADMIN',
+          notes: 'BATAL APPROVAL SERVICE',
+          time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+        });
+
+        saveRequestsToDB(requests);
+
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            await supabase.from('permintaan_toko').update({
+              service_approve: false,
+              status: 'PENDING'
+            }).eq('no_surat', noSurat);
+          } catch(e) {}
+        }
+
+        showNotif(`BERHASIL MEMBATALKAN APPROVAL SERVICE #${noSurat}!`, 'info');
+
+        loadRiwayat();
+        loadDashboard();
+        if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+      }
+    }, 300);
+  });
+}
+window.batalApproveService = batalApproveService;
+
+function batalApproveDM(noSurat) {
+  if (!noSurat) return;
+  showConfirm(`BATALKAN APPROVAL DM UNTUK PERMINTAAN #${noSurat}?`, () => {
+    showLoading('');
+    setTimeout(async () => {
+      hideLoading();
+      const requests = getRequestsFromDB();
+      const idx = requests.findIndex(r => r.noSurat === noSurat);
+      if (idx !== -1) {
+        requests[idx].dmApprove = false;
+        requests[idx].dmUserName = '';
+        requests[idx].dmTTD = '';
+        requests[idx].status = 'PENDING';
+
+        if (!requests[idx].log) requests[idx].log = [];
+        requests[idx].log.push({
+          action: 'BATAL_APPROVE_DM',
+          user: currentUser ? currentUser.fullName : 'ADMIN',
+          notes: 'BATAL APPROVAL DM',
+          time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+        });
+
+        saveRequestsToDB(requests);
+
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            await supabase.from('permintaan_toko').update({
+              status: 'PENDING'
+            }).eq('no_surat', noSurat);
+          } catch(e) {}
+        }
+
+        showNotif(`BERHASIL MEMBATALKAN APPROVAL DM #${noSurat}!`, 'info');
+
+        loadRiwayat();
+        loadDashboard();
+        if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+      }
+    }, 300);
+  });
+}
+window.batalApproveDM = batalApproveDM;
+
 function tolakServiceModal(noSurat, roleType) {
   const elNo = document.getElementById('rejectNoSurat');
   const elRole = document.getElementById('rejectRoleType');
@@ -4155,6 +4255,24 @@ function lihatDetail(noSurat, fromDashboard = false) {
         <span class="material-symbols-rounded">task_alt</span>
       </button>
     `);
+  }
+
+  // BATAL APPROVE SERVICE / DM BUTTONS FOR ADMIN AND MANAGEMENT
+  if (isAdminUser || role === 'SERVICE' || role === 'DM') {
+    if (req.serviceApprove) {
+      actionButtons.push(`
+        <button type="button" class="btnIcon btnIconOnly" title="BATAL APPROVE SERVICE" onclick="tutupDetailBarangV2(); batalApproveService('${req.noSurat}');" style="background: #eab308 !important; color: #ffffff !important;">
+          <span class="material-symbols-rounded">undo</span>
+        </button>
+      `);
+    }
+    if (req.status === 'APPROVE' || req.dmUserName || req.dmTTD) {
+      actionButtons.push(`
+        <button type="button" class="btnIcon btnIconOnly" title="BATAL APPROVE DM" onclick="tutupDetailBarangV2(); batalApproveDM('${req.noSurat}');" style="background: #f97316 !important; color: #ffffff !important;">
+          <span class="material-symbols-rounded">undo</span>
+        </button>
+      `);
+    }
   }
 
   const isCreator = currentUser && (req.userId === currentUser.id || req.createdBy === currentUser.fullName || (currentUser.category === 'TOKO' && req.toko.toUpperCase() === currentUser.fullName.toUpperCase()));
