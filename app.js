@@ -453,6 +453,16 @@ function tambahNotifikasiSistem(targetRoles, targetArea, message, noSurat = '') 
 
   if (typeof supabase !== 'undefined' && supabase) {
     try {
+      supabase.from('notifications').upsert({
+        id: newNotif.id,
+        target_roles: newNotif.targetRoles,
+        target_area: newNotif.targetArea,
+        message: newNotif.message,
+        no_surat: newNotif.noSurat,
+        time: newNotif.time,
+        read_by: newNotif.readBy || []
+      }).catch(e => console.warn('[SUPABASE NOTIF TABLE NOTICE]:', e));
+
       const systemNotifRow = {
         id: '__SYSTEM_NOTIFICATIONS__',
         no_surat: '__SYSTEM_NOTIFICATIONS__',
@@ -1655,21 +1665,77 @@ function initGlobalRealtimeSyncEngine() {
     }
   }
 
-  // 2. FIRESTORE SNAPSHOT LISTENERS FOR REALTIME UPDATES
+  // 2. FIRESTORE SNAPSHOT LISTENERS FOR INSTANT MULTI-DEVICE SYNC
   if (typeof dbFirestore !== 'undefined' && dbFirestore) {
     try {
-      dbFirestore.collection('requests').onSnapshot(() => onGlobalDataChangedRealtime('firestore_requests'), err => {});
-      dbFirestore.collection('users').onSnapshot(() => onGlobalDataChangedRealtime('firestore_users'), err => {});
+      dbFirestore.collection('requests').onSnapshot(snapshot => {
+        if (snapshot && !snapshot.empty) {
+          const delReqs = new Set(
+            (JSON.parse(appStorage.getItem(DELETED_REQUESTS_KEY) || '[]') || [])
+              .filter(Boolean)
+              .map(v => String(v).trim())
+          );
+          const fsReqs = [];
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data && data.noSurat && !delReqs.has(String(data.noSurat).trim())) {
+              fsReqs.push(data);
+            }
+          });
+          if (fsReqs.length > 0) {
+            fsReqs.sort((a,b) => (b.noSurat || '').localeCompare(a.noSurat || ''));
+            appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(fsReqs));
+          }
+        }
+        onGlobalDataChangedRealtime('firestore_requests');
+      }, err => {});
+
+      dbFirestore.collection('users').onSnapshot(snapshot => {
+        if (snapshot && !snapshot.empty) {
+          const fsUsers = [];
+          snapshot.forEach(doc => {
+            const u = doc.data();
+            if (u && u.username) fsUsers.push(u);
+          });
+          if (fsUsers.length > 0) {
+            appStorage.setItem(USERS_DB_KEY, JSON.stringify(fsUsers));
+          }
+        }
+        onGlobalDataChangedRealtime('firestore_users');
+      }, err => {});
     } catch(e) {
       console.warn('[FIRESTORE SNAPSHOT NOTICE]:', e);
     }
   }
 
-  // 3. FAST 2.5-SECOND BACKGROUND POLLING HEARTBEAT (GUARANTEED SYNC FALLBACK)
+  // 3. FIREBASE REALTIME DB LISTENER
+  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+    try {
+      dbRealtime.ref('requests').on('value', snapshot => {
+        const val = snapshot.val();
+        if (val) {
+          const reqList = Array.isArray(val) ? val : Object.values(val);
+          const delReqs = new Set(
+            (JSON.parse(appStorage.getItem(DELETED_REQUESTS_KEY) || '[]') || [])
+              .filter(Boolean)
+              .map(v => String(v).trim())
+          );
+          const cleanReqs = reqList.filter(r => r && r.noSurat && !delReqs.has(String(r.noSurat).trim()));
+          if (cleanReqs.length > 0) {
+            cleanReqs.sort((a,b) => (b.noSurat || '').localeCompare(a.noSurat || ''));
+            appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(cleanReqs));
+            onGlobalDataChangedRealtime('realtime_db_requests');
+          }
+        }
+      });
+    } catch(e) {}
+  }
+
+  // 4. FAST 2-SECOND BACKGROUND POLLING HEARTBEAT (GUARANTEED SYNC FALLBACK)
   if (!window.globalFastRealtimeTimer) {
     window.globalFastRealtimeTimer = setInterval(() => {
       onGlobalDataChangedRealtime('heartbeat');
-    }, 2500);
+    }, 2000);
   }
 }
 
@@ -1685,7 +1751,10 @@ async function onGlobalDataChangedRealtime(source) {
     if (currentUser) {
       if (typeof loadDashboard === 'function') loadDashboard();
       if (typeof loadRiwayat === 'function') loadRiwayat();
-      if (typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) loadMasterDbTable();
+      const hasCheckedMaster = document.querySelectorAll('.masterDbCheckbox:checked').length > 0;
+      if (!hasCheckedMaster && typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) {
+        loadMasterDbTable();
+      }
       if (typeof loadUsersManagement === 'function' && document.getElementById('userTableBody')) loadUsersManagement();
       if (typeof loadDaftarTokoModal === 'function' && document.getElementById('daftarTokoTableBody')) loadDaftarTokoModal();
       if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
@@ -1710,9 +1779,9 @@ async function syncSupabaseRequestsToLocalCache() {
           .map(v => String(v).trim())
       );
 
-      const formattedReqs = data
+      const freshReqs = data
         .filter(row => {
-          const ns = row.no_surat || row.noSurat || '';
+          const ns = String(row.no_surat || row.noSurat || '').trim();
           return ns && !ns.startsWith('__SYSTEM_') && !delReqs.has(ns);
         })
         .map(row => ({
@@ -1721,7 +1790,7 @@ async function syncSupabaseRequestsToLocalCache() {
           toko: row.toko,
           area: row.area,
           jenis: row.jenis,
-          catatan: row.catatan,
+          catatan: row.catatan || '',
           items: row.items || [],
           photos: parsePhotosArray(row.photos || row.foto),
           status: row.status || 'PENDING',
@@ -1732,12 +1801,14 @@ async function syncSupabaseRequestsToLocalCache() {
           log: row.log || []
         }));
 
-      appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(formattedReqs));
+      freshReqs.sort((a,b) => (b.noSurat || '').localeCompare(a.noSurat || ''));
+      appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(freshReqs));
 
       if (typeof currentUser !== 'undefined' && currentUser) {
         if (typeof loadDashboard === 'function') loadDashboard();
         if (typeof loadRiwayat === 'function') loadRiwayat();
         if (typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) loadMasterDbTable();
+        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
       }
     }
   } catch (e) {
@@ -1793,6 +1864,25 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
   if (typeof supabase === 'undefined' || !supabase) return;
 
   try {
+    try {
+      const { data: ntfData } = await supabase.from('notifications').select('*');
+      if (ntfData && Array.isArray(ntfData) && ntfData.length > 0) {
+        const parsedNotifs = ntfData.map(n => ({
+          id: n.id,
+          targetRoles: n.target_roles || n.targetRoles || [],
+          targetArea: n.target_area || n.targetArea || 'ALL',
+          message: n.message,
+          noSurat: n.no_surat || n.noSurat || '',
+          time: n.time,
+          readBy: n.read_by || n.readBy || []
+        }));
+        if (parsedNotifs.length > 0) {
+          appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(parsedNotifs));
+          try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(parsedNotifs)); } catch(e) {}
+        }
+      }
+    } catch(e) {}
+
     const { data, error } = await supabase
       .from('permintaan_toko')
       .select('*')
@@ -2061,7 +2151,6 @@ async function pushCentralCloudDB() {
     if (typeof supabase !== 'undefined' && supabase) {
       try {
         const supaPayloads = requests.map(r => ({
-          id: String(r.noSurat || '').replace(/[\/\.]/g, '_'),
           no_surat: r.noSurat,
           tanggal: r.tanggal,
           toko: r.toko,
@@ -2073,11 +2162,21 @@ async function pushCentralCloudDB() {
           status: r.status,
           service_approve: !!r.serviceApprove,
           created_by: r.createdBy || '',
-          created_at: r.createdAt || ''
+          created_at: r.createdAt || '',
+          user_id: r.userId || ''
         }));
         if (supaPayloads.length > 0) {
-          const { error } = await supabase.from('permintaan_toko').upsert(supaPayloads);
-          if (error) console.warn('[SUPABASE PUSH REQUESTS ERROR]:', error.message);
+          const supaPayloadsWithId = supaPayloads.map(p => ({
+            id: String(p.no_surat || '').replace(/[\/\.]/g, '_'),
+            ...p
+          }));
+          try {
+            const { error } = await supabase.from('permintaan_toko').upsert(supaPayloadsWithId);
+            if (error) console.warn('[SUPABASE PUSH REQUESTS NOTICE]:', error.message);
+            else console.log('⚡ [SUPABASE PUSH SUCCESS]: All requests synced to Supabase!');
+          } catch(sbErr) {
+            console.warn('[SUPABASE PUSH EXCEPTION]:', sbErr);
+          }
         }
 
         // PUSH STORE LIST TO SUPABASE TABLE 'toko_list'
@@ -4189,8 +4288,12 @@ function simpanData() {
   }
 }
 
-function prosesSimpanKeDB(toko, jenis, catatan, items) {
-  setTimeout(() => {
+async function prosesSimpanKeDB(toko, jenis, catatan, items) {
+  if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+    await syncSupabaseRequestsToLocalCache().catch(() => {});
+  }
+
+  setTimeout(async () => {
     hideLoading();
     const requests = getRequestsFromDB();
 
@@ -4206,27 +4309,31 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
         saveRequestsToDB(requests);
 
         const docId = String(editNoSurat).replace(/[\/\.]/g, '_');
+        const supaEditRow = {
+          id: docId,
+          no_surat: requests[idx].noSurat,
+          tanggal: requests[idx].tanggal,
+          toko: requests[idx].toko,
+          area: requests[idx].area,
+          jenis: requests[idx].jenis,
+          catatan: requests[idx].catatan || '',
+          items: requests[idx].items || [],
+          photos: requests[idx].photos || [],
+          status: requests[idx].status,
+          service_approve: !!requests[idx].serviceApprove,
+          created_by: requests[idx].createdBy || '',
+          created_at: requests[idx].createdAt || '',
+          user_id: requests[idx].userId || ''
+        };
+
         if (typeof supabase !== 'undefined' && supabase) {
-          supabase.from('permintaan_toko').upsert({
-            id: docId,
-            no_surat: requests[idx].noSurat,
-            tanggal: requests[idx].tanggal,
-            toko: requests[idx].toko,
-            area: requests[idx].area,
-            jenis: requests[idx].jenis,
-            catatan: requests[idx].catatan,
-            items: requests[idx].items,
-            photos: requests[idx].photos,
-            status: requests[idx].status,
-            service_approve: requests[idx].serviceApprove,
-            created_by: requests[idx].createdBy,
-            created_at: requests[idx].createdAt,
-            user_id: requests[idx].userId
-          }).then(({ error }) => {
-            if (error) {
-              console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
-            }
-          });
+          try {
+            const { error } = await supabase.from('permintaan_toko').upsert(supaEditRow);
+            if (error) console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
+            else console.log('⚡ [SUPABASE UPDATE SUCCESS]: Data berhasil diperbarui di Supabase Database!');
+          } catch(sbErr) {
+            console.warn('[SUPABASE UPDATE EXCEPTION]:', sbErr);
+          }
         }
         if (typeof dbFirestore !== 'undefined' && dbFirestore) {
           dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -4235,8 +4342,8 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
           dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
         }
 
-        if (typeof pushCentralCloudDB === 'function') {
-          pushCentralCloudDB();
+        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+          await syncSupabaseRequestsToLocalCache();
         }
 
         showNotif(`PERMINTAAN #${editNoSurat} DATA BERHASIL DIPERBARUHI!`, 'success');
@@ -4279,26 +4386,31 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
       saveRequestsToDB(requests);
 
       const docId = String(noSurat).replace(/[\/\.]/g, '_');
+      const supaNewRow = {
+        id: docId,
+        no_surat: newRecord.noSurat,
+        tanggal: newRecord.tanggal,
+        toko: newRecord.toko,
+        area: newRecord.area,
+        jenis: newRecord.jenis,
+        catatan: newRecord.catatan || '',
+        items: newRecord.items || [],
+        photos: newRecord.photos || [],
+        status: newRecord.status || 'PENDING',
+        service_approve: !!newRecord.serviceApprove,
+        created_by: newRecord.createdBy || '',
+        created_at: newRecord.createdAt || '',
+        user_id: newRecord.userId || ''
+      };
+
       if (typeof supabase !== 'undefined' && supabase) {
-        supabase.from('permintaan_toko').upsert({
-          id: docId,
-          no_surat: newRecord.noSurat,
-          tanggal: newRecord.tanggal,
-          toko: newRecord.toko,
-          area: newRecord.area,
-          jenis: newRecord.jenis,
-          catatan: newRecord.catatan,
-          items: newRecord.items,
-          photos: newRecord.photos,
-          status: newRecord.status,
-          service_approve: newRecord.serviceApprove,
-          created_by: newRecord.createdBy,
-          created_at: newRecord.createdAt,
-          user_id: newRecord.userId
-        }).then(({ error }) => {
+        try {
+          const { error } = await supabase.from('permintaan_toko').upsert(supaNewRow);
           if (error) console.warn('[SUPABASE SAVE NOTICE]:', error.message);
-          else console.log('⚡ [SUPABASE SUCCESS]: Data berhasil disimpan ke Supabase Database!');
-        });
+          else console.log('⚡ [SUPABASE SAVE SUCCESS]: Data berhasil disimpan ke Supabase Database!');
+        } catch(sbErr) {
+          console.warn('[SUPABASE SAVE EXCEPTION]:', sbErr);
+        }
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
         dbFirestore.collection('requests').doc(docId).set(newRecord).catch(e => console.warn('[FIRESTORE SAVE NOTICE]:', e));
@@ -4307,8 +4419,8 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
         dbRealtime.ref(`requests/${docId}`).set(newRecord).catch(e => console.warn('[REALTIME SAVE NOTICE]:', e));
       }
 
-      if (typeof pushCentralCloudDB === 'function') {
-        pushCentralCloudDB();
+      if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+        await syncSupabaseRequestsToLocalCache();
       }
 
       showNotif(`PERMINTAAN #${noSurat} DATA BERHASIL DISIMPAN!`, 'success');
@@ -4733,7 +4845,7 @@ function gantiFotoViewer(arah) {
 function approveService(noSurat) {
   showConfirm(`APPROVE PERMINTAAN #${noSurat}?`, () => {
     showLoading('');
-    setTimeout(() => {
+    setTimeout(async () => {
       hideLoading();
       const requests = getRequestsFromDB();
       const idx = requests.findIndex(r => r.noSurat === noSurat);
@@ -4755,6 +4867,19 @@ function approveService(noSurat) {
           time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
         });
         saveRequestsToDB(requests);
+
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            await supabase.from('permintaan_toko').update({
+              service_approve: true,
+              status: requests[idx].status || 'PENDING'
+            }).eq('no_surat', noSurat);
+          } catch(e) {}
+        }
+        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+          await syncSupabaseRequestsToLocalCache();
+        }
+
         showNotif(`APPROVE BERHASIL`, 'info');
 
         tambahNotifikasiSistem(['DM'], 'ALL', `PERMINTAAN #${noSurat} DISETUJUI SERVICE (${currentUser.fullName || currentUser.username}). MOHON APPROVAL DM.`, noSurat);
@@ -4793,7 +4918,7 @@ function approveDM(noSurat) {
 
   showConfirm(`APPROVE PERMINTAAN #${noSurat}?`, () => {
     showLoading('');
-    setTimeout(() => {
+    setTimeout(async () => {
       hideLoading();
       const requests = getRequestsFromDB();
       const idx = requests.findIndex(r => r.noSurat === noSurat);
@@ -4819,6 +4944,18 @@ function approveDM(noSurat) {
           time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
         });
         saveRequestsToDB(requests);
+
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            await supabase.from('permintaan_toko').update({
+              status: 'APPROVE'
+            }).eq('no_surat', noSurat);
+          } catch(e) {}
+        }
+        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+          await syncSupabaseRequestsToLocalCache();
+        }
+
         showNotif(`APPROVE BERHASIL`, 'info');
 
         tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI DM. SILAKAN DIPROSES.`, noSurat);
@@ -4850,7 +4987,7 @@ function approveDM(noSurat) {
 function doneService(noSurat) {
   showConfirm(`UBAH STATUS PERMINTAAN #${noSurat} MENJADI DONE?`, () => {
     showLoading('');
-    setTimeout(() => {
+    setTimeout(async () => {
       hideLoading();
       const requests = getRequestsFromDB();
       const idx = requests.findIndex(r => r.noSurat === noSurat);
@@ -4864,6 +5001,17 @@ function doneService(noSurat) {
           time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
         });
         saveRequestsToDB(requests);
+
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            await supabase.from('permintaan_toko').update({
+              status: 'DONE'
+            }).eq('no_surat', noSurat);
+          } catch(e) {}
+        }
+        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+          await syncSupabaseRequestsToLocalCache();
+        }
         showNotif(`PERMINTAAN #${noSurat} DITANDAI DONE!`, 'info');
 
         tambahNotifikasiSistem(['TOKO', 'SALES', 'DM'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH SELESAI (DONE).`, noSurat);
@@ -5013,7 +5161,7 @@ function kirimReject() {
 
   closeReject();
   showLoading('');
-  setTimeout(() => {
+  setTimeout(async () => {
     hideLoading();
     const requests = getRequestsFromDB();
     const idx = requests.findIndex(r => r.noSurat === noSurat);
@@ -5028,6 +5176,19 @@ function kirimReject() {
         time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
       });
       saveRequestsToDB(requests);
+
+      if (typeof supabase !== 'undefined' && supabase) {
+        try {
+          await supabase.from('permintaan_toko').update({
+            status: 'REJECT',
+            catatan: requests[idx].catatan
+          }).eq('no_surat', noSurat);
+        } catch(e) {}
+      }
+      if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+        await syncSupabaseRequestsToLocalCache();
+      }
+
       showNotif(`PERMINTAAN BERHASIL DITOLAK`, 'info');
 
       const users = getUsersFromDB();
@@ -5167,6 +5328,9 @@ function hapusData(noSurat) {
             console.warn('[SUPABASE DELETE NOTICE]:', error.message);
           } else {
             console.log('⚡ [SUPABASE DELETE SUCCESS]:', noSurat);
+          }
+          if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+            syncSupabaseRequestsToLocalCache();
           }
         });
       }
@@ -7618,6 +7782,10 @@ function loadMasterDbTable() {
   const searchInput = document.getElementById('searchMasterDb');
   const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
+  // Preserve checked checkbox selections across re-renders
+  const checkedBoxes = tbody.querySelectorAll('.masterDbCheckbox:checked');
+  const checkedSet = new Set(Array.from(checkedBoxes).map(cb => cb.value));
+
   let requests = getRequestsFromDB();
 
   if (search) {
@@ -7633,7 +7801,8 @@ function loadMasterDbTable() {
   tbody.innerHTML = '';
 
   if (requests.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">BELUM ADA DATA PERMINTAAN TERDAFTAR.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);">BELUM ADA DATA PERMINTAAN TERDAFTAR.</td></tr>`;
+    updateMultiMasterDbBtnState();
     return;
   }
 
@@ -7651,8 +7820,9 @@ function loadMasterDbTable() {
     if (shouldRowBlinkRed(r)) {
       tr.className = 'blink-row-red';
     }
+    const isChecked = checkedSet.has(r.noSurat) ? 'checked' : '';
     tr.innerHTML = `
-      <td style="text-align:center;"><input type="checkbox" class="masterDbCheckbox" value="${r.noSurat}" onchange="updateMultiMasterDbBtnState()" style="cursor:pointer; width:16px; height:16px;"></td>
+      <td style="text-align:center;"><input type="checkbox" class="masterDbCheckbox" value="${r.noSurat}" ${isChecked} onchange="updateMultiMasterDbBtnState()" style="cursor:pointer; width:16px; height:16px;"></td>
       <td style="font-weight:600; color:var(--primary);">${r.noSurat}</td>
       <td style="white-space:nowrap;">${formatDateDDMMYYYYString(r.tanggal)}</td>
       <td>${r.toko} <div style="font-size:11px; color:var(--text-muted);">By: ${r.createdBy}</div></td>
@@ -7735,6 +7905,10 @@ function hapusMultiMasterDb() {
           try {
             await supabase.from('permintaan_toko').delete().in('no_surat', noSuratList);
           } catch(sbErr1) {}
+        }
+
+        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+          await syncSupabaseRequestsToLocalCache();
         }
 
         // 4. HAPUS INDIVIDUAL FIRESTORE & REALTIME DB
@@ -8426,6 +8600,10 @@ function hapusTokoCustom(id) {
 
         if (typeof pushCentralCloudDB === 'function') {
           await pushCentralCloudDB();
+        }
+
+        if (typeof syncAllDataToCache === 'function') {
+          await syncAllDataToCache().catch(() => {});
         }
 
         hideLoading();
