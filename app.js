@@ -3892,7 +3892,22 @@ function filterRiwayat() {
       `;
     }
 
-    const isPdfVisible = (r.status === 'APPROVE' || r.status === 'DONE' || (isAdminUser && r.status !== 'REJECT'));
+function isPdfButtonAllowed(req) {
+  if (!req || !currentUser) return false;
+  const role = String(currentUser.category || '').toUpperCase();
+  
+  // TOMBOL PDF TIDAK DIBERIKAN UNTUK ROLE TOKO DAN SALES
+  if (role === 'TOKO' || role === 'SALES') {
+    return false;
+  }
+
+  // TOMBOL PDF HANYA KELUAR JIKA DM JUGA SUDAH APPROVE (STATUS APPROVE ATAU DONE)
+  const isDmApproved = (req.status === 'APPROVE' || req.status === 'DONE');
+  return isDmApproved;
+}
+window.isPdfButtonAllowed = isPdfButtonAllowed;
+
+    const isPdfVisible = isPdfButtonAllowed(r);
     if (isPdfVisible) {
       aksi += `
         <button class="btnIcon btnPdf" onclick="bukaPdfModal('${r.noSurat}')" title="CETAK PDF"><span class="material-symbols-rounded">picture_as_pdf</span></button>
@@ -4699,7 +4714,7 @@ function lihatDetail(noSurat, fromDashboard = false) {
     }
   }
 
-  const isPdfVisible = true;
+  const isPdfVisible = isPdfButtonAllowed(req);
   if (isPdfVisible) {
     actionButtons.push(`
       <button type="button" class="btnIcon btnPdf btnIconOnly" title="CETAK PDF" onclick="tutupDetailBarangV2(); bukaPdfModal('${req.noSurat}');">
@@ -5072,6 +5087,11 @@ function bukaPdfModal(noSurat) {
   const requests = getRequestsFromDB();
   const req = requests.find(r => r.noSurat === noSurat);
   if (!req) return;
+
+  if (typeof isPdfButtonAllowed === 'function' && !isPdfButtonAllowed(req)) {
+    showNotif('TOMBOL CETAK PDF HANYA TERSEDIA JIKA DOKUMEN SUDAH DI-APPROVE OLEH DM & TIDAK TERSEDIA UNTUK TOKO/SALES!', 'warning');
+    return;
+  }
 
   const pdfContainer = document.getElementById('pdfDocumentContent');
   if (!pdfContainer) return;
