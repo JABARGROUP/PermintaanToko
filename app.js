@@ -202,9 +202,17 @@ const ADMIN_SECRET_KEY_STORAGE_KEY = 'STORE_ADMIN_SECRET_KEY_V7_CLEAN';
 const ADMIN_SCRIPT_URL_KEY = 'STORE_ADMIN_SCRIPT_URL_V7_CLEAN';
 const FIREBASE_USER_CONFIG_KEY = 'STORE_FIREBASE_USER_CONFIG_V7_CLEAN';
 const GLOBAL_THEME_KEY = 'STORE_GLOBAL_APP_THEME_V7_CLEAN';
+const LOCAL_USER_THEME_KEY = 'STORE_LOCAL_USER_THEME_V7_CLEAN';
+const LAST_ADMIN_THEME_TIME_KEY = 'STORE_LAST_ADMIN_THEME_TIME_V7_CLEAN';
+
+function getActiveAppliedTheme() {
+  const localUserTheme = (typeof appStorage !== 'undefined' ? appStorage.getItem(LOCAL_USER_THEME_KEY) : null);
+  const globalTheme = (typeof appStorage !== 'undefined' ? appStorage.getItem(GLOBAL_THEME_KEY) : null);
+  return localUserTheme || globalTheme || 'light';
+}
 
 function applyThemeToDocument(theme) {
-  const t = theme || (typeof appStorage !== 'undefined' ? appStorage.getItem(GLOBAL_THEME_KEY) : null) || 'light';
+  const t = theme || getActiveAppliedTheme();
   document.documentElement.setAttribute('data-theme', t);
   document.body.setAttribute('data-theme', t);
 
@@ -224,10 +232,16 @@ async function setGlobalAdminTheme(themeName) {
     String(currentUser.username || '').toUpperCase() === 'ADMIN'
   );
 
+  const now = Date.now();
+
   if (typeof appStorage !== 'undefined') {
     appStorage.setItem(GLOBAL_THEME_KEY, themeName);
+    appStorage.setItem(LOCAL_USER_THEME_KEY, themeName);
+    appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(now));
   }
   try { localStorage.setItem(GLOBAL_THEME_KEY, themeName); } catch(e) {}
+  try { localStorage.setItem(LOCAL_USER_THEME_KEY, themeName); } catch(e) {}
+  try { localStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(now)); } catch(e) {}
   applyThemeToDocument(themeName);
 
   if (isSysAdmin) {
@@ -240,7 +254,7 @@ async function setGlobalAdminTheme(themeName) {
           toko: 'SYSTEM',
           area: 'ALL',
           jenis: 'SYSTEM',
-          catatan: JSON.stringify({ theme: themeName, updatedBy: currentUser.username, time: Date.now() }),
+          catatan: JSON.stringify({ theme: themeName, updatedBy: currentUser.username, time: now }),
           items: [],
           photos: [],
           status: 'DONE',
@@ -256,13 +270,13 @@ async function setGlobalAdminTheme(themeName) {
 
     if (typeof dbRealtime !== 'undefined' && dbRealtime) {
       try {
-        dbRealtime.ref('settings/global_theme').set({ theme: themeName, updatedBy: currentUser.username, time: Date.now() });
+        dbRealtime.ref('settings/global_theme').set({ theme: themeName, updatedBy: currentUser.username, time: now });
       } catch(e) {}
     }
 
-    showNotif(`⚡ [ADMIN TEMA]: TEMA '${themeName.toUpperCase()}' BERHASIL DISIMPAN & SINKRON KE SEMUA AKUN / PERANGKAT!`, 'success');
+    showNotif(`⚡ [ADMIN TEMA]: TEMA '${themeName.toUpperCase()}' BERHASIL DISIMPAN & SINKRON KE SEMUA PERANGKAT!`, 'success');
   } else {
-    showNotif('TEMA APLIKASI DIATUR TERPUSAT OLEH ADMIN. HANYA AKUN ADMIN YANG BISA MENGUBAH TEMA SEMUA PERANGKAT.', 'info');
+    showNotif(`TEMA '${themeName.toUpperCase()}' BERHASIL DISIMPAN DI PERANGKAT INI.`, 'info');
   }
 }
 window.setGlobalAdminTheme = setGlobalAdminTheme;
@@ -273,14 +287,21 @@ function toggleTheme() {
     String(currentUser.username || '').toUpperCase() === 'ADMIN'
   );
 
-  if (!isSysAdmin) {
-    showNotif('TEMA APLIKASI DIATUR SECARA TERPUSAT OLEH ADMIN. HANYA AKUN ADMIN YANG BISA MENGUBAH TEMA SEMUA USER.', 'warning');
-    return;
-  }
-
-  const currentTheme = (typeof appStorage !== 'undefined' ? appStorage.getItem(GLOBAL_THEME_KEY) : null) || 'light';
+  const currentTheme = getActiveAppliedTheme();
   const newTheme = (currentTheme === 'light') ? 'dark' : 'light';
-  setGlobalAdminTheme(newTheme);
+
+  if (isSysAdmin) {
+    // ADMIN: CHANGE THEME FOR ALL DEVICES GLOBALLY
+    setGlobalAdminTheme(newTheme);
+  } else {
+    // NON-ADMIN USER: SAVE & APPLY THEME PREFERENCE ON LOCAL DEVICE ONLY
+    if (typeof appStorage !== 'undefined') {
+      appStorage.setItem(LOCAL_USER_THEME_KEY, newTheme);
+    }
+    try { localStorage.setItem(LOCAL_USER_THEME_KEY, newTheme); } catch(e) {}
+    applyThemeToDocument(newTheme);
+    showNotif(`TEMA TAMPILAN '${newTheme.toUpperCase()}' TERPASANG DI PERANGKAT INI!`, 'info');
+  }
 }
 window.toggleTheme = toggleTheme;
 
@@ -347,7 +368,22 @@ function simpanAdminSecretKey() {
 }
 
 function getSystemNotifications() {
-  return JSON.parse(appStorage.getItem(NOTIFICATIONS_DB_KEY) || '[]');
+  const raw = appStorage.getItem(NOTIFICATIONS_DB_KEY) || '[]';
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) return parsed.items;
+  } catch(e) {}
+  return [];
+}
+
+function getSystemNotifsClearedTimestamp() {
+  const raw = appStorage.getItem(NOTIFICATIONS_DB_KEY) || '[]';
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed.clearedAt) return Number(parsed.clearedAt) || 0;
+  } catch(e) {}
+  return 0;
 }
 
 function shouldEmitImportantNotification(targetRoles, targetArea, message, noSurat = '') {
@@ -381,6 +417,7 @@ function tambahNotifikasiSistem(targetRoles, targetArea, message, noSurat = '') 
   }
 
   const notifs = getSystemNotifications();
+  const clearedAt = getSystemNotifsClearedTimestamp();
   const normalizedRoles = Array.isArray(targetRoles) ? targetRoles : [targetRoles];
   const dedupeKey = `${String(noSurat || '').trim()}|${String(targetArea || 'ALL')}|${String(message || '').trim()}`;
   const alreadyExists = notifs.some(n => {
@@ -401,8 +438,34 @@ function tambahNotifikasiSistem(targetRoles, targetArea, message, noSurat = '') 
   };
   notifs.unshift(newNotif);
   if (notifs.length > 100) notifs.pop();
-  appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
-  pushCentralCloudDB();
+  
+  const payload = clearedAt ? { clearedAt, items: notifs } : notifs;
+  appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(payload));
+  try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(payload)); } catch(e) {}
+
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      const systemNotifRow = {
+        id: '__SYSTEM_NOTIFICATIONS__',
+        no_surat: '__SYSTEM_NOTIFICATIONS__',
+        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+        toko: 'SYSTEM',
+        area: 'ALL',
+        jenis: 'SYSTEM',
+        catatan: JSON.stringify(payload),
+        items: [],
+        photos: [],
+        status: 'DONE',
+        service_approve: true,
+        created_by: 'SYSTEM',
+        created_at: new Date().toISOString()
+      };
+      supabase.from('permintaan_toko').upsert(systemNotifRow).then(({ error }) => {
+        if (error) console.warn('[SUPABASE NOTIF SAVE NOTICE]:', error.message);
+      });
+    } catch(e) {}
+  }
+
   updateNotifBellCounter();
 }
 
@@ -421,9 +484,9 @@ function getAccessibleNotifications() {
 
     if (isSysAdmin) return true;
 
-    // 1. STRICT AREA FILTER: MUST MATCH USER'S AREA OR ALL
+    // 1. STRICT AREA FILTER: MUST MATCH USER'S AREA OR ALL (DM HANDLES ALL AREAS GLOBALLY)
     const targetArea = String(n.targetArea || 'ALL').toUpperCase();
-    const areaMatch = (targetArea === 'ALL' || targetArea === userArea || userArea === 'ALL');
+    const areaMatch = (targetArea === 'ALL' || targetArea === userArea || userArea === 'ALL' || userCat === 'DM');
     if (!areaMatch) return false;
 
     // 2. STRICT ROLE MATCH PER LOGIN CATEGORY
@@ -455,10 +518,16 @@ function getAccessibleNotifications() {
     return true;
   });
 
+  const clearedAt = getSystemNotifsClearedTimestamp();
+
   // 4. DYNAMIC SYNTHESIS ACCORDING TO SPECIFIC ROLES & AREA
   // A. UNTUK SERVICE (PPRV SERVICE / PENDING - MENUNGGU APPROVAL SERVICE IN USER'S AREA)
   if (userCat === 'SERVICE' || isSysAdmin) {
     const servicePendingReqs = requests.filter(r => {
+      if (clearedAt && r.createdAt) {
+        const reqTime = new Date(r.createdAt).getTime();
+        if (reqTime <= clearedAt) return false;
+      }
       const isAreaMatch = (!r.area || r.area.toUpperCase() === userArea || userArea === 'ALL' || isSysAdmin);
       const isWaitingService = (!r.serviceApprove && r.status === 'PENDING');
       return isAreaMatch && isWaitingService;
@@ -480,12 +549,15 @@ function getAccessibleNotifications() {
     });
   }
 
-  // B. UNTUK DM (TUNGGU DM - MENUNGGU APPROVAL DM IN USER'S AREA)
+  // B. UNTUK DM (TUNGGU DM - MENUNGGU APPROVAL DM DARI SEMUA AREA)
   if (userCat === 'DM' || isSysAdmin) {
     const dmPendingReqs = requests.filter(r => {
-      const isAreaMatch = (!r.area || r.area.toUpperCase() === userArea || userArea === 'ALL' || isSysAdmin);
+      if (clearedAt && r.createdAt) {
+        const reqTime = new Date(r.createdAt).getTime();
+        if (reqTime <= clearedAt) return false;
+      }
       const isWaitingDm = (r.serviceApprove === true && r.status === 'PENDING');
-      return isAreaMatch && isWaitingDm;
+      return isWaitingDm;
     });
 
     dmPendingReqs.forEach(r => {
@@ -494,8 +566,8 @@ function getAccessibleNotifications() {
         filtered.unshift({
           id: `NTF-DM-${r.noSurat}`,
           targetRoles: ['DM'],
-          targetArea: r.area || userArea,
-          message: `MOHON APPROVAL DM: Permintaan #${r.noSurat} dari ${r.toko} telah disetujui Service & menanti Approval DM Anda.`,
+          targetArea: 'ALL',
+          message: `MOHON APPROVAL DM: Permintaan #${r.noSurat} dari ${r.toko} (${r.area}) telah disetujui Service & menanti Approval DM Anda.`,
           noSurat: r.noSurat,
           time: r.tanggalInput || r.createdAt || getFormattedDateDDMMYYYY(),
           readBy: []
@@ -507,6 +579,10 @@ function getAccessibleNotifications() {
   // C. UNTUK CREATOR / TOKO / SALES
   if (userCat === 'TOKO' || userCat === 'SALES') {
     const tokoPendingReqs = requests.filter(r => {
+      if (clearedAt && r.createdAt) {
+        const reqTime = new Date(r.createdAt).getTime();
+        if (reqTime <= clearedAt) return false;
+      }
       const isMine = (
         r.userId === currentUser.id ||
         String(r.createdBy || '').toUpperCase() === userUname ||
@@ -746,35 +822,64 @@ function hapusSemuaNotifikasiSystem() {
     return;
   }
 
-  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI DARI SISTEM?', () => {
-    appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify([]));
-    if (typeof supabase !== 'undefined' && supabase) {
-      try {
-        const systemNotifRow = {
-          id: '__SYSTEM_NOTIFICATIONS__',
-          no_surat: '__SYSTEM_NOTIFICATIONS__',
-          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
-          toko: 'SYSTEM',
-          area: 'ALL',
-          jenis: 'SYSTEM',
-          catatan: JSON.stringify([]),
-          items: [],
-          photos: [],
-          status: 'DONE',
-          service_approve: true,
-          created_by: 'SYSTEM',
-          created_at: new Date().toISOString()
-        };
-        supabase.from('permintaan_toko').upsert(systemNotifRow);
-      } catch(e) {}
+  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI DARI SISTEM?', async () => {
+    showLoading('MENGHAPUS SEMUA NOTIFIKASI...');
+    try {
+      const emptyNotifsPayload = {
+        clearedAt: Date.now(),
+        items: []
+      };
+
+      // 1. KOSONGKAN PENYIMPANAN LOKAL METADATA & ITEMS
+      appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload));
+      try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload)); } catch(e) {}
+
+      // 2. SINKRONKAN PERSISTEN LANGSUNG KE SUPABASE CLOUD DATABASE
+      if (typeof supabase !== 'undefined' && supabase) {
+        try {
+          const systemNotifRow = {
+            id: '__SYSTEM_NOTIFICATIONS__',
+            no_surat: '__SYSTEM_NOTIFICATIONS__',
+            tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+            toko: 'SYSTEM',
+            area: 'ALL',
+            jenis: 'SYSTEM',
+            catatan: JSON.stringify(emptyNotifsPayload),
+            items: [],
+            photos: [],
+            status: 'DONE',
+            service_approve: true,
+            created_by: 'SYSTEM',
+            created_at: new Date().toISOString()
+          };
+          await supabase.from('permintaan_toko').upsert(systemNotifRow);
+        } catch(sbErr) {
+          console.warn('[SUPABASE NOTIF DELETE ERROR]:', sbErr);
+        }
+      }
+
+      // 3. PUSH KE DATABASE UTAMA LAIN
+      if (typeof pushCentralCloudDB === 'function') {
+        await pushCentralCloudDB();
+      }
+
+      hideLoading();
+      updateNotifBellCounter();
+      if (typeof loadNotificationList === 'function') loadNotificationList();
+      showNotif('SELURUH NOTIFIKASI BERHASIL DIHAPUS DARI SISTEM & SINKRON KE SEMUA USER!', 'success');
+    } catch (err) {
+      hideLoading();
+      console.error('[HAPUS NOTIFIKASI ERROR]:', err);
+      showNotif('GAGAL MENGHAPUS NOTIFIKASI: ' + (err.message || err), 'error');
     }
-    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
-    updateNotifBellCounter();
-    if (typeof loadNotificationList === 'function') loadNotificationList();
-    showNotif('SELURUH NOTIFIKASI BERHASIL DIHAPUS & SINKRON KE SEMUA USER!', 'success');
   });
 }
 window.hapusSemuaNotifikasiSystem = hapusSemuaNotifikasiSystem;
+
+function hapusSemuaNotifFirebaseDanLokal() {
+  hapusSemuaNotifikasiSystem();
+}
+window.hapusSemuaNotifFirebaseDanLokal = hapusSemuaNotifFirebaseDanLokal;
 
 function generateStoreCode(namaToko) {
   if (!namaToko) return 'TK';
@@ -1552,20 +1657,23 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
       .in('no_surat', ['__SYSTEM_NOTIFICATIONS__', '__SYSTEM_CHAT_MESSAGES__', '__SYSTEM_TTD_MAP__', '__SYSTEM_GLOBAL_THEME__']);
 
     if (!error && Array.isArray(data)) {
+      let notifChanged = false;
+      let chatChanged = false;
+
       data.forEach(row => {
         const ns = row.no_surat || row.noSurat || '';
         if (ns === '__SYSTEM_NOTIFICATIONS__' && row.catatan) {
           try {
-            const notifs = JSON.parse(row.catatan);
-            if (Array.isArray(notifs)) {
-              appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
-            }
+            appStorage.setItem(NOTIFICATIONS_DB_KEY, row.catatan);
+            try { localStorage.setItem(NOTIFICATIONS_DB_KEY, row.catatan); } catch(e) {}
+            notifChanged = true;
           } catch(e) {}
         } else if (ns === '__SYSTEM_CHAT_MESSAGES__' && row.catatan) {
           try {
             const chats = JSON.parse(row.catatan);
             if (Array.isArray(chats)) {
               appStorage.setItem(CHAT_DB_KEY, JSON.stringify(chats));
+              try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(chats)); } catch(e) {}
 
               // REBUILD CHAT ROOMS LOCALLY FROM SUPABASE CHAT MESSAGES
               const roomMap = new Map();
@@ -1595,7 +1703,10 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
                 }
               });
 
-              appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(Array.from(roomMap.values())));
+              const roomList = Array.from(roomMap.values());
+              appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(roomList));
+              try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(roomList)); } catch(e) {}
+              chatChanged = true;
             }
           } catch(e) {}
         } else if (ns === '__SYSTEM_TTD_MAP__' && row.catatan) {
@@ -1605,20 +1716,24 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
               const localTtd = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
               const mergedTtd = { ...localTtd, ...cloudTtd };
               appStorage.setItem(TTD_DB_KEY, JSON.stringify(mergedTtd));
-              try {
-                if (typeof localStorage !== 'undefined') {
-                  localStorage.setItem('APP_USER_TTD_MAP', JSON.stringify(mergedTtd));
-                }
-              } catch(e) {}
+              try { localStorage.setItem('APP_USER_TTD_MAP', JSON.stringify(mergedTtd)); } catch(e) {}
             }
           } catch(e) {}
         } else if (ns === '__SYSTEM_GLOBAL_THEME__' && row.catatan) {
           try {
             const themeObj = JSON.parse(row.catatan);
             if (themeObj && themeObj.theme) {
-              const currentApplied = appStorage.getItem(GLOBAL_THEME_KEY);
-              if (currentApplied !== themeObj.theme) {
+              const cloudTime = Number(themeObj.time || 0);
+              const lastAdminTime = Number(appStorage.getItem(LAST_ADMIN_THEME_TIME_KEY) || 0);
+
+              if (cloudTime > lastAdminTime) {
                 appStorage.setItem(GLOBAL_THEME_KEY, themeObj.theme);
+                appStorage.setItem(LOCAL_USER_THEME_KEY, themeObj.theme);
+                appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(cloudTime));
+                try { localStorage.setItem(GLOBAL_THEME_KEY, themeObj.theme); } catch(e) {}
+                try { localStorage.setItem(LOCAL_USER_THEME_KEY, themeObj.theme); } catch(e) {}
+                try { localStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(cloudTime)); } catch(e) {}
+
                 if (typeof applyThemeToDocument === 'function') {
                   applyThemeToDocument(themeObj.theme);
                 }
@@ -1627,6 +1742,19 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
           } catch(e) {}
         }
       });
+
+      // TRIGGER REALTIME UI UPDATES ACROSS ALL CONNECTED DEVICES
+      if (notifChanged) {
+        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+        const popupNotifList = document.getElementById('popupNotifList');
+        if (popupNotifList && (popupNotifList.classList.contains('show') || popupNotifList.style.display === 'flex')) {
+          if (typeof loadNotificationList === 'function') loadNotificationList();
+        }
+      }
+      if (chatChanged) {
+        if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+        if (typeof refreshActiveChatUI === 'function') refreshActiveChatUI();
+      }
     }
   } catch (err) {
     console.warn('[SUPABASE SYSTEM ROW SYNC NOTICE]:', err);
@@ -1701,43 +1829,6 @@ async function pushCentralCloudDB() {
           const { error } = await supabase.from('permintaan_toko').upsert(supaPayloads);
           if (error) console.warn('[SUPABASE PUSH REQUESTS ERROR]:', error.message);
         }
-
-        // PUSH NOTIFICATIONS & CHATS TO SUPABASE VIA MAIN TABLE SAFELY (100% 200 OK, ZERO 404/400 CONSOLE ERRORS)
-        const notifs = JSON.parse(appStorage.getItem(NOTIFICATIONS_DB_KEY) || '[]');
-        const systemNotifRow = {
-          id: '__SYSTEM_NOTIFICATIONS__',
-          no_surat: '__SYSTEM_NOTIFICATIONS__',
-          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
-          toko: 'SYSTEM',
-          area: 'ALL',
-          jenis: 'SYSTEM',
-          catatan: JSON.stringify(notifs),
-          items: [],
-          photos: [],
-          status: 'DONE',
-          service_approve: true,
-          created_by: 'SYSTEM',
-          created_at: new Date().toISOString()
-        };
-        await supabase.from('permintaan_toko').upsert(systemNotifRow);
-
-        const chats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-        const systemChatRow = {
-          id: '__SYSTEM_CHAT_MESSAGES__',
-          no_surat: '__SYSTEM_CHAT_MESSAGES__',
-          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
-          toko: 'SYSTEM',
-          area: 'ALL',
-          jenis: 'SYSTEM',
-          catatan: JSON.stringify(chats),
-          items: [],
-          photos: [],
-          status: 'DONE',
-          service_approve: true,
-          created_by: 'SYSTEM',
-          created_at: new Date().toISOString()
-        };
-        await supabase.from('permintaan_toko').upsert(systemChatRow);
 
         const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
         const systemTtdRow = {
@@ -2202,6 +2293,114 @@ function updateThemeIcon() {
 
 const STORE_REMEMBER_LOGIN_CREDS_KEY = 'STORE_REMEMBER_LOGIN_CREDS_V1';
 
+function clearLocalStorageKeepThemeAndTTD() {
+  try {
+    // 1. BACK UP THEME SETTINGS
+    const globalTheme = appStorage.getItem(GLOBAL_THEME_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(GLOBAL_THEME_KEY) : null);
+    const localUserTheme = appStorage.getItem(LOCAL_USER_THEME_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(LOCAL_USER_THEME_KEY) : null);
+    const lastAdminThemeTime = appStorage.getItem(LAST_ADMIN_THEME_TIME_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_ADMIN_THEME_TIME_KEY) : null);
+    const appTheme = appStorage.getItem(THEME_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(THEME_KEY) : null);
+    const appSelectedTheme = (typeof localStorage !== 'undefined' ? localStorage.getItem('APP_SELECTED_THEME') : null);
+
+    // 2. BACK UP DIGITAL SIGNATURES (TTD)
+    const ttdDbMap = appStorage.getItem(TTD_DB_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(TTD_DB_KEY) : null);
+    const appUserTtdMap = (typeof localStorage !== 'undefined' ? localStorage.getItem('APP_USER_TTD_MAP') : null);
+
+    const localTtdEntries = [];
+    if (typeof localStorage !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('LOCAL_TTD_') || key.startsWith('TTD_') || key.includes('TTD'))) {
+          localTtdEntries.push({ key, value: localStorage.getItem(key) });
+        }
+      }
+    }
+
+    // 3. BACK UP ESSENTIAL CREDENTIALS & CONFIG
+    const rememberCreds = appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY) : null);
+    const fonteToken = typeof getFonteToken === 'function' ? getFonteToken() : '';
+    const secretKey = typeof getSavedAdminSecretKey === 'function' ? getSavedAdminSecretKey() : '';
+    const fbConfig = appStorage.getItem(FIREBASE_USER_CONFIG_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(FIREBASE_USER_CONFIG_KEY) : null);
+
+    // 4. CLEAR STORAGE & BROWSER CACHES
+    if (typeof appStorage !== 'undefined' && appStorage.clear) {
+      appStorage.clear();
+    }
+    try { localStorage.clear(); } catch(e) {}
+    try { sessionStorage.clear(); } catch(e) {}
+
+    if ('caches' in window && caches.keys) {
+      try {
+        caches.keys().then(keys => {
+          keys.forEach(k => caches.delete(k));
+        }).catch(e => {});
+      } catch(e) {}
+    }
+
+    // 5. RESTORE THEME SETTINGS
+    if (globalTheme) {
+      appStorage.setItem(GLOBAL_THEME_KEY, globalTheme);
+      try { localStorage.setItem(GLOBAL_THEME_KEY, globalTheme); } catch(e) {}
+    }
+    if (localUserTheme) {
+      appStorage.setItem(LOCAL_USER_THEME_KEY, localUserTheme);
+      try { localStorage.setItem(LOCAL_USER_THEME_KEY, localUserTheme); } catch(e) {}
+    }
+    if (lastAdminThemeTime) {
+      appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, lastAdminThemeTime);
+      try { localStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, lastAdminThemeTime); } catch(e) {}
+    }
+    if (appTheme) {
+      appStorage.setItem(THEME_KEY, appTheme);
+      try { localStorage.setItem(THEME_KEY, appTheme); } catch(e) {}
+    }
+    if (appSelectedTheme) {
+      try { localStorage.setItem('APP_SELECTED_THEME', appSelectedTheme); } catch(e) {}
+    }
+
+    // 6. RESTORE DIGITAL SIGNATURES (TTD)
+    if (ttdDbMap) {
+      appStorage.setItem(TTD_DB_KEY, ttdDbMap);
+      try { localStorage.setItem(TTD_DB_KEY, ttdDbMap); } catch(e) {}
+    }
+    if (appUserTtdMap) {
+      try { localStorage.setItem('APP_USER_TTD_MAP', appUserTtdMap); } catch(e) {}
+    }
+    localTtdEntries.forEach(item => {
+      if (item && item.key && item.value) {
+        try { localStorage.setItem(item.key, item.value); } catch(e) {}
+        try { appStorage.setItem(item.key, item.value); } catch(e) {}
+      }
+    });
+
+    // 7. RESTORE ESSENTIAL CREDENTIALS & CONFIG
+    if (rememberCreds) {
+      appStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, rememberCreds);
+      try { localStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, rememberCreds); } catch(e) {}
+    }
+    if (fonteToken) {
+      appStorage.setItem(FONTE_TOKEN_KEY, fonteToken);
+      try { localStorage.setItem(FONTE_TOKEN_KEY, fonteToken); } catch(e) {}
+    }
+    if (secretKey) {
+      appStorage.setItem(ADMIN_SECRET_KEY_STORAGE_KEY, secretKey);
+      try { localStorage.setItem(ADMIN_SECRET_KEY_STORAGE_KEY, secretKey); } catch(e) {}
+    }
+    if (fbConfig) {
+      appStorage.setItem(FIREBASE_USER_CONFIG_KEY, fbConfig);
+      try { localStorage.setItem(FIREBASE_USER_CONFIG_KEY, fbConfig); } catch(e) {}
+    }
+
+    // 8. RE-APPLY THEME IMMEDIATELY
+    if (typeof applyThemeToDocument === 'function') {
+      applyThemeToDocument();
+    }
+  } catch (err) {
+    console.warn('[CLEAR LOCALSTORAGE KEEP THEME & TTD NOTICE]:', err);
+  }
+}
+window.clearLocalStorageKeepThemeAndTTD = clearLocalStorageKeepThemeAndTTD;
+
 function autoLogin() {
   if (!currentUser) {
     try {
@@ -2251,29 +2450,8 @@ async function prosesLogin() {
 
   showLoading('MEMBERSIHKAN CACHE LOKAL & MENGAMBIL DATA DATABASE...');
 
-  // 1. FUNGSI HAPUS CACHE & PENYIMPANAN LOKAL SEBELUM PENGAMBILAN DATA DARI DATABASE
-  try {
-    const rememberCreds = appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
-    const fonteToken = typeof getFonteToken === 'function' ? getFonteToken() : '';
-    const secretKey = typeof getSavedAdminSecretKey === 'function' ? getSavedAdminSecretKey() : '';
-
-    if ('caches' in window && caches.keys) {
-      try {
-        const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
-      } catch(e) {}
-    }
-
-    if (typeof appStorage !== 'undefined' && appStorage.clear) {
-      appStorage.clear();
-    }
-
-    if (rememberCreds) appStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, rememberCreds);
-    if (fonteToken) appStorage.setItem(FONTE_TOKEN_KEY, fonteToken);
-    if (secretKey) appStorage.setItem(ADMIN_SECRET_KEY_STORAGE_KEY, secretKey);
-  } catch(e) {
-    console.warn('[PRE-LOGIN CACHE CLEAR NOTICE]:', e);
-  }
+  // 1. FUNGSI HAPUS CACHE & PENYIMPANAN LOKAL SEBELUM PENGAMBILAN DATA (MENJAGA TEMA & TTD)
+  clearLocalStorageKeepThemeAndTTD();
 
   try {
     // 2. TARIK & SINKRONKAN DATA TERBARU DARI DATABASE CLOUD (SUPABASE / FIREBASE)
@@ -2376,23 +2554,8 @@ function logout() {
 
     currentUser = null;
 
-    // HAPUS SEMUA CACHE & PENYIMPANAN LOKAL PADA SAAT LOGOUT
-    try {
-      if (typeof appStorage !== 'undefined' && appStorage.clear) {
-        appStorage.clear();
-      }
-      try { localStorage.clear(); } catch (e) {}
-      try { sessionStorage.clear(); } catch (e) {}
-
-      // MEMBERSIHKAN BROWSER CACHE STORAGE API
-      if ('caches' in window) {
-        caches.keys().then(keys => {
-          keys.forEach(k => caches.delete(k));
-        }).catch(e => console.warn(e));
-      }
-    } catch (err) {
-      console.warn('[CLEAR CACHE LOGOUT NOTICE]:', err);
-    }
+    // HAPUS SEMUA CACHE & PENYIMPANAN LOKAL PADA SAAT LOGOUT (MENJAGA TEMA & TTD)
+    clearLocalStorageKeepThemeAndTTD();
 
     // KEMBALIKAN INGAT SAYA JIKA USER CENTANG REMEMBER ME
     if (rememberedCreds) {
@@ -3973,10 +4136,10 @@ function approveService(noSurat) {
         saveRequestsToDB(requests);
         showNotif(`APPROVE BERHASIL`, 'info');
 
-        tambahNotifikasiSistem(['DM'], requests[idx].area, `PERMINTAAN #${noSurat} DISETUJUI SERVICE (${currentUser.fullName || currentUser.username}). MOHON APPROVAL DM.`, noSurat);
+        tambahNotifikasiSistem(['DM'], 'ALL', `PERMINTAAN #${noSurat} DISETUJUI SERVICE (${currentUser.fullName || currentUser.username}). MOHON APPROVAL DM.`, noSurat);
 
         const users = getUsersFromDB();
-        const dmUsers = users.filter(u => u.category === 'DM' && (u.area === requests[idx].area || u.area === 'ALL'));
+        const dmUsers = users.filter(u => u.category === 'DM');
         dmUsers.forEach(dm => {
           if (dm.phone && dm.phone !== '-') {
             const dmName = dm.fullName || dm.username || 'Bapak/Ibu DM';
@@ -6018,8 +6181,12 @@ function cekUnreadNotif() {
 }
 
 function hapusSemuaChatAdmin() {
-  if (!currentUser || (currentUser.category !== 'ADMIN' && String(currentUser.username).toUpperCase() !== 'ADMIN')) {
-    showNotif('HANYA SUPER ADMIN YANG DAPAT MENGHAPUS SELURUH CHAT!', 'warning');
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+  if (!isSysAdmin) {
+    showNotif('HANYA AKUN ADMIN YANG DAPAT MENGHAPUS SELURUH CHAT!', 'warning');
     return;
   }
 
@@ -6030,39 +6197,62 @@ function hapusSemuaChatAdmin() {
         // 1. KOSONGKAN PENYIMPANAN LOKAL
         appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
         appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
+        try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify([])); } catch(e) {}
+        try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([])); } catch(e) {}
 
-        // 2. KOSONGKAN DI FIRESTORE
+        // 2. KOSONGKAN LANGSUNG DI SUPABASE CLOUD DATABASE
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            const systemChatRow = {
+              id: '__SYSTEM_CHAT_MESSAGES__',
+              no_surat: '__SYSTEM_CHAT_MESSAGES__',
+              tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+              toko: 'SYSTEM',
+              area: 'ALL',
+              jenis: 'SYSTEM',
+              catatan: JSON.stringify([]),
+              items: [],
+              photos: [],
+              status: 'DONE',
+              service_approve: true,
+              created_by: 'SYSTEM',
+              created_at: new Date().toISOString()
+            };
+            await supabase.from('permintaan_toko').upsert(systemChatRow);
+          } catch(sbErr) {
+            console.warn('[SUPABASE CHAT DELETE NOTICE]:', sbErr);
+          }
+        }
+
+        // 3. KOSONGKAN DI FIRESTORE & REALTIME DB
         if (typeof dbFirestore !== 'undefined' && dbFirestore) {
           try {
             await dbFirestore.collection('app_settings').doc('config').set({
               chatMessages: [],
               chatRooms: []
             }, { merge: true });
-          } catch(e) {
-            console.warn('[FIRESTORE CHAT DELETE NOTICE]:', e);
-          }
+          } catch(e) {}
         }
-
-        // 3. KOSONGKAN DI REALTIME DB
         if (typeof dbRealtime !== 'undefined' && dbRealtime) {
           try {
             await dbRealtime.ref('chat_messages').remove();
             await dbRealtime.ref('chat_rooms').remove();
-          } catch(e) {
-            console.warn('[RTDB CHAT DELETE NOTICE]:', e);
-          }
+          } catch(e) {}
         }
 
         // 4. SYNC CENTRAL CLOUD
         if (typeof pushCentralCloudDB === 'function') {
-          pushCentralCloudDB();
+          await pushCentralCloudDB();
         }
 
         hideLoading();
-        showNotif('SELURUH PESAN CHAT & ROOM BERHASIL DIHAPUS!', 'success');
+        showNotif('SELURUH PESAN CHAT & ROOM BERHASIL DIHAPUS DARI SISTEM & SINKRON KE SEMUA USER!', 'success');
 
         if (typeof refreshActiveChatUI === 'function') {
           refreshActiveChatUI();
+        }
+        if (typeof cekUnreadNotif === 'function') {
+          cekUnreadNotif();
         }
       } catch (err) {
         hideLoading();
@@ -8176,98 +8366,11 @@ if (document.readyState === 'loading') {
   setupGlobalKeyboardNavigation();
 }
 
-async function hapusSemuaNotifFirebaseDanLokal() {
-  const isUserAdmin = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
-  if (!isUserAdmin) {
-    showNotif('FITUR HANYA DAPAT DIAKSES OLEH ADMIN!', 'error');
-    return;
+function hapusSemuaNotifFirebaseDanLokal() {
+  if (typeof hapusSemuaNotifikasiSystem === 'function') {
+    hapusSemuaNotifikasiSystem();
   }
-
-  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI & CHAT DI DATABASE DAN SEMUA PERANGKAT?\n\n(Semua notifikasi dan pesan chat di semua perangkat akan dibersihkan total!)', async () => {
-    showLoading('MENGHAPUS SEMUA NOTIFIKASI & CHAT DATABASE...');
-
-    try {
-      appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify([]));
-      appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
-      appStorage.setItem(CHAT_MESSAGES_KEY, JSON.stringify([]));
-      appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
-
-      if (dbFirestore) {
-        try {
-          await dbFirestore.collection('app_settings').doc('config').set({
-            notifications: [],
-            chatMessages: [],
-            chatRooms: [],
-            clearNotifsSignal: Date.now(),
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
-        } catch (e) {
-          console.warn('Firestore Clear Notifs Error:', e);
-        }
-      }
-
-      if (dbRealtime) {
-        try {
-          await dbRealtime.ref('notifications').set([]);
-          await dbRealtime.ref('chat_messages').set([]);
-          await dbRealtime.ref('chat_rooms').set([]);
-          await dbRealtime.ref('settings/clear_notifs_signal').set(Date.now());
-        } catch (e) {
-          console.warn('Realtime DB Clear Notifs Error:', e);
-        }
-      }
-
-      if (supabase) {
-        const clearSystemNotifRow = {
-          id: '__SYSTEM_NOTIFICATIONS__',
-          no_surat: '__SYSTEM_NOTIFICATIONS__',
-          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
-          toko: 'SYSTEM',
-          area: 'ALL',
-          jenis: 'SYSTEM',
-          catatan: JSON.stringify([]),
-          items: [],
-          photos: [],
-          status: 'DONE',
-          service_approve: true,
-          created_by: 'SYSTEM',
-          created_at: new Date().toISOString()
-        };
-        const clearSystemChatRow = {
-          id: '__SYSTEM_CHAT_MESSAGES__',
-          no_surat: '__SYSTEM_CHAT_MESSAGES__',
-          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
-          toko: 'SYSTEM',
-          area: 'ALL',
-          jenis: 'SYSTEM',
-          catatan: JSON.stringify([]),
-          items: [],
-          photos: [],
-          status: 'DONE',
-          service_approve: true,
-          created_by: 'SYSTEM',
-          created_at: new Date().toISOString()
-        };
-        try { await supabase.from('permintaan_toko').upsert(clearSystemNotifRow); } catch(e) {}
-        try { await supabase.from('permintaan_toko').upsert(clearSystemChatRow); } catch(e) {}
-      }
-
-      if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-      if (typeof loadNotificationList === 'function') loadNotificationList();
-      
-      const chatBody = document.getElementById('chatMessagesBody');
-      if (chatBody) chatBody.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8; font-size:12px;">BELUM ADA PESAN CHAT</div>';
-
-      hideLoading();
-      showNotif('SEMUA NOTIFIKASI & CHAT DI DATABASE FIREBASE SERTA SEMUA PERANGKAT BERHASIL DIHAPUS!', 'success');
-    } catch (err) {
-      hideLoading();
-      console.error('Gagal menghapus notifikasi cloud:', err);
-      showNotif('GAGAL MENGHAPUS NOTIFIKASI DATABASE: ' + err.message, 'error');
-    }
-  });
 }
-
 window.hapusSemuaNotifFirebaseDanLokal = hapusSemuaNotifFirebaseDanLokal;
 
 document.addEventListener('keydown', function(e) {
