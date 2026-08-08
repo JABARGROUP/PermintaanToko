@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260808_v1146">
-  <script src="app.js?v=20260808_v1146"></script>
+  <link rel="stylesheet" href="styles.css?v=20260808_v1147">
+  <script src="app.js?v=20260808_v1147"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -278,7 +278,7 @@
         <div id="sectionUploadFoto">
           <label>FOTO BARANG PENDUKUNG (MAKSIMAL 5 FOTO)</label>
           <div class="uploadBox">
-            <input type="file" id="foto" accept="image/*" multiple onchange="previewFoto(event)" style="display:none">
+            <input type="file" id="foto" accept="image/png, image/jpeg, image/jpg, image/webp, image/heic, image/heif, image/*" multiple onchange="previewFoto(event)" style="display:none">
             <div id="previewArea" onclick="pilihFoto()">
               <span class="material-symbols-rounded uploadIcon">add_a_photo</span>
               <div id="previewText">TAP / DRAG FOTO DI SINI (MAKSIMAL 5 FOTO)</div>
@@ -853,7 +853,7 @@
           <span class="material-symbols-rounded" style="font-size: 17px;">photo_camera</span> FOTO TTD
         </button>
 
-        <input type="file" id="fotoTTDInput" accept="image/*" capture="environment" onchange="prosesFotoKeTTD(event)" style="display:none;">
+        <input type="file" id="fotoTTDInput" accept="image/png, image/jpeg, image/jpg, image/webp, image/heic, image/heif, image/*" onchange="prosesFotoKeTTD(event)" style="display:none;">
       </div>
 
       <div class="ttdButton" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
