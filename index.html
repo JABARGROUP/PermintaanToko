@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260808_v1131">
-  <script src="app.js?v=20260808_v1131"></script>
+  <link rel="stylesheet" href="styles.css?v=20260808_v1146">
+  <script src="app.js?v=20260808_v1146"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -336,7 +336,7 @@
     <section id="masterDbPage" class="page">
       <div class="box box-full">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-          <h3 style="color: var(--primary);">MASTER DATABASE PERMINTAAN LENGKAP (ADMIN DATA UTAMA)</h3>
+          <h3 style="color: var(--primary);">MASTER DATA PERMINTAAN LENGKAP (ADMIN DATA UTAMA)</h3>
           <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
             <button type="button" id="btnHapusMultiMasterDb" class="btnDownload" style="display: none; background: #ef4444; height: 42px; padding: 0 18px; font-weight: 800;" onclick="hapusMultiMasterDb()">
               <span class="material-symbols-rounded">delete_sweep</span> HAPUS (0) DATA
@@ -348,7 +348,7 @@
         </div>
 
         <div class="searchToolbar">
-          <input type="text" id="searchMasterDb" placeholder="CARI MASTER DATABASE (NO SURAT, TOKO, TYPE, SERI, BARANG)..." onkeyup="loadMasterDbTable()">
+          <input type="text" id="searchMasterDb" placeholder="CARI DATA PERMINTAAN (NO SURAT, TOKO, TYPE, SERI, BARANG)..." onkeyup="loadMasterDbTable()">
         </div>
 
         <div class="tableWrap">
@@ -620,8 +620,8 @@
       </button>
 
       <button id="btnMasterDbNav" onclick="showPage('masterDbPage')" style="display: none;">
-        <span class="material-symbols-rounded">database</span>
-        MASTER DB
+        <span class="material-symbols-rounded">dataset</span>
+        MASTER DATA
       </button>
 
       <button id="btnUserNav" onclick="showPage('userManagementPage')" style="display: none;">
@@ -706,38 +706,48 @@
   </div>
 
   <!-- POPUP TAMBAH TOKO MODAL (UNTUK SEMUA USER - OTOMATIS MASUK AREA USER & GENERATE 2 DIGIT KODE TOKO) -->
-  <div id="popupTambahToko" class="popupOverlay">
-    <div class="popupBox" style="width: 480px; max-width: 94vw; padding: 18px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-      <div class="popupHeader" style="background: #0284c7; margin: -18px -18px 16px -18px; padding: 14px 18px; border-radius: 10px 10px 0 0;">
-        <span style="display: flex; align-items: center; gap: 6px;"><span class="material-symbols-rounded">store</span> KELOLA / TAMBAH TOKO BARU</span>
-        <button type="button" class="popupClose" onclick="tutupModalTambahToko()">&times;</button>
+  <div id="popupTambahToko" class="popupOverlay" onclick="if(event.target === this || event.target.id === 'popupTambahToko') { if(typeof window.tutupModalTambahToko==='function') window.tutupModalTambahToko(); else if(typeof tutupModalTambahToko==='function') tutupModalTambahToko(); }" style="display: none; align-items: flex-start !important; justify-content: center !important; padding-top: 12px !important;">
+    <div class="popupBox" style="width: 480px !important; max-width: 92vw !important; max-height: 86vh !important; overflow: hidden !important; margin: 0 auto !important; padding: 0 !important; border-radius: 18px !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important; display: flex !important; flex-direction: column !important;">
+      
+      <!-- HEADER (DIAM / FIXED) -->
+      <div class="popupHeader" style="background: linear-gradient(135deg, #0284c7, #0369a1); margin: 0; padding: 14px 18px; border-radius: 18px 18px 0 0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+        <span style="display: flex; align-items: center; gap: 6px; color: #ffffff; font-weight: 800; font-size: 14px;"><span class="material-symbols-rounded">store</span> KELOLA / TAMBAH TOKO BARU</span>
+        <button type="button" class="popupClose" onclick="if(typeof window.tutupModalTambahToko==='function') window.tutupModalTambahToko(); else if(typeof tutupModalTambahToko==='function') tutupModalTambahToko();" style="cursor: pointer; background: transparent; border: none; color: #ffffff; font-size: 28px; font-weight: 900; line-height: 1; margin: 0; padding: 0 4px; outline: none;" title="TUTUP">&times;</button>
       </div>
-      <div class="popupBody">
-        <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px;">
-          TOKO AKAN OTOMATIS TERSIMPAN PADA AREA <strong id="tokoModalAreaText" style="color: var(--primary);"></strong> DENGAN KODE TOKO 2 DIGIT OTOMATIS.
-        </p>
 
-        <!-- INPUT NAMA TOKO BARU -->
-        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-          <input type="text" id="inputNamaTokoBaru" placeholder="MASUKKAN NAMA TOKO BARU..." style="flex: 1; padding: 10px; text-transform: uppercase; border-radius: 6px; border: 1px solid var(--border-color);" onkeypress="if(event.key==='Enter') simpanTokoBaru()">
-          <button type="button" id="btnSimpanTokoBaru" class="btnDownload" style="background: #16a34a; white-space: nowrap; padding: 0 16px;" onclick="simpanTokoBaru()">
-            <span class="material-symbols-rounded" style="vertical-align: middle;">save</span> SIMPAN
-          </button>
+      <!-- POPUP BODY (CONTAINER TANPA SCROLL, FORM TERKUNCI DIAM) -->
+      <div class="popupBody" style="padding: 16px 18px 18px 18px; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
+        
+        <!-- ELEMENT ATAS TERKUNCI (DIAM) -->
+        <div style="flex-shrink: 0;">
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px;">
+            TOKO AKAN OTOMATIS TERSIMPAN PADA AREA <strong id="tokoModalAreaText" style="color: var(--primary);"></strong> DENGAN KODE TOKO 2 DIGIT OTOMATIS.
+          </p>
+
+          <!-- INPUT NAMA TOKO BARU -->
+          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <input type="text" id="inputNamaTokoBaru" placeholder="MASUKKAN NAMA TOKO BARU..." style="flex: 1; padding: 10px; text-transform: uppercase; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main);" onkeypress="if(event.key==='Enter') simpanTokoBaru()">
+            <button type="button" id="btnSimpanTokoBaru" class="btnDownload" style="background: #16a34a; white-space: nowrap; padding: 0 16px; border-radius: 8px;" onclick="simpanTokoBaru()">
+              <span class="material-symbols-rounded" style="vertical-align: middle;">save</span> SIMPAN
+            </button>
+          </div>
+
+          <!-- UPLOAD EXCEL SEKALIGUS (KOLOM A = NAMA TOKO, KOLOM B = AREA) -->
+          <div style="background: var(--bg-body); border: 1px dashed var(--primary); padding: 10px; border-radius: 10px; margin-bottom: 16px; text-align: center;">
+            <input type="file" id="excelTokoModalFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="prosesUploadExcelToko(event)">
+            <button type="button" class="btnDownload" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 11.5px; padding: 10px 14px; width: 100%; border-radius: 8px; cursor: pointer; justify-content: center;" onclick="document.getElementById('excelTokoModalFileInput').click()">
+              <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">upload_file</span> UPLOAD FILE EXCEL DAFTAR TOKO (A = NAMA, B = AREA)
+            </button>
+          </div>
+
+          <!-- LABEL DAFTAR TOKO (DIAM) -->
+          <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; color: var(--primary);">DAFTAR TOKO TERDAFTAR DI AREA INI:</div>
         </div>
 
-        <!-- UPLOAD EXCEL SEKALIGUS (KOLOM A = NAMA TOKO, KOLOM B = AREA) -->
-        <div style="background: var(--bg-body); border: 1px dashed var(--primary); padding: 10px; border-radius: 8px; margin-bottom: 16px; text-align: center;">
-          <input type="file" id="excelTokoModalFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="prosesUploadExcelToko(event)">
-          <button type="button" class="btnDownload" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 11.5px; padding: 8px 14px; width: 100%; border-radius: 6px; cursor: pointer; justify-content: center;" onclick="document.getElementById('excelTokoModalFileInput').click()">
-            <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">upload_file</span> UPLOAD FILE EXCEL DAFTAR TOKO (A = NAMA, B = AREA)
-          </button>
-        </div>
-
-        <!-- DAFTAR TOKO TERDAFTAR -->
-        <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; color: var(--primary);">DAFTAR TOKO TERDAFTAR DI AREA INI:</div>
-        <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-header);">
+        <!-- HANYA BAGIAN TABEL DI BAWAH INI YANG MEMILIKI FITUR SCROLLING -->
+        <div style="flex: 1; max-height: 220px; min-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-header); -webkit-overflow-scrolling: touch;">
           <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-            <thead>
+            <thead style="position: sticky; top: 0; z-index: 10;">
               <tr style="background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
                 <th style="padding: 8px; text-align: left;">NAMA TOKO</th>
                 <th style="padding: 8px; text-align: center;">KODE TOKO</th>
@@ -750,17 +760,14 @@
           </table>
         </div>
 
-        <div style="margin-top: 14px; text-align: right;">
-          <button type="button" class="btnBatal" style="padding: 8px 18px; border-radius: 6px;" onclick="tutupModalTambahToko()">TUTUP</button>
-        </div>
       </div>
     </div>
   </div>
 
   <!-- 2. POPUP CAMERA BARCODE / QR SCANNER -->
   <div id="scannerModal" class="popupOverlay">
-    <div class="popupBox" style="width: 440px; max-width: 94vw;">
-      <div class="popupHeader" style="background: var(--primary);">
+    <div class="popupBox" style="width: 440px !important; max-width: 90vw !important; margin: auto !important; border-radius: 18px !important;">
+      <div class="popupHeader" style="background: var(--primary); border-radius: 18px 18px 0 0;">
         <span><span class="material-symbols-rounded" style="vertical-align: middle;">qr_code_scanner</span> SCAN BARCODE / QR NO SERI</span>
         <button type="button" onclick="tutupScanner()">&times;</button>
       </div>
@@ -768,54 +775,54 @@
         <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">ARAHKAN KAMERA KE BARCODE / QR CODE NO SERI UNIT</p>
         <div id="readerScanner" style="width: 100%; border-radius: 12px; overflow: hidden; background: #000; min-height: 240px; margin: 0 auto 14px auto;"></div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-          <button type="button" class="btnBatal" style="width: 100%; height: 40px; background: #ef4444; color: #fff; border: none; border-radius: 8px; cursor: pointer;" onclick="tutupScanner()">BATAL / TUTUP</button>
+          <button type="button" class="btnBatal" style="width: 100%; height: 40px; background: #ef4444; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;" onclick="tutupScanner()">BATAL / TUTUP</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 3. POPUP CONFIRMATION MODAL (SAME MODEL CARD AS NOTIFICATION POPUP) -->
+  <!-- 3. POPUP CONFIRMATION MODAL (YES/NO HALF SCREEN COMPACT CARD) -->
   <div id="confirmOverlay" class="popupOverlay" style="z-index: 10000000;">
-    <div class="popupNotifCard" id="confirmBoxCard">
-      <div class="popupNotifBody" style="padding: 20px 20px 14px 20px; text-align: center;">
-        <span class="material-symbols-rounded" style="font-size: 32px; color: var(--primary); margin-bottom: 6px; display: block;">help</span>
+    <div class="popupNotifCard" id="confirmBoxCard" style="width: 420px !important; max-width: 90vw !important; margin: auto !important; border-radius: 18px !important; overflow: hidden !important;">
+      <div class="popupNotifBody" style="padding: 22px 20px 16px 20px; text-align: center;">
+        <span class="material-symbols-rounded" style="font-size: 36px; color: var(--primary); margin-bottom: 8px; display: block;">help</span>
         <p id="confirmMessage" style="font-size: 13.5px; font-weight: 700; line-height: 1.5; color: var(--text-main); margin: 0;">YAKIN INGIN MELANJUTKAN KAN?</p>
       </div>
-      <div class="popupNotifFooter" style="padding: 0 16px 16px 16px; display: flex; gap: 10px;">
+      <div class="popupNotifFooter" style="padding: 0 16px 18px 16px; display: flex; gap: 10px;">
         <button type="button" class="btnBatal" style="flex: 1; height: 38px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer;" onclick="closeConfirm()">BATAL</button>
         <button type="button" class="btnOkNotif" style="flex: 1; height: 38px; border-radius: 10px; border: none; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer;" onclick="confirmYes()">YA, LANJUT</button>
       </div>
     </div>
   </div>
 
-  <!-- 4. CLEAN & ATTRACTIVE NOTIFICATION DIALOG MODAL (SAME MODEL CARD AS CONFIRMATION POPUP) -->
+  <!-- 4. CLEAN & ATTRACTIVE NOTIFICATION DIALOG MODAL (OK HALF SCREEN COMPACT CARD) -->
   <div id="popupNotif" class="popupOverlay" style="z-index: 10000000;">
-    <div class="popupNotifCard" id="popupNotifCard">
-      <div class="popupNotifBody" style="padding: 20px 20px 14px 20px; text-align: center;">
-        <span id="popupNotifIcon" class="material-symbols-rounded" style="font-size: 32px; color: var(--primary); margin-bottom: 6px; display: block;">info</span>
+    <div class="popupNotifCard" id="popupNotifCard" style="width: 420px !important; max-width: 90vw !important; margin: auto !important; border-radius: 18px !important; overflow: hidden !important;">
+      <div class="popupNotifBody" style="padding: 22px 20px 16px 20px; text-align: center;">
+        <span id="popupNotifIcon" class="material-symbols-rounded" style="font-size: 36px; color: var(--primary); margin-bottom: 8px; display: block;">info</span>
         <p id="popupNotifMessage" style="font-size: 13.5px; font-weight: 700; line-height: 1.5; color: var(--text-main); margin: 0;">MEMPROSES...</p>
       </div>
-      <div class="popupNotifFooter" style="padding: 0 16px 16px 16px; display: flex; justify-content: center;">
+      <div class="popupNotifFooter" style="padding: 0 16px 18px 16px; display: flex; justify-content: center;">
         <button type="button" class="btnOkNotif" id="btnOkNotif" style="width: 100%; height: 38px; border-radius: 10px; border: none; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer;" onclick="closePopup()">OK</button>
       </div>
     </div>
   </div>
 
-  <!-- 5. POPUP REJECT REASON MODAL -->
+  <!-- 5. POPUP REJECT REASON MODAL (HALF SCREEN COMPACT CARD) -->
   <div id="rejectOverlay" class="popupOverlay">
-    <div class="rejectBoxPopup">
-      <div class="rejectHeaderPopup">
-        <span class="material-symbols-rounded">cancel</span>
-        <span id="rejectTitle">TOLAK PERMINTAAN</span>
+    <div class="rejectBoxPopup" style="width: 440px !important; max-width: 90vw !important; margin: auto !important; border-radius: 18px !important; overflow: hidden !important; background: var(--bg-box) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;">
+      <div class="rejectHeaderPopup" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: #ffffff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800;"><span class="material-symbols-rounded">cancel</span> <span id="rejectTitle">TOLAK PERMINTAAN</span></span>
+        <button type="button" class="popupClose" onclick="closeReject()" style="background: none; border: none; color: #ffffff; font-size: 24px; font-weight: 800; cursor: pointer;">&times;</button>
       </div>
-      <div class="rejectBodyPopup">
+      <div class="rejectBodyPopup" style="padding: 18px;">
         <input type="hidden" id="rejectNoSurat">
         <input type="hidden" id="rejectRoleType">
-        <p>MASUKKAN ALASAN PENOLAKAN:</p>
-        <textarea id="rejectReason" rows="3" placeholder=""></textarea>
-        <div class="confirmButton">
-          <button type="button" class="btnBatal" onclick="closeReject()">BATAL</button>
-          <button type="button" class="btnHapus" onclick="kirimReject()">KIRIM</button>
+        <p style="font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">MASUKKAN ALASAN PENOLAKAN:</p>
+        <textarea id="rejectReason" rows="3" placeholder="Tuliskan alasan penolakan..." style="width: 100%; border-radius: 10px; padding: 10px; font-size: 12.5px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); margin-bottom: 16px; resize: vertical; box-sizing: border-box;"></textarea>
+        <div class="confirmButton" style="display: flex; gap: 10px;">
+          <button type="button" class="btnBatal" onclick="closeReject()" style="flex: 1; height: 38px; border-radius: 10px; font-weight: 700; cursor: pointer;">BATAL</button>
+          <button type="button" class="btnHapus" onclick="kirimReject()" style="flex: 1; height: 38px; border-radius: 10px; background: #ef4444; color: #fff; font-weight: 700; border: none; cursor: pointer;">KIRIM PENOLAKAN</button>
         </div>
       </div>
     </div>

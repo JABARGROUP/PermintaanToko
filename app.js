@@ -1495,7 +1495,7 @@ function initFirebaseDB() {
           if (dot) {
             dot.style.background = '#10b981';
             dot.style.boxShadow = '0 0 10px #10b981';
-            dot.title = `FIREBASE DATABASE ONLINE: TERHUBUNG (${activeConfig.projectId})`;
+            dot.title = `ONLINE: TERHUBUNG (${activeConfig.projectId})`;
           }
 
           // REAL-TIME SNAPSHOT LISTENER UNTUK CHAT & SETTINGS PUSAT
@@ -1575,8 +1575,8 @@ function initFirebaseDB() {
     const dot = document.getElementById('firebaseOnlineDot');
     if (dot) {
       dot.style.background = '#ef4444';
-      dot.style.boxShadow = '0 0 10px #ef4444';
-      dot.title = 'FIREBASE DATABASE ONLINE: TERPUTUS / DISKONEK';
+      dot.style.boxShadow = 'none';
+      dot.title = 'ONLINE: TERPUTUS / DISKONEK';
     }
     console.warn("[FIREBASE ENGINE NOTICE]:", err.message);
   }
@@ -1665,11 +1665,11 @@ function initGlobalRealtimeSyncEngine() {
     }
   }
 
-  // 3. FAST 5-SECOND BACKGROUND POLLING HEARTBEAT (GUARANTEED SYNC FALLBACK)
+  // 3. FAST 2.5-SECOND BACKGROUND POLLING HEARTBEAT (GUARANTEED SYNC FALLBACK)
   if (!window.globalFastRealtimeTimer) {
     window.globalFastRealtimeTimer = setInterval(() => {
       onGlobalDataChangedRealtime('heartbeat');
-    }, 5000);
+    }, 2500);
   }
 }
 
@@ -1688,6 +1688,7 @@ async function onGlobalDataChangedRealtime(source) {
       if (typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) loadMasterDbTable();
       if (typeof loadUsersManagement === 'function' && document.getElementById('userTableBody')) loadUsersManagement();
       if (typeof loadDaftarTokoModal === 'function' && document.getElementById('daftarTokoTableBody')) loadDaftarTokoModal();
+      if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
       if (typeof refreshActiveChatUI === 'function') refreshActiveChatUI();
       if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
       if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
@@ -1702,11 +1703,17 @@ async function syncSupabaseRequestsToLocalCache() {
   if (typeof supabase === 'undefined' || !supabase) return;
   try {
     const { data, error } = await supabase.from('permintaan_toko').select('*');
-    if (!error && Array.isArray(data) && data.length > 0) {
+    if (!error && Array.isArray(data)) {
+      const delReqs = new Set(
+        (JSON.parse(appStorage.getItem(DELETED_REQUESTS_KEY) || '[]') || [])
+          .filter(Boolean)
+          .map(v => String(v).trim())
+      );
+
       const formattedReqs = data
         .filter(row => {
           const ns = row.no_surat || row.noSurat || '';
-          return ns && !ns.startsWith('__SYSTEM_');
+          return ns && !ns.startsWith('__SYSTEM_') && !delReqs.has(ns);
         })
         .map(row => ({
           noSurat: row.no_surat || row.noSurat,
@@ -1725,27 +1732,62 @@ async function syncSupabaseRequestsToLocalCache() {
           log: row.log || []
         }));
 
-      const currentLocal = getRequestsFromDB();
-      const map = new Map();
-      formattedReqs.forEach(r => { if (r && r.noSurat) map.set(r.noSurat, r); });
-      currentLocal.forEach(r => {
-        if (r && r.noSurat && !map.has(r.noSurat)) {
-          map.set(r.noSurat, r);
-        }
-      });
-
-      const merged = Array.from(map.values());
-      appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(merged));
+      appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(formattedReqs));
 
       if (typeof currentUser !== 'undefined' && currentUser) {
         if (typeof loadDashboard === 'function') loadDashboard();
         if (typeof loadRiwayat === 'function') loadRiwayat();
+        if (typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) loadMasterDbTable();
       }
     }
   } catch (e) {
     console.warn('[SUPABASE REQUESTS SYNC NOTICE]:', e);
   }
 }
+
+async function syncSupabaseUsersToLocalCache() {
+  if (typeof supabase === 'undefined' || !supabase) return;
+  try {
+    const { data: supaUsers, error } = await supabase.from('users').select('*');
+    if (!error && Array.isArray(supaUsers)) {
+      const delUsers = new Set(
+        (JSON.parse(appStorage.getItem(DELETED_USERS_KEY) || '[]') || [])
+          .filter(Boolean)
+          .map(v => String(v).trim().toUpperCase())
+      );
+
+      const formatted = supaUsers
+        .map(u => ({
+          id: u.id,
+          username: String(u.username || '').trim(),
+          password: String(u.password || '').trim(),
+          fullName: String(u.full_name || u.fullName || '').trim(),
+          storeCode: String(u.store_code || u.storeCode || '').trim(),
+          phone: String(u.phone || '').trim(),
+          category: String(u.category || 'TOKO').trim().toUpperCase(),
+          area: String(u.area || 'BDG').trim().toUpperCase(),
+          createdAt: u.created_at || (typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '')
+        }))
+        .filter(u => u.username && !delUsers.has(String(u.id).toUpperCase()) && !delUsers.has(String(u.username).toUpperCase()));
+
+      if (formatted.length > 0) {
+        if (typeof SEED_USERS !== 'undefined' && Array.isArray(SEED_USERS)) {
+          SEED_USERS.forEach(su => {
+            if (su && su.username && !formatted.some(x => x.username.toUpperCase() === su.username.toUpperCase()) && !delUsers.has(su.username.toUpperCase())) {
+              formatted.unshift(su);
+            }
+          });
+        }
+
+        appStorage.setItem(USERS_DB_KEY, JSON.stringify(formatted));
+        try { localStorage.setItem(USERS_DB_KEY, JSON.stringify(formatted)); } catch(e) {}
+      }
+    }
+  } catch (err) {
+    console.warn('[SUPABASE USERS SYNC NOTICE]:', err);
+  }
+}
+window.syncSupabaseUsersToLocalCache = syncSupabaseUsersToLocalCache;
 
 async function syncSupabaseNotifsAndChatToLocalCache() {
   if (typeof supabase === 'undefined' || !supabase) return;
@@ -1968,6 +2010,7 @@ window.syncSupabaseThemeToLocalCache = syncSupabaseThemeToLocalCache;
 async function syncAllDataToCache() {
   try {
     await syncSupabaseRequestsToLocalCache();
+    await syncSupabaseUsersToLocalCache();
     await syncSupabaseNotifsAndChatToLocalCache();
     await syncSupabaseStoresToLocalCache();
     await syncSupabaseLookupToLocalCache();
@@ -2709,7 +2752,7 @@ async function setGlobalAdminTheme(themeId) {
     } catch(e) {}
   }
 
-  showNotif(`TEMA CLOUD DIBAHARUI KE "${themeId.toUpperCase()}" OLEH ADMIN & DISINKRONKAN KE SELURUH PERANGKAT!`, 'success');
+  showNotif(`TEMA DIPERBARUI KE "${themeId.toUpperCase()}" OLEH ADMIN & DISINKRONKAN KE SELURUH PERANGKAT!`, 'success');
 }
 window.setGlobalAdminTheme = setGlobalAdminTheme;
 
@@ -2918,7 +2961,7 @@ async function prosesLogin() {
     return;
   }
 
-  showLoading('MEMBERSIHKAN CACHE LOKAL & MENGAMBIL DATA DATABASE...');
+  showLoading('MEMPROSES LOGIN & MEMUAT DATA TERBARU...');
 
   // 1. FUNGSI HAPUS CACHE & PENYIMPANAN LOKAL SEBELUM PENGAMBILAN DATA (MENJAGA TEMA & TTD)
   await clearLocalStorageKeepThemeAndTTD();
@@ -3021,7 +3064,10 @@ function fillLogin(u, p) {
 }
 
 function logout() {
-  showConfirm('YAKIN INGIN KELUAR DARI APLIKASI?', async () => {
+  const confirmMsg = isFormDirtyOrFilled() 
+    ? 'ADA DATA PERMINTAAN YANG BELUM DISIMPAN. YAKIN INGIN LOGOUT & KELUAR DARI APLIKASI?' 
+    : 'YAKIN INGIN KELUAR DARI APLIKASI?';
+  showConfirm(confirmMsg, async () => {
     let rememberedCreds = null;
     try {
       rememberedCreds = appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
@@ -3107,9 +3153,51 @@ function bukaMainApp() {
   if (typeof checkAndTriggerPendingReminders === 'function') checkAndTriggerPendingReminders(false);
 }
 
+function isFormDirtyOrFilled() {
+  if (typeof modeEdit !== 'undefined' && modeEdit) return true;
+
+  const activePage = typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : '';
+  if (activePage !== 'inputPage') return false;
+
+  // 1. Detail Barang / Inputs inside detailContainer (Nama barang, tipe, SN, Dus, Alasan)
+  const detailRows = document.querySelectorAll('#detailContainer .detailRow');
+  for (let i = 0; i < detailRows.length; i++) {
+    const row = detailRows[i];
+    const typeVal = (row.querySelector('.typeBarang')?.value || '').trim();
+    const seriVal = (row.querySelector('.seriBarang')?.value || '').trim();
+    const namaVal = (row.querySelector('.namaBarang')?.value || '').trim();
+    const dusVal = (row.querySelector('.seriDusBarang')?.value || '').trim();
+    const alasanVal = (row.querySelector('.alasan')?.value || '').trim();
+    const qtyVal = (row.querySelector('.qty')?.value || '').trim();
+
+    // Check if user has actually typed text or changed qty from default 1
+    if (typeVal !== '' || seriVal !== '' || namaVal !== '' || dusVal !== '' || alasanVal !== '') {
+      return true;
+    }
+    if (qtyVal !== '' && qtyVal !== '1') {
+      return true;
+    }
+  }
+
+  // 2. Foto Upload Pendukung
+  if (typeof fotoDataList !== 'undefined' && Array.isArray(fotoDataList) && fotoDataList.length > 0) {
+    return true;
+  }
+
+  // 3. Catatan Textarea
+  const catatanEl = document.getElementById('catatan');
+  if (catatanEl && catatanEl.value.trim() !== '') return true;
+
+  return false;
+}
+window.isFormDirtyOrFilled = isFormDirtyOrFilled;
+
 function showPage(pageId) {
-  if (modeEdit && pageId !== 'inputPage') {
-    showConfirm('KELUAR DARI MENU EDIT?', () => {
+  const currentActivePage = typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : '';
+
+  if (currentActivePage === 'inputPage' && pageId !== 'inputPage' && isFormDirtyOrFilled()) {
+    const confirmMsg = modeEdit ? 'KELUAR DARI MENU EDIT?' : 'KELUAR DARI FORM PERMINTAAN? (DATA YANG DIISI AKAN HILANG)';
+    showConfirm(confirmMsg, () => {
       bersihkanForm();
       closeAllPopups();
       pindahHalaman(pageId);
@@ -3226,10 +3314,11 @@ function initMobileBackButtonEngine() {
 
     const currentActivePage = getCurrentActivePageId();
 
-    if (currentActivePage === 'inputPage' && typeof modeEdit !== 'undefined' && modeEdit) {
+    if (currentActivePage === 'inputPage' && isFormDirtyOrFilled()) {
       try { history.pushState({ page: 'inputPage' }, '', location.href); } catch(err) {}
       
-      showConfirm('KELUAR DARI MENU EDIT?', () => {
+      const confirmMsg = modeEdit ? 'KELUAR DARI MENU EDIT?' : 'KELUAR DARI FORM PERMINTAAN? (DATA YANG DIISI AKAN HILANG)';
+      showConfirm(confirmMsg, () => {
         if (typeof bersihkanForm === 'function') bersihkanForm();
         closeAllPopups();
         pindahHalaman('dashboardPage');
@@ -7544,7 +7633,7 @@ function loadMasterDbTable() {
   tbody.innerHTML = '';
 
   if (requests.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">BELUM ADA DATA DI MASTER DATABASE.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">BELUM ADA DATA PERMINTAAN TERDAFTAR.</td></tr>`;
     return;
   }
 
@@ -7619,7 +7708,7 @@ function hapusMultiMasterDb() {
     return;
   }
 
-  showConfirm(`ADMIN: YAKIN INGIN MENGHAPUS ${noSuratList.length} DATA PERMINTAAN TERPILIH DARI MASTER DATABASE?`, () => {
+  showConfirm(`ADMIN: YAKIN INGIN MENGHAPUS ${noSuratList.length} DATA PERMINTAAN TERPILIH?`, () => {
     showLoading('MENGHAPUS DATA TERPILIH...');
     setTimeout(async () => {
       try {
@@ -7767,8 +7856,8 @@ function downloadMasterExcel() {
     if (typeof XLSX !== 'undefined') {
       const ws = XLSX.utils.aoa_to_sheet(rows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Master Database");
-      XLSX.writeFile(wb, `MASTER_DATABASE_PERMINTAAN_LENGKAP_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, "Master Data");
+      XLSX.writeFile(wb, `MASTER_DATA_PERMINTAAN_LENGKAP_${new Date().toISOString().split('T')[0]}.xlsx`);
       showNotif('FILE EXCEL (.XLSX) BERHASIL DI-DOWNLOAD!', 'info');
     } else {
       showNotif('MODUL EXCEL (.XLSX) BELUM SIAP, PERIKSA KONEKSI INTERNET!', 'warning');
@@ -7850,6 +7939,17 @@ function prosesUploadExcelLookup(event) {
 
 function bukaAkun() {
   if (!currentUser) return;
+
+  const currentActivePage = typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : '';
+  if (currentActivePage === 'inputPage' && isFormDirtyOrFilled()) {
+    const confirmMsg = modeEdit ? 'KELUAR DARI MENU EDIT?' : 'KELUAR DARI FORM PERMINTAAN? (DATA YANG DIISI AKAN HILANG)';
+    showConfirm(confirmMsg, () => {
+      if (typeof bersihkanForm === 'function') bersihkanForm();
+      closeAllPopups();
+      prosesBukaAkun();
+    });
+    return;
+  }
 
   if (typeof modeEdit !== 'undefined' && modeEdit) {
     showConfirm('KELUAR DARI MENU EDIT?', () => {
@@ -7970,7 +8070,7 @@ function bukaModalTambahToko() {
   loadDaftarTokoModal();
   const popup = document.getElementById('popupTambahToko');
   if (popup) {
-    popup.style.display = 'flex';
+    popup.style.setProperty('display', 'flex', 'important');
     popup.classList.add('show');
     pushPopupHistoryState();
   }
@@ -8011,11 +8111,17 @@ function tutupModalTambahToko() {
 
   const popup = document.getElementById('popupTambahToko');
   if (popup) {
-    popup.style.display = 'none';
     popup.classList.remove('show');
+    popup.style.setProperty('display', 'none', 'important');
   }
-  loadForm();
+  try {
+    if (typeof loadForm === 'function') loadForm();
+  } catch (err) {
+    console.warn('[tutupModalTambahToko notice]:', err);
+  }
 }
+window.bukaModalTambahToko = bukaModalTambahToko;
+window.tutupModalTambahToko = tutupModalTambahToko;
 
 function loadDaftarTokoModal() {
   const tbody = document.getElementById('daftarTokoTableBody');
@@ -8263,6 +8369,7 @@ function simpanTokoBaru() {
     }
   }, 300);
 }
+window.simpanTokoBaru = simpanTokoBaru;
 
 function hapusTokoCustom(id) {
   const allStores = getStoresFromDB();
@@ -8270,7 +8377,7 @@ function hapusTokoCustom(id) {
   const name = store ? store.fullName : 'TOKO';
   const storeArea = store ? store.area : (currentUser ? currentUser.area : '');
 
-  showConfirm(`HAPUS TOKO '${name}' DARI DAFTAR & DATABASE ADMIN?`, () => {
+  showConfirm(`HAPUS TOKO '${name}' DARI DAFTAR?`, () => {
     showLoading('MENGHAPUS TOKO...');
     setTimeout(async () => {
       try {

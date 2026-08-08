@@ -2361,14 +2361,9 @@ body.design-mode-3d-isometric .dashboardTable th {
   margin-bottom: 14px;
 }
 
-/* DYNAMICALLY AUTOSIZING WIDE POPUP BOX & MODALS (1MM GAP ON LEFT AND RIGHT EDGES FOR MODALS ONLY) */
-.popupBox,
+/* DYNAMICALLY AUTOSIZING WIDE POPUP BOX & MODALS (FULL-WIDTH MODALS ONLY) */
 .popupBoxDetail,
-.popupOverlay .popupBox,
 .popupOverlay .popupBoxDetail,
-.akunBox,
-.confirmBox,
-.rejectBoxPopup,
 #popupDetail .popupBox,
 #popupDetail .popupBoxDetail,
 #pdfModal .popupBox,
@@ -2384,7 +2379,76 @@ body.design-mode-3d-isometric .dashboardTable th {
   animation: fade .25s ease-out;
   margin-left: 1mm !important;
   margin-right: 1mm !important;
-  box-sizing: border-box !important;
+}
+
+/* COMPACT HALF-SCREEN POPUPS (POPUP TOLAKAN, POPUP TAMBAH TOKO, NOTIF KONFIRMASI YES/NO) */
+.rejectBoxPopup,
+#rejectOverlay .rejectBoxPopup {
+  width: 440px !important;
+  max-width: 90vw !important;
+  margin: auto !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  background: var(--bg-box) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;
+}
+
+#popupTambahToko {
+  display: none;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding-top: 12px !important;
+}
+
+#popupTambahToko.show {
+  display: flex !important;
+}
+
+#popupTambahToko .popupBox {
+  width: 480px !important;
+  max-width: 92vw !important;
+  max-height: 86vh !important;
+  overflow: hidden !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#popupTambahToko .popupBody {
+  padding: 16px 18px 18px 18px !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#popupTambahToko .popupHeader {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}
+
+.popupNotifCard,
+.confirmBoxCard,
+#confirmBoxCard,
+#popupNotifCard {
+  width: 420px !important;
+  max-width: 90vw !important;
+  margin: auto !important;
+  background: var(--bg-box) !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid var(--border-color) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  animation: fade .2s ease-out !important;
 }
 
 .popupOverlay {
@@ -2527,9 +2591,9 @@ table th,
 .popupCloseV2:hover,
 .popupHeader button:hover,
 .detailHeader button:hover {
-  transform: scale(1.25) rotate(90deg) !important;
-  color: var(--primary) !important;
-  opacity: 1;
+  transform: none !important;
+  color: #ef4444 !important;
+  opacity: 1 !important;
 }
 
 /* BALANCED & EQUAL WIDTH BUTTON CONTAINER FOR ALL POPUPS */
@@ -3993,8 +4057,8 @@ button[onclick="tutupModalTambahToko()"] {
 .popupHeader button:hover,
 .popupOverlay button[onclick*="tutup"]:hover,
 .popupOverlay button[onclick*="close"]:hover {
-  color: #dc2626 !important;
-  transform: scale(1.25) !important;
+  color: #ef4444 !important;
+  transform: none !important;
 }
 
 /* REQUIREMENT 6: HIGHLIGHT ORANGE ROW FOR TUNGGU DM / TUNGGU SERVICE */
