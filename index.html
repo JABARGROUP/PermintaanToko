@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260807_v1106">
-  <script src="app.js?v=20260807_v1106"></script>
+  <link rel="stylesheet" href="styles.css?v=20260808_v1115">
+  <script src="app.js?v=20260808_v1115"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -31,7 +31,7 @@
   <!-- TOP-RIGHT HEADER ACTIONS CONTAINER (ALIGNED FLUSH TO RIGHT CARD BOUNDARY) -->
   <div id="topHeaderActions" class="top-header-actions">
     <!-- BULAT KECIL INDIKATOR STATUS ONLINE (KONEK / DISKONEK) -->
-    <div id="firebaseOnlineDot" title="STATUS SERVER ONLINE: TERHUBUNG" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; cursor: pointer; transition: all 0.3s;" onclick="showNotif('STATUS SISTEM ONLINE: TERHUBUNG', 'success')"></div>
+    <div id="firebaseOnlineDot" title="STATUS SERVER ONLINE: TERHUBUNG" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; cursor: pointer; transition: all 0.3s; align-self: flex-start; margin-top: 4px; pointer-events: auto !important;" onclick="showNotif('STATUS SISTEM ONLINE: TERHUBUNG', 'success')"></div>
 
     <button id="helpButton" class="helpButton" onclick="bukaBantuan()" title="PUSAT BANTUAN & CHAT" style="display: none;">
       <span class="material-symbols-rounded">support_agent</span>
@@ -131,6 +131,9 @@
           <div class="input-group">
             <span><span class="material-symbols-rounded">lock</span></span>
             <input type="password" id="password" placeholder="PASSWORD">
+            <button type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility()" title="LIHAT / SEMBUNYIKAN PASSWORD">
+              <span class="material-symbols-rounded" id="togglePasswordIcon" style="font-size: 20px;">visibility</span>
+            </button>
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px; margin-top: -4px;">
@@ -510,6 +513,22 @@
         </div>
       </div>
 
+      <!-- BOX UPLOAD MASTER DAFTAR TOKO SEKALIGUS (FILE EXCEL 2 KOLOM: A=NAMA TOKO, B=AREA) -->
+      <div class="box" style="border-left: 4px solid #16a34a; margin-bottom: 24px; background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(21, 128, 61, 0.03));">
+        <h3 style="color: #16a34a; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span class="material-symbols-rounded">file_upload</span> UPLOAD DAFTAR TOKO SEKALIGUS (EXCEL / CSV - 2 KOLOM)
+        </h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+          DATA EXCEL: <strong>KOLOM A = NAMA TOKO</strong> | <strong>KOLOM B = AREA</strong> (MISAL: BDG, CKR, TSMI, CSB). KODE TOKO UNIK OTOMATIS DIBUAT & DISIMPAN KE CLOUD.
+        </p>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <input type="file" id="excelTokoFileAdminInput" accept=".xlsx, .xls, .csv" style="display:none" onchange="prosesUploadExcelToko(event)">
+          <button type="button" class="btnDownload" style="background: #16a34a; height: 42px;" onclick="document.getElementById('excelTokoFileAdminInput').click()">
+            <span class="material-symbols-rounded">upload_file</span> UPLOAD EXCEL DAFTAR TOKO (KOLOM A = NAMA, KOLOM B = AREA)
+          </button>
+        </div>
+      </div>
+
       <!-- PENGATURAN MODEL TEMPLATE PDF SURAT PERMINTAAN (5 MODEL WITH LARGE POPUP MODAL) -->
       <div class="box" style="border-left: 4px solid #7c3aed; margin-bottom: 28px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(109, 40, 217, 0.03)); box-shadow: 0 4px 14px rgba(124, 58, 237, 0.08);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -701,10 +720,18 @@
         </p>
 
         <!-- INPUT NAMA TOKO BARU -->
-        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
           <input type="text" id="inputNamaTokoBaru" placeholder="MASUKKAN NAMA TOKO BARU..." style="flex: 1; padding: 10px; text-transform: uppercase; border-radius: 6px; border: 1px solid var(--border-color);" onkeypress="if(event.key==='Enter') simpanTokoBaru()">
           <button type="button" id="btnSimpanTokoBaru" class="btnDownload" style="background: #16a34a; white-space: nowrap; padding: 0 16px;" onclick="simpanTokoBaru()">
             <span class="material-symbols-rounded" style="vertical-align: middle;">save</span> SIMPAN
+          </button>
+        </div>
+
+        <!-- UPLOAD EXCEL SEKALIGUS (KOLOM A = NAMA TOKO, KOLOM B = AREA) -->
+        <div style="background: var(--bg-body); border: 1px dashed var(--primary); padding: 10px; border-radius: 8px; margin-bottom: 16px; text-align: center;">
+          <input type="file" id="excelTokoModalFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="prosesUploadExcelToko(event)">
+          <button type="button" class="btnDownload" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 11.5px; padding: 8px 14px; width: 100%; border-radius: 6px; cursor: pointer; justify-content: center;" onclick="document.getElementById('excelTokoModalFileInput').click()">
+            <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">upload_file</span> UPLOAD FILE EXCEL DAFTAR TOKO (A = NAMA, B = AREA)
           </button>
         </div>
 
@@ -809,15 +836,17 @@
   </div>
 
   <!-- 7. POPUP DIGITAL SIGNATURE (TTD) MODAL -->
-  <div id="popupTTD" class="popupTTD">
+  <div id="popupTTD" class="popupTTD popupOverlay">
     <div class="ttdBox">
-      <h3>TANDA TANGAN DIGITAL (TTD)</h3>
-      <div class="ttdInfo">BUAT / GAMBAR TANDA TANGAN ANDA DI BAWAH INI UNTUK SURAT DOKUMEN PERMINTAAN</div>
-      <canvas id="canvasTTD" width="540" height="220"></canvas>
-      <div class="ttdButton">
-        <button type="button" class="btnBack" onclick="tutupTTD()">BATAL</button>
-        <button type="button" class="btnSecondary" onclick="hapusTTD()">BERSIHKAN</button>
-        <button type="button" class="btnPrimary" onclick="simpanTTD()">SIMPAN TTD</button>
+      <h3 style="color: var(--primary); margin-bottom: 4px; font-size: 15px; font-weight: 800;">TANDA TANGAN DIGITAL (TTD)</h3>
+      <div class="ttdInfo" style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">BUAT / GAMBAR TANDA TANGAN ANDA DI BAWAH INI UNTUK SURAT DOKUMEN PERMINTAAN</div>
+      <div style="width: 100%; box-sizing: border-box; overflow: hidden; padding: 2px;">
+        <canvas id="canvasTTD" style="width: 100% !important; max-width: 100% !important; height: 220px !important; border: 2px dashed var(--primary) !important; border-radius: 12px !important; background: #ffffff !important; display: block !important; box-sizing: border-box !important; margin: 0 auto 14px auto !important; touch-action: none;"></canvas>
+      </div>
+      <div class="ttdButton" style="display: flex; gap: 10px; justify-content: center;">
+        <button type="button" class="btnBack" onclick="tutupTTD()" style="flex: 1; height: 38px; border-radius: 10px; font-weight: 700;">BATAL</button>
+        <button type="button" class="btnSecondary" onclick="hapusTTD()" style="flex: 1; height: 38px; border-radius: 10px; font-weight: 700;">BERSIHKAN</button>
+        <button type="button" class="btnPrimary" onclick="simpanTTD()" style="flex: 1; height: 38px; border-radius: 10px; font-weight: 700;">SIMPAN TTD</button>
       </div>
     </div>
   </div>

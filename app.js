@@ -768,47 +768,137 @@ function clickNotificationItem(notifId, noSurat) {
 }
 
 function markNotifAsRead(notifId, noSurat = '') {
+  if (!currentUser) return;
+
   let notifs = getSystemNotifications();
-  const idx = notifs.findIndex(n => n.id === notifId);
+  const accessibleNotifs = getAccessibleNotifications();
 
-  const targetNoSurat = noSurat || (idx !== -1 ? notifs[idx].noSurat : '');
-  const requests = getRequestsFromDB();
-  const req = requests.find(r => r.noSurat === targetNoSurat);
-
-  // JIKA STATUS PERMINTAAN SUDAH APPROVE, REJECT, ATAU DONE -> OTOMATIS HAPUS DARI PENYIMPANAN LOKAL & DATABASE CLOUD
-  if (req && (req.status === 'APPROVE' || req.status === 'REJECT' || req.status === 'DONE')) {
-    notifs = notifs.filter(n => n.id !== notifId && n.noSurat !== targetNoSurat);
-    appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
-    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
-    updateNotifBellCounter();
-    return;
+  let targetNotif = notifs.find(n => n.id === notifId || (noSurat && n.noSurat === noSurat && String(n.message || '').includes(noSurat)));
+  if (!targetNotif && Array.isArray(accessibleNotifs)) {
+    const accItem = accessibleNotifs.find(n => n.id === notifId || (noSurat && n.noSurat === noSurat));
+    if (accItem) {
+      targetNotif = { ...accItem, readBy: [] };
+      notifs.unshift(targetNotif);
+    }
   }
 
-  if (idx !== -1) {
-    if (!notifs[idx].readBy.includes(currentUser.id)) {
-      notifs[idx].readBy.push(currentUser.id);
+  if (targetNotif) {
+    if (!Array.isArray(targetNotif.readBy)) targetNotif.readBy = [];
+    if (!targetNotif.readBy.includes(currentUser.id)) targetNotif.readBy.push(currentUser.id);
+    if (!targetNotif.readBy.includes(currentUser.username)) targetNotif.readBy.push(currentUser.username);
+
+    if (noSurat) {
+      notifs.forEach(n => {
+        if (n && n.noSurat === noSurat) {
+          if (!Array.isArray(n.readBy)) n.readBy = [];
+          if (!n.readBy.includes(currentUser.id)) n.readBy.push(currentUser.id);
+          if (!n.readBy.includes(currentUser.username)) n.readBy.push(currentUser.username);
+        }
+      });
     }
-    if (!notifs[idx].readBy.includes(currentUser.username)) {
-      notifs[idx].readBy.push(currentUser.username);
+
+    if (notifs.length > 100) notifs = notifs.slice(0, 100);
+
+    const clearedAt = getSystemNotifsClearedTimestamp();
+    const payload = clearedAt ? { clearedAt, items: notifs } : notifs;
+
+    appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(payload));
+    try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(payload)); } catch(e) {}
+
+    if (typeof supabase !== 'undefined' && supabase) {
+      try {
+        const systemNotifRow = {
+          id: '__SYSTEM_NOTIFICATIONS__',
+          no_surat: '__SYSTEM_NOTIFICATIONS__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify(payload),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        supabase.from('permintaan_toko').upsert(systemNotifRow).then(({ error }) => {
+          if (error) console.warn('[SUPABASE NOTIF SAVE NOTICE]:', error.message);
+        });
+      } catch(e) {}
     }
-    appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
-    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
-    updateNotifBellCounter();
   }
+
+  updateNotifBellCounter();
 }
 
-function markAllNotifAsRead() {
+function markAllNotifAsRead(silent = false) {
   if (!currentUser) return;
-  const notifs = getSystemNotifications();
+  
+  let notifs = getSystemNotifications();
+  const accessibleNotifs = getAccessibleNotifications();
+
+  // MERGE ACCESSIBLE NOTIFICATIONS INTO MAIN STORAGE SO READ STATUS IS PERSISTED
+  if (Array.isArray(accessibleNotifs)) {
+    accessibleNotifs.forEach(acc => {
+      if (acc && acc.id) {
+        const idx = notifs.findIndex(n => n.id === acc.id || (n.noSurat && acc.noSurat && n.noSurat === acc.noSurat && n.message === acc.message));
+        if (idx !== -1) {
+          if (!Array.isArray(notifs[idx].readBy)) notifs[idx].readBy = [];
+          if (!notifs[idx].readBy.includes(currentUser.id)) notifs[idx].readBy.push(currentUser.id);
+          if (!notifs[idx].readBy.includes(currentUser.username)) notifs[idx].readBy.push(currentUser.username);
+        } else {
+          const newObj = { ...acc, readBy: [currentUser.id, currentUser.username] };
+          notifs.unshift(newObj);
+        }
+      }
+    });
+  }
+
+  // MARK ALL STORED NOTIFICATIONS ACCESSIBLE TO THIS USER AS READ
   notifs.forEach(n => {
+    if (!Array.isArray(n.readBy)) n.readBy = [];
     if (!n.readBy.includes(currentUser.id)) n.readBy.push(currentUser.id);
     if (!n.readBy.includes(currentUser.username)) n.readBy.push(currentUser.username);
   });
-  appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
-  if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
+
+  if (notifs.length > 100) notifs = notifs.slice(0, 100);
+
+  const clearedAt = getSystemNotifsClearedTimestamp();
+  const payload = clearedAt ? { clearedAt, items: notifs } : notifs;
+
+  appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(payload));
+  try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(payload)); } catch(e) {}
+
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      const systemNotifRow = {
+        id: '__SYSTEM_NOTIFICATIONS__',
+        no_surat: '__SYSTEM_NOTIFICATIONS__',
+        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+        toko: 'SYSTEM',
+        area: 'ALL',
+        jenis: 'SYSTEM',
+        catatan: JSON.stringify(payload),
+        items: [],
+        photos: [],
+        status: 'DONE',
+        service_approve: true,
+        created_by: 'SYSTEM',
+        created_at: new Date().toISOString()
+      };
+      supabase.from('permintaan_toko').upsert(systemNotifRow).then(({ error }) => {
+        if (error) console.warn('[SUPABASE NOTIF SAVE NOTICE]:', error.message);
+      });
+    } catch(e) {}
+  }
+
   updateNotifBellCounter();
   loadNotificationList();
-  showNotif('SEMUA NOTIFIKASI DITANDAI DIBACA!', 'info');
+
+  if (!silent && typeof showNotif === 'function') {
+    showNotif('SEMUA NOTIFIKASI DITANDAI DIBACA!', 'info');
+  }
 }
 window.markAllNotifAsRead = markAllNotifAsRead;
 
@@ -2109,6 +2199,21 @@ function saveAdminScriptUrl(url) {
   else appStorage.removeItem(ADMIN_SCRIPT_URL_KEY);
 }
 
+function togglePasswordVisibility() {
+  const pswInput = document.getElementById('password');
+  const icon = document.getElementById('togglePasswordIcon');
+  if (!pswInput || !icon) return;
+
+  if (pswInput.type === 'password') {
+    pswInput.type = 'text';
+    icon.textContent = 'visibility_off';
+  } else {
+    pswInput.type = 'password';
+    icon.textContent = 'visibility';
+  }
+}
+window.togglePasswordVisibility = togglePasswordVisibility;
+
 function loadAdminScriptUrlInput() {
   const input = document.getElementById('adminScriptUrlInput');
   if (input) input.value = getAdminScriptUrl();
@@ -2121,15 +2226,136 @@ function simpanAdminScriptUrl() {
   showNotif(value ? 'URL GOOGLE APPS SCRIPT BERHASIL DISIMPAN!' : 'URL GOOGLE APPS SCRIPT DIHAPUS!', 'info');
 }
 
-function initDatabase() {
-  const currentTheme = localStorage.getItem(THEME_KEY);
-  if (currentTheme) {
-    document.body.className = currentTheme;
+function generateStoreCode(storeName, targetArea = '') {
+  const cleanName = String(storeName || '').trim().toUpperCase();
+  if (!cleanName) return 'TK';
+
+  let stores = [];
+  try {
+    const raw = appStorage.getItem(STORES_DB_KEY);
+    if (raw) stores = JSON.parse(raw);
+  } catch (e) {}
+  if (!Array.isArray(stores)) stores = [];
+
+  const existingMatch = stores.find(s => s && s.fullName && s.fullName.trim().toUpperCase() === cleanName && (!targetArea || s.area === targetArea));
+  if (existingMatch && existingMatch.storeCode) {
+    return existingMatch.storeCode;
   }
-  if (typeof updatePhotoSectionVisibility === 'function') {
-    updatePhotoSectionVisibility();
+
+  const takenCodes = new Set();
+  stores.forEach(s => {
+    if (s && s.storeCode && s.fullName && s.fullName.trim().toUpperCase() !== cleanName) {
+      takenCodes.add(String(s.storeCode).trim().toUpperCase());
+    }
+  });
+
+  try {
+    const rawUsers = appStorage.getItem(USERS_DB_KEY);
+    if (rawUsers) {
+      const uList = JSON.parse(rawUsers);
+      if (Array.isArray(uList)) {
+        uList.forEach(u => {
+          if (u && u.storeCode && u.fullName && u.fullName.trim().toUpperCase() !== cleanName) {
+            takenCodes.add(String(u.storeCode).trim().toUpperCase());
+          }
+        });
+      }
+    }
+  } catch(e) {}
+
+  const words = cleanName.replace(/[^A-Z0-9\s]/g, '').split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 'TK';
+
+  const candidates = [];
+
+  if (words.length >= 2) {
+    candidates.push(words.map(w => w[0]).join(''));
   }
+
+  if (words[0].length >= 2) {
+    candidates.push(words[0].substring(0, 2));
+  }
+
+  if (words.length >= 2 && words[1].length >= 2) {
+    candidates.push(words[0][0] + words[1][1]);
+  }
+
+  if (words[0].length >= 3) {
+    candidates.push(words[0][0] + words[0][2]);
+  }
+
+  if (words[0].length >= 4) {
+    candidates.push(words[0][0] + words[0][3]);
+  }
+
+  if (words.length >= 2 && words[0].length >= 2) {
+    candidates.push(words[0].substring(0, 2) + words[1][0]);
+  }
+
+  if (words[0].length >= 3) {
+    candidates.push(words[0].substring(0, 3));
+  }
+
+  if (words.length >= 2 && words[0].length >= 2 && words[1].length >= 2) {
+    candidates.push(words[0].substring(0, 2) + words[1].substring(0, 2));
+  }
+
+  for (let cand of candidates) {
+    cand = cand.trim().toUpperCase();
+    if (cand && !takenCodes.has(cand)) {
+      return cand;
+    }
+  }
+
+  const baseCode = (words.length >= 2 ? (words[0][0] + words[1][0]) : words[0].substring(0, 2)).toUpperCase();
+  let counter = 2;
+  while (takenCodes.has(`${baseCode}${counter}`)) {
+    counter++;
+  }
+  return `${baseCode}${counter}`;
 }
+window.generateStoreCode = generateStoreCode;
+
+function getStoresFromDB() {
+  let stores = [];
+  try {
+    const raw = appStorage.getItem(STORES_DB_KEY);
+    if (raw) stores = JSON.parse(raw);
+  } catch (e) {
+    stores = [];
+  }
+
+  if (!Array.isArray(stores)) stores = [];
+
+  const users = (typeof getUsersFromDB === 'function' ? getUsersFromDB() : []);
+  users.forEach(u => {
+    if (u && u.category === 'TOKO' && u.fullName) {
+      const exists = stores.some(s => s && s.fullName && s.fullName.trim().toUpperCase() === u.fullName.trim().toUpperCase());
+      if (!exists) {
+        stores.push({
+          id: u.id || `STK-${u.username}`,
+          fullName: u.fullName,
+          area: u.area || 'BDG',
+          storeCode: u.storeCode || '',
+          createdBy: 'SYSTEM'
+        });
+      }
+    }
+  });
+
+  const assignedCodes = new Set();
+  stores.forEach(s => {
+    if (!s) return;
+    const name = String(s.fullName || '').trim().toUpperCase();
+    if (!s.storeCode || assignedCodes.has(s.storeCode.toUpperCase())) {
+      s.storeCode = generateStoreCode(name, s.area);
+    }
+    assignedCodes.add(s.storeCode.toUpperCase());
+  });
+
+  return stores;
+}
+window.getStoresFromDB = getStoresFromDB;
 
 function getUsersFromDB() {
   let users = [];
@@ -2401,6 +2627,36 @@ function clearLocalStorageKeepThemeAndTTD() {
 }
 window.clearLocalStorageKeepThemeAndTTD = clearLocalStorageKeepThemeAndTTD;
 
+function loadRememberedCredentials() {
+  let savedCredsStr = null;
+  try {
+    savedCredsStr = appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
+    if (!savedCredsStr && typeof localStorage !== 'undefined') {
+      savedCredsStr = localStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
+    }
+  } catch(e) {}
+
+  const uEl = document.getElementById('username');
+  const pEl = document.getElementById('password');
+  const remEl = document.getElementById('rememberMe');
+
+  if (savedCredsStr) {
+    try {
+      const creds = JSON.parse(savedCredsStr);
+      if (creds && creds.username) {
+        if (uEl) uEl.value = creds.username;
+        if (pEl) pEl.value = creds.password || '';
+        if (remEl) remEl.checked = true;
+        return true;
+      }
+    } catch(e) {}
+  }
+
+  if (remEl) remEl.checked = true;
+  return false;
+}
+window.loadRememberedCredentials = loadRememberedCredentials;
+
 function autoLogin() {
   if (!currentUser) {
     try {
@@ -2417,20 +2673,7 @@ function autoLogin() {
     bukaMainApp();
   } else {
     pindahHalaman('loginPage');
-    
-    // PRE-FILL USERNAME & PASSWORD HANYA JIKA INGAT SANDI DILAKUKAN DI PENYIMPANAN LOKAL
-    const savedCredsStr = appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
-    if (savedCredsStr) {
-      try {
-        const creds = JSON.parse(savedCredsStr);
-        const uEl = document.getElementById('username');
-        const pEl = document.getElementById('password');
-        const remEl = document.getElementById('rememberMe');
-        if (uEl && creds.username) uEl.value = creds.username;
-        if (pEl && creds.password) pEl.value = creds.password;
-        if (remEl) remEl.checked = true;
-      } catch(e) {}
-    }
+    loadRememberedCredentials();
   }
 }
 
@@ -2491,9 +2734,12 @@ async function prosesLogin() {
 
       appStorage.setItem(SESSION_KEY, JSON.stringify(user));
       if (remember) {
-        appStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, JSON.stringify({ username: u, password: p }));
+        const credsStr = JSON.stringify({ username: u, password: p });
+        appStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, credsStr);
+        try { localStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, credsStr); } catch(e) {}
       } else {
         appStorage.removeItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
+        try { localStorage.removeItem(STORE_REMEMBER_LOGIN_CREDS_KEY); } catch(e) {}
       }
 
       catatLogLogin(user.username, user.fullName, user.area, 'BERHASIL');
@@ -2549,25 +2795,25 @@ function fillLogin(u, p) {
 
 function logout() {
   showConfirm('YAKIN INGIN KELUAR DARI APLIKASI?', () => {
-    const rememberMeChecked = document.getElementById('rememberMe')?.checked;
-    const rememberedCreds = rememberMeChecked ? appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY) : null;
+    let rememberedCreds = null;
+    try {
+      rememberedCreds = appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
+      if (!rememberedCreds && typeof localStorage !== 'undefined') {
+        rememberedCreds = localStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
+      }
+    } catch (e) {}
 
     currentUser = null;
 
-    // HAPUS SEMUA CACHE & PENYIMPANAN LOKAL PADA SAAT LOGOUT (MENJAGA TEMA & TTD)
     clearLocalStorageKeepThemeAndTTD();
 
-    // KEMBALIKAN INGAT SAYA JIKA USER CENTANG REMEMBER ME
     if (rememberedCreds) {
       try {
         appStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, rememberedCreds);
-        localStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, rememberedCreds);
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, rememberedCreds);
+        }
       } catch (e) {}
-    } else {
-      const uEl = document.getElementById('username');
-      const pEl = document.getElementById('password');
-      if (uEl) uEl.value = '';
-      if (pEl) pEl.value = '';
     }
 
     tutupAkun();
@@ -2578,10 +2824,13 @@ function logout() {
     if (bottomMenu) bottomMenu.style.display = 'none';
     const helpBtn = document.getElementById('helpButton');
     if (helpBtn) helpBtn.style.display = 'none';
-    
+
     pindahHalaman('loginPage');
+    if (typeof loadRememberedCredentials === 'function') {
+      loadRememberedCredentials();
+    }
     if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-    
+
     showNotif('BERHASIL LOGOUT!', 'success');
   });
 }
@@ -2901,6 +3150,9 @@ function pindahHalaman(pageId, pushHistory = true) {
     if (dotEl) dotEl.style.setProperty('display', 'none', 'important');
     const topHeader = document.getElementById('topHeaderActions');
     if (topHeader) topHeader.style.setProperty('display', 'none', 'important');
+    if (typeof loadRememberedCredentials === 'function') {
+      loadRememberedCredentials();
+    }
   } else {
     const bottomMenu = document.getElementById('bottomMenu');
     if (bottomMenu) {
@@ -5410,8 +5662,11 @@ function initCanvasTTD() {
   if (!canvasTTD) return;
 
   const rect = canvasTTD.getBoundingClientRect();
-  canvasTTD.width = rect.width || canvasTTD.offsetWidth || 540;
-  canvasTTD.height = rect.height || canvasTTD.offsetHeight || 220;
+  const targetW = Math.round(rect.width) || canvasTTD.offsetWidth || 500;
+  const targetH = Math.round(rect.height) || canvasTTD.offsetHeight || 220;
+
+  canvasTTD.width = targetW;
+  canvasTTD.height = targetH;
 
   ctxTTD = canvasTTD.getContext('2d');
   ctxTTD.lineWidth = 2.8;
@@ -7641,6 +7896,166 @@ function hapusTokoCustom(id) {
 }
 window.hapusTokoCustom = hapusTokoCustom;
 
+async function prosesUploadExcelToko(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (typeof XLSX === 'undefined') {
+    showNotif('MODUL BACA EXCEL (XLSX) BELUM SIAP!', 'error');
+    return;
+  }
+
+  showLoading('MEMBACA FILE EXCEL DAFTAR TOKO (KOLOM A = NAMA, KOLOM B = AREA)...');
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (!Array.isArray(rawJson) || rawJson.length === 0) {
+        hideLoading();
+        showNotif('FILE EXCEL KOSONG ATAU FORMAT TIDAK SESUAI!', 'warning');
+        return;
+      }
+
+      const existingStores = getStoresFromDB();
+      const defaultUserArea = (currentUser && currentUser.area && currentUser.area !== 'ALL') ? currentUser.area : 'BDG';
+      const users = getUsersFromDB();
+
+      let addedCount = 0;
+      let skippedCount = 0;
+      const newStoresList = [];
+      const newUsersList = [];
+
+      for (let i = 0; i < rawJson.length; i++) {
+        const row = rawJson[i];
+        if (!row || !row.length) continue;
+        
+        let storeNameVal = String(row[0] || '').trim().toUpperCase();
+        let storeAreaVal = String(row[1] || '').trim().toUpperCase();
+
+        if (!storeNameVal) continue;
+
+        if (storeNameVal === 'NAMA TOKO' || storeNameVal === 'TOKO' || storeNameVal === 'STORE' || storeNameVal === 'NAME' || storeAreaVal === 'AREA' || storeAreaVal === 'KODE AREA') {
+          continue;
+        }
+
+        if (!storeAreaVal || storeAreaVal === 'UNDEFINED' || storeAreaVal === 'NULL') {
+          storeAreaVal = defaultUserArea;
+        }
+
+        const isDuplicate = existingStores.some(s => s && s.fullName && s.fullName.trim().toUpperCase() === storeNameVal && s.area === storeAreaVal);
+        if (isDuplicate) {
+          skippedCount++;
+          continue;
+        }
+
+        const generatedCode = generateStoreCode(storeNameVal, storeAreaVal);
+        const newId = `STK-UPL-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+
+        const storeObj = {
+          id: newId,
+          fullName: storeNameVal,
+          area: storeAreaVal,
+          storeCode: generatedCode,
+          createdBy: currentUser ? currentUser.fullName : 'ADMIN'
+        };
+
+        existingStores.push(storeObj);
+        newStoresList.push(storeObj);
+
+        const safeUsername = storeNameVal.replace(/[^A-Z0-9]/gi, '_').toUpperCase();
+        if (!users.some(u => u && u.username && u.username.toUpperCase() === safeUsername)) {
+          const userAcc = {
+            id: newId,
+            username: safeUsername,
+            password: '123',
+            fullName: storeNameVal,
+            storeCode: generatedCode,
+            phone: '-',
+            category: 'TOKO',
+            area: storeAreaVal,
+            createdAt: getFormattedDateDDMMYYYY()
+          };
+          users.push(userAcc);
+          newUsersList.push(userAcc);
+        }
+
+        addedCount++;
+      }
+
+      if (addedCount === 0) {
+        hideLoading();
+        showNotif(`TIDAK ADA TOKO BARU DITAMBAHKAN (${skippedCount} TOKO SUDAH TERDAFTAR SEBELUMNYA).`, 'info');
+        event.target.value = '';
+        return;
+      }
+
+      const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
+      newStoresList.forEach(ns => localStores.push(ns));
+      appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
+
+      if (newUsersList.length > 0) {
+        saveUsersToDB(users);
+      }
+
+      if (typeof supabase !== 'undefined' && supabase) {
+        try {
+          const supaStoresPayload = newStoresList.map(s => ({
+            id: s.id,
+            full_name: s.fullName,
+            area: s.area,
+            store_code: s.storeCode,
+            created_by: s.createdBy
+          }));
+          await supabase.from('toko_list').upsert(supaStoresPayload);
+
+          if (newUsersList.length > 0) {
+            const supaUsersPayload = newUsersList.map(u => ({
+              id: u.id,
+              username: u.username,
+              password: u.password,
+              full_name: u.fullName,
+              store_code: u.storeCode,
+              phone: u.phone,
+              category: u.category,
+              area: u.area,
+              created_at: u.createdAt
+            }));
+            await supabase.from('users').upsert(supaUsersPayload);
+          }
+        } catch(sbErr) {
+          console.warn('[SUPABASE BATCH UPLOAD STORES WARNING]:', sbErr);
+        }
+      }
+
+      pushCentralCloudDB();
+      hideLoading();
+
+      showNotif(`BERHASIL MENGUNGGAH ${addedCount} TOKO BARU (KOLOM A = NAMA, KOLOM B = AREA)! (${skippedCount} DUPLIKAT DILEWATI)`, 'success');
+      event.target.value = '';
+
+      if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
+      if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
+      if (typeof loadUsersManagement === 'function') loadUsersManagement();
+
+    } catch(err) {
+      hideLoading();
+      console.error('[EXCEL UPLOAD TOKO ERROR]:', err);
+      showNotif('GAGAL MEMBACA FILE EXCEL: ' + (err.message || err), 'error');
+      event.target.value = '';
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+window.prosesUploadExcelToko = prosesUploadExcelToko;
+
 function downloadExcel() {
   const data = getAccessibleRequests();
   if (data.length === 0) {
@@ -8379,11 +8794,22 @@ function setupGlobalKeyboardNavigation() {
   });
 }
 
-// INITIALIZE GLOBAL KEYBOARD NAVIGATION
+// INITIALIZE APP STARTUP (AUTO LOGIN & PRE-FILL REMEMBERED CREDENTIALS ON REFRESH)
+function initAppStartup() {
+  if (typeof setupGlobalKeyboardNavigation === 'function') {
+    setupGlobalKeyboardNavigation();
+  }
+  if (typeof autoLogin === 'function') {
+    autoLogin();
+  } else if (typeof loadRememberedCredentials === 'function') {
+    loadRememberedCredentials();
+  }
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupGlobalKeyboardNavigation);
+  document.addEventListener('DOMContentLoaded', initAppStartup);
 } else {
-  setupGlobalKeyboardNavigation();
+  initAppStartup();
 }
 
 function hapusSemuaNotifFirebaseDanLokal() {

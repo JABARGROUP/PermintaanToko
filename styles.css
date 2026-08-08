@@ -308,6 +308,28 @@ section#masterDbPage.page.active,
   pointer-events: none !important;
 }
 
+#firebaseOnlineDot {
+  align-self: flex-start !important;
+  margin-top: 5px !important;
+  pointer-events: auto !important;
+}
+
+#togglePasswordBtn {
+  background: none !important;
+  border: none !important;
+  padding: 0 12px !important;
+  color: var(--text-muted) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: color 0.2s !important;
+}
+
+#togglePasswordBtn:hover {
+  color: var(--primary) !important;
+}
+
 .top-header-actions button,
 .theme-toggle-btn,
 .notif-bell-btn,
@@ -2326,7 +2348,6 @@ body.design-mode-3d-isometric .dashboardTable th {
 .akunBox,
 .confirmBox,
 .rejectBoxPopup,
-.ttdBox,
 #popupDetail .popupBox,
 #popupDetail .popupBoxDetail,
 #pdfModal .popupBox,
@@ -2601,45 +2622,84 @@ table th,
 }
 
 /* DIGITAL SIGNATURE (TTD) MODAL */
-.ttdBox {
-  width: 520px !important;
-  max-width: 92% !important;
-  padding: 18px !important;
-  text-align: center;
-  border-radius: 18px !important;
+.popupTTD {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 100000 !important;
+  padding: 14px !important;
+  box-sizing: border-box !important;
 }
 
-.ttdBox h3 { color: var(--primary); margin-bottom: 4px; font-size: 15px; }
-.ttdInfo { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+.popupTTD.show {
+  display: flex !important;
+}
+
+.ttdBox {
+  width: 540px !important;
+  max-width: 94vw !important;
+  padding: 20px 18px !important;
+  text-align: center !important;
+  border-radius: 18px !important;
+  background: var(--bg-box) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,.35) !important;
+  margin: auto !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.ttdBox h3 { color: var(--primary) !important; margin-bottom: 4px !important; font-size: 15px !important; }
+.ttdInfo { font-size: 11px !important; color: var(--text-muted) !important; margin-bottom: 12px !important; }
 
 #canvasTTD {
-  border: 2px dashed var(--border-color);
-  border-radius: 12px;
-  background: #ffffff;
-  cursor: crosshair;
-  touch-action: none;
-  margin: 0 auto 12px auto;
-  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 220px !important;
+  border: 2px dashed var(--primary) !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  cursor: crosshair !important;
+  touch-action: none !important;
+  margin: 0 auto 14px auto !important;
+  display: block !important;
+  box-sizing: border-box !important;
 }
 
 .ttdButton {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
+  display: flex !important;
+  gap: 10px !important;
+  justify-content: center !important;
+  width: 100% !important;
 }
 
 .ttdButton button {
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
+  flex: 1 !important;
+  height: 38px !important;
+  padding: 8px 16px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-.btnPrimary { background: var(--primary); color: #fff; }
-.btnSecondary { background: #ef4444; color: #fff; }
-.btnBack { background: #6b7280; color: #fff; }
+.btnPrimary { background: var(--primary) !important; color: #fff !important; }
+.btnSecondary { background: #ef4444 !important; color: #fff !important; }
+.btnBack { background: #6b7280 !important; color: #fff !important; }
 
 .popupHeader {
   background: var(--primary);
