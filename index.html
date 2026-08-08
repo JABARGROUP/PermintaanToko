@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260808_v1115">
-  <script src="app.js?v=20260808_v1115"></script>
+  <link rel="stylesheet" href="styles.css?v=20260808_v1131">
+  <script src="app.js?v=20260808_v1131"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -675,23 +675,21 @@
 
       <!-- Tambahkan ID menuKelolaTokoAkun di sini -->
       <div id="menuKelolaTokoAkun" style="margin-top: 8px;">
-        <button type="button" class="btnTambahBarang" style="background: #0284c7; width: 100%; justify-content: center; height: 35px;" onclick="tutupAkun(); bukaModalTambahToko();">
-          <span class="material-symbols-rounded">store</span> KELOLA / TAMBAH TOKO BARU
+        <button type="button" class="btnTambahBarang" style="background: #0284c7; width: 100%; justify-content: center; height: 35px; border-radius: 8px; font-size: 11.5px; font-weight: 700;" onclick="tutupAkun(); bukaModalTambahToko();">
+          <span class="material-symbols-rounded" style="font-size: 18px;">store</span> KELOLA / TAMBAH TOKO BARU
         </button>
       </div>
 
       <div id="menuTTD" style="margin-top: 8px; text-align: center; display: none;">
-        <button type="button" class="btnTambahBarang" style="background: #7c3aed; width: 100%; justify-content: center; height: 35px;" onclick="tutupAkun(); bukaTTD();">
-          <span class="material-symbols-rounded">draw</span> KELOLA TANDA TANGAN DIGITAL (TTD)
+        <button type="button" class="btnTambahBarang" style="background: #7c3aed; width: 100%; justify-content: center; height: 35px; border-radius: 8px; font-size: 11.5px; font-weight: 700;" onclick="tutupAkun(); bukaTTD();">
+          <span class="material-symbols-rounded" style="font-size: 18px;">draw</span> KELOLA TANDA TANGAN DIGITAL (TTD)
         </button>
       </div>
 
-
-
-      <!-- 2 EQUAL BUTTONS: REFRESH APLIKASI & GANTI TEMA -->
+      <!-- 2 EQUAL BUTTONS: REFRESH WEB & GANTI TEMA -->
       <div style="margin-top: 8px; margin-bottom: 8px; display: flex; gap: 8px; width: 100%;">
         <button type="button" class="refresh-icon-btn" onclick="window.location.reload()" title="REFRESH / MUAT ULANG APLIKASI WEB" style="flex: 1; height: 35px; padding: 6px; border-radius: 8px; border: 1px solid var(--border-color); background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">
-          <span class="material-symbols-rounded" style="font-size: 18px;">refresh</span> REFRESH APLIKASI
+          <span class="material-symbols-rounded" style="font-size: 18px;">refresh</span> REFRESH WEB
         </button>
         <button type="button" class="theme-icon-btn" onclick="toggleTheme()" title="GANTI TEMA TAMPILAN" style="flex: 1; height: 35px; padding: 6px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">
           <span class="material-symbols-rounded" style="font-size: 18px;">palette</span> GANTI TEMA
@@ -699,11 +697,11 @@
       </div>
 
       <div class="akunButton" style="display:flex; align-items:center; gap:8px;">
-        <button type="button" class="btnBatal" onclick="tutupAkun()">BATAL</button>
-        <button type="button" class="btnSimpan" onclick="simpanAkun()">SIMPAN</button>
+        <button type="button" class="btnBatal" onclick="tutupAkun()" style="flex: 1; height: 35px; border-radius: 8px; font-size: 11.5px; font-weight: 700;">BATAL</button>
+        <button type="button" class="btnSimpan" onclick="simpanAkun()" style="flex: 1; height: 35px; border-radius: 8px; font-size: 11.5px; font-weight: 700;">SIMPAN</button>
       </div>
 
-      <button type="button" class="btnLogout" onclick="logout()">LOGOUT KELUAR</button>
+      <button type="button" class="btnLogout" onclick="logout()" style="width: 100%; height: 35px; margin-top: 8px; border-radius: 8px; font-size: 11.5px; font-weight: 700;">LOGOUT KELUAR</button>
     </div>
   </div>
 
@@ -839,14 +837,22 @@
   <div id="popupTTD" class="popupTTD popupOverlay">
     <div class="ttdBox">
       <h3 style="color: var(--primary); margin-bottom: 4px; font-size: 15px; font-weight: 800;">TANDA TANGAN DIGITAL (TTD)</h3>
-      <div class="ttdInfo" style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">BUAT / GAMBAR TANDA TANGAN ANDA DI BAWAH INI UNTUK SURAT DOKUMEN PERMINTAAN</div>
-      <div style="width: 100%; box-sizing: border-box; overflow: hidden; padding: 2px;">
-        <canvas id="canvasTTD" style="width: 100% !important; max-width: 100% !important; height: 220px !important; border: 2px dashed var(--primary) !important; border-radius: 12px !important; background: #ffffff !important; display: block !important; box-sizing: border-box !important; margin: 0 auto 14px auto !important; touch-action: none;"></canvas>
+      <div class="ttdInfo" style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">GAMBAR TTD DI CANVAS ATAU AMBIL FOTO TTD KERTAS</div>
+
+      <div style="position: relative; width: 100%; box-sizing: border-box; overflow: hidden; padding: 2px;">
+        <canvas id="canvasTTD" style="width: 100% !important; max-width: 100% !important; height: 220px !important; border: 2px dashed var(--primary) !important; border-radius: 12px !important; background: #ffffff !important; display: block !important; box-sizing: border-box !important; margin: 0 auto 10px auto !important; touch-action: none;"></canvas>
+
+        <button type="button" onclick="pilihFotoTTD()" title="AMBIL / UPLOAD FOTO TTD DARI KAMERA/KERTAS" style="position: absolute; right: 10px; top: 10px; background: var(--primary); color: #ffffff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 10; transition: transform 0.2s;">
+          <span class="material-symbols-rounded" style="font-size: 17px;">photo_camera</span> FOTO TTD
+        </button>
+
+        <input type="file" id="fotoTTDInput" accept="image/*" capture="environment" onchange="prosesFotoKeTTD(event)" style="display:none;">
       </div>
-      <div class="ttdButton" style="display: flex; gap: 10px; justify-content: center;">
-        <button type="button" class="btnBack" onclick="tutupTTD()" style="flex: 1; height: 38px; border-radius: 10px; font-weight: 700;">BATAL</button>
-        <button type="button" class="btnSecondary" onclick="hapusTTD()" style="flex: 1; height: 38px; border-radius: 10px; font-weight: 700;">BERSIHKAN</button>
-        <button type="button" class="btnPrimary" onclick="simpanTTD()" style="flex: 1; height: 38px; border-radius: 10px; font-weight: 700;">SIMPAN TTD</button>
+
+      <div class="ttdButton" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+        <button type="button" class="btnBack" onclick="tutupTTD()" style="flex: 1; min-width: 80px; height: 38px; border-radius: 10px; font-weight: 700;">BATAL</button>
+        <button type="button" class="btnSecondary" onclick="hapusTTD()" style="flex: 1; min-width: 90px; height: 38px; border-radius: 10px; font-weight: 700;">BERSIHKAN</button>
+        <button type="button" class="btnPrimary" onclick="simpanTTD()" style="flex: 1.2; min-width: 110px; height: 38px; border-radius: 10px; font-weight: 700;">SIMPAN TTD</button>
       </div>
     </div>
   </div>

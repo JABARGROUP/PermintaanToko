@@ -19,23 +19,23 @@ function updateGlobalConnectionDotStatus() {
   if (fb && sb) {
     dot.style.background = '#10b981';
     dot.style.boxShadow = '0 0 10px #10b981';
-    dot.title = 'STATUS DATABASE: FIREBASE & SUPABASE TERHUBUNG (HIJAU)';
-    dot.onclick = () => showNotif('STATUS DATABASE: FIREBASE & SUPABASE TERHUBUNG 100% (HIJAU)', 'success');
+    dot.title = 'STATUS KONEKSI SISTEM: ONLINE TERHUBUNG (HIJAU)';
+    dot.onclick = () => showNotif('STATUS KONEKSI SISTEM: ONLINE TERHUBUNG SANGAT BAIK (HIJAU)', 'success');
   } else if (fb && !sb) {
     dot.style.background = '#f59e0b';
     dot.style.boxShadow = '0 0 10px #f59e0b';
-    dot.title = 'STATUS DATABASE: FIREBASE KONEK, SUPABASE OFF / DISKONEK (ORANGE)';
-    dot.onclick = () => showNotif('STATUS DATABASE: FIREBASE KONEK, SUPABASE DISKONEK (ORANGE)', 'warning');
+    dot.title = 'STATUS KONEKSI SISTEM: KONEKSI STABIL (ORANGE)';
+    dot.onclick = () => showNotif('STATUS KONEKSI SISTEM: TERHUBUNG KONEKSI UTAMA (ORANGE)', 'warning');
   } else if (!fb && sb) {
     dot.style.background = '#f59e0b';
     dot.style.boxShadow = '0 0 10px #f59e0b';
-    dot.title = 'STATUS DATABASE: SUPABASE KONEK, FIREBASE OFF / DISKONEK (ORANGE)';
-    dot.onclick = () => showNotif('STATUS DATABASE: SUPABASE KONEK, FIREBASE DISKONEK (ORANGE)', 'warning');
+    dot.title = 'STATUS KONEKSI SISTEM: KONEKSI CADANGAN (ORANGE)';
+    dot.onclick = () => showNotif('STATUS KONEKSI SISTEM: TERHUBUNG KONEKSI CADANGAN (ORANGE)', 'warning');
   } else {
     dot.style.background = '#ef4444';
     dot.style.boxShadow = '0 0 10px #ef4444';
-    dot.title = 'STATUS DATABASE: KONEKSI FIREBASE & SUPABASE TERPUTUS (MERAH)';
-    dot.onclick = () => showNotif('STATUS DATABASE: FIREBASE & SUPABASE TERPUTUS (MERAH)', 'error');
+    dot.title = 'STATUS KONEKSI SISTEM: OFFLINE / TERPUTUS (MERAH)';
+    dot.onclick = () => showNotif('STATUS KONEKSI SISTEM: OFFLINE / TERPUTUS (MERAH)', 'error');
   }
 }
 window.updateGlobalConnectionDotStatus = updateGlobalConnectionDotStatus;
@@ -247,6 +247,14 @@ async function setGlobalAdminTheme(themeName) {
   if (isSysAdmin) {
     if (typeof supabase !== 'undefined' && supabase) {
       try {
+        try {
+          await supabase.from('lookup').upsert({
+            code: 'GLOBAL_THEME',
+            type: themeName,
+            updated_at: new Date().toISOString()
+          });
+        } catch (e) {}
+
         const themeRow = {
           id: '__SYSTEM_GLOBAL_THEME__',
           no_surat: '__SYSTEM_GLOBAL_THEME__',
@@ -274,7 +282,7 @@ async function setGlobalAdminTheme(themeName) {
       } catch(e) {}
     }
 
-    showNotif(`⚡ [ADMIN TEMA]: TEMA '${themeName.toUpperCase()}' BERHASIL DISIMPAN & SINKRON KE SEMUA PERANGKAT!`, 'success');
+    showNotif(`TEMA '${themeName.toUpperCase()}' BERHASIL DISIMPAN & DISINKRONKAN KE SEMUA USER!`, 'success');
   } else {
     showNotif(`TEMA '${themeName.toUpperCase()}' BERHASIL DISIMPAN DI PERANGKAT INI.`, 'info');
   }
@@ -1146,7 +1154,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       await initSupabaseDB();
     }
     
-    initDatabase(); 
+    if (typeof initDatabase === 'function') {
+      initDatabase();
+    } 
     if (typeof startCentralCloudSyncEngine === 'function') startCentralCloudSyncEngine();
     if (typeof startSupabaseKeepalive === 'function') startSupabaseKeepalive();
     loadSavedTheme();
@@ -1851,10 +1861,117 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
   }
 }
 
+async function syncSupabaseStoresToLocalCache() {
+  if (typeof supabase === 'undefined' || !supabase) return;
+  try {
+    const { data: supaStores, error } = await supabase.from('toko_list').select('*');
+    if (!error && Array.isArray(supaStores) && supaStores.length > 0) {
+      const formattedStores = supaStores.map(s => ({
+        id: s.id || `STK-${s.store_code || Date.now()}`,
+        fullName: String(s.full_name || s.fullName || '').trim(),
+        area: String(s.area || 'BDG').trim().toUpperCase(),
+        storeCode: String(s.store_code || s.storeCode || '').trim(),
+        createdBy: String(s.created_by || s.createdBy || 'ADMIN').trim()
+      })).filter(s => s.fullName);
+
+      if (formattedStores.length > 0) {
+        appStorage.setItem(STORES_DB_KEY, JSON.stringify(formattedStores));
+        try { localStorage.setItem(STORES_DB_KEY, JSON.stringify(formattedStores)); } catch(e) {}
+      }
+    }
+  } catch (err) {
+    console.warn('[SUPABASE STORES SYNC NOTICE]:', err);
+  }
+}
+window.syncSupabaseStoresToLocalCache = syncSupabaseStoresToLocalCache;
+
+async function syncSupabaseLookupToLocalCache() {
+  if (typeof supabase === 'undefined' || !supabase) return;
+  try {
+    const cloudMap = {};
+    const { data: sysData } = await supabase
+      .from('permintaan_toko')
+      .select('*')
+      .eq('no_surat', '__SYSTEM_KODE_UNIT_MAP__');
+
+    if (Array.isArray(sysData) && sysData.length > 0 && sysData[0].catatan) {
+      try {
+        const sysMap = JSON.parse(sysData[0].catatan);
+        if (sysMap && typeof sysMap === 'object') {
+          Object.assign(cloudMap, sysMap);
+        }
+      } catch(e) {}
+    }
+
+    if (Object.keys(cloudMap).length > 0) {
+      const existingMap = JSON.parse(appStorage.getItem(KODE_UNIT_MAP_KEY) || '{}');
+      const mergedMap = { ...existingMap, ...cloudMap };
+      appStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(mergedMap));
+      try { localStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(mergedMap)); } catch(e) {}
+    }
+  } catch (err) {
+    console.warn('[SUPABASE LOOKUP SYNC NOTICE]:', err);
+  }
+}
+window.syncSupabaseLookupToLocalCache = syncSupabaseLookupToLocalCache;
+
+async function syncSupabaseThemeToLocalCache() {
+  if (typeof supabase === 'undefined' || !supabase) return;
+  try {
+    let cloudTheme = null;
+    let cloudTime = 0;
+
+    const { data: sysData } = await supabase
+      .from('permintaan_toko')
+      .select('*')
+      .eq('no_surat', '__SYSTEM_GLOBAL_THEME__');
+
+    if (Array.isArray(sysData) && sysData.length > 0 && sysData[0].catatan) {
+      try {
+        const themeObj = JSON.parse(sysData[0].catatan);
+        if (themeObj && themeObj.theme) {
+          cloudTheme = themeObj.theme;
+          cloudTime = Number(themeObj.time || 0);
+        }
+      } catch(e) {}
+    }
+
+    if (cloudTheme) {
+      const lastAdminTime = Number(appStorage.getItem(LAST_ADMIN_THEME_TIME_KEY) || 0);
+      if (cloudTime >= lastAdminTime || !lastAdminTime) {
+        appStorage.setItem(GLOBAL_THEME_KEY, cloudTheme);
+        appStorage.setItem(LOCAL_USER_THEME_KEY, cloudTheme);
+        appStorage.setItem(THEME_KEY, cloudTheme);
+        if (cloudTime) {
+          appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(cloudTime));
+        }
+
+        try { localStorage.setItem(GLOBAL_THEME_KEY, cloudTheme); } catch(e) {}
+        try { localStorage.setItem(LOCAL_USER_THEME_KEY, cloudTheme); } catch(e) {}
+        try { localStorage.setItem(THEME_KEY, cloudTheme); } catch(e) {}
+        try { localStorage.setItem('APP_SELECTED_THEME', cloudTheme); } catch(e) {}
+
+        const idx = THEME_MODES.findIndex(m => m.id === cloudTheme);
+        if (idx !== -1) currentThemeIndex = idx;
+
+        if (typeof applyThemeToDocument === 'function') {
+          applyThemeToDocument(cloudTheme);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[SUPABASE THEME SYNC NOTICE]:', err);
+  }
+}
+window.syncSupabaseThemeToLocalCache = syncSupabaseThemeToLocalCache;
+
 async function syncAllDataToCache() {
   try {
     await syncSupabaseRequestsToLocalCache();
     await syncSupabaseNotifsAndChatToLocalCache();
+    await syncSupabaseStoresToLocalCache();
+    await syncSupabaseLookupToLocalCache();
+    await syncSupabaseThemeToLocalCache();
 
     if (dbFirestore) {
       try {
@@ -1918,6 +2035,49 @@ async function pushCentralCloudDB() {
         if (supaPayloads.length > 0) {
           const { error } = await supabase.from('permintaan_toko').upsert(supaPayloads);
           if (error) console.warn('[SUPABASE PUSH REQUESTS ERROR]:', error.message);
+        }
+
+        // PUSH STORE LIST TO SUPABASE TABLE 'toko_list'
+        if (typeof getStoresFromDB === 'function') {
+          const allStores = getStoresFromDB();
+          if (allStores && allStores.length > 0) {
+            const supaStores = allStores.map(s => ({
+              id: s.id,
+              full_name: s.fullName,
+              area: s.area,
+              store_code: s.storeCode,
+              created_by: s.createdBy || 'ADMIN'
+            }));
+            try {
+              await supabase.from('toko_list').upsert(supaStores);
+            } catch(e) {}
+          }
+        }
+
+        // PUSH TYPE LOOKUP KODE UNIT MAP TO SUPABASE SYSTEM ROW
+        if (typeof getKodeUnitMap === 'function') {
+          const unitMap = getKodeUnitMap();
+          if (unitMap && Object.keys(unitMap).length > 0) {
+
+            const systemUnitRow = {
+              id: '__SYSTEM_KODE_UNIT_MAP__',
+              no_surat: '__SYSTEM_KODE_UNIT_MAP__',
+              tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+              toko: 'SYSTEM',
+              area: 'ALL',
+              jenis: 'SYSTEM',
+              catatan: JSON.stringify(unitMap),
+              items: [],
+              photos: [],
+              status: 'DONE',
+              service_approve: true,
+              created_by: 'SYSTEM',
+              created_at: new Date().toISOString()
+            };
+            try {
+              await supabase.from('permintaan_toko').upsert(systemUnitRow);
+            } catch(e) {}
+          }
         }
 
         const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
@@ -2492,6 +2652,67 @@ function kirimNotifikasiWA(targetPhone, message) {
   return true;
 }
 
+async function setGlobalAdminTheme(themeId) {
+  if (!themeId) return;
+  const nowTime = Date.now();
+  const themeObj = { theme: themeId, time: nowTime, admin: currentUser ? currentUser.username : 'ADMIN' };
+  const themeStr = JSON.stringify(themeObj);
+
+  appStorage.setItem(GLOBAL_THEME_KEY, themeId);
+  appStorage.setItem(LOCAL_USER_THEME_KEY, themeId);
+  appStorage.setItem(THEME_KEY, themeId);
+  appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(nowTime));
+
+  try { localStorage.setItem(GLOBAL_THEME_KEY, themeId); } catch(e) {}
+  try { localStorage.setItem(LOCAL_USER_THEME_KEY, themeId); } catch(e) {}
+  try { localStorage.setItem(THEME_KEY, themeId); } catch(e) {}
+  try { localStorage.setItem('APP_SELECTED_THEME', themeId); } catch(e) {}
+  try { localStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(nowTime)); } catch(e) {}
+
+  const idx = THEME_MODES.findIndex(m => m.id === themeId);
+  if (idx !== -1) currentThemeIndex = idx;
+  if (typeof updateBodyClasses === 'function') updateBodyClasses();
+
+  const sb = (typeof supabase !== 'undefined' && supabase) ? supabase : null;
+  if (sb) {
+    try {
+      const themeRow = {
+        id: '__SYSTEM_GLOBAL_THEME__',
+        no_surat: '__SYSTEM_GLOBAL_THEME__',
+        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+        toko: 'SYSTEM',
+        area: 'ALL',
+        jenis: 'SYSTEM',
+        catatan: themeStr,
+        items: [],
+        photos: [],
+        status: 'DONE',
+        service_approve: true,
+        created_by: 'SYSTEM',
+        created_at: new Date().toISOString()
+      };
+      await sb.from('permintaan_toko').upsert(themeRow);
+      console.log('⚡ [SUPABASE GLOBAL THEME SYNC SUCCESS]:', themeId);
+    } catch(err) {
+      console.warn('[SUPABASE GLOBAL THEME SYNC NOTICE]:', err);
+    }
+  }
+
+  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+    try {
+      await dbFirestore.collection('app_settings').doc('global_theme').set(themeObj, { merge: true });
+    } catch(e) {}
+  }
+  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+    try {
+      await dbRealtime.ref('settings/global_theme').set(themeObj);
+    } catch(e) {}
+  }
+
+  showNotif(`TEMA CLOUD DIBAHARUI KE "${themeId.toUpperCase()}" OLEH ADMIN & DISINKRONKAN KE SELURUH PERANGKAT!`, 'success');
+}
+window.setGlobalAdminTheme = setGlobalAdminTheme;
+
 function loadSavedTheme() {
   updateBodyClasses();
 }
@@ -2499,14 +2720,21 @@ function loadSavedTheme() {
 function toggleTheme() {
   currentThemeIndex = (currentThemeIndex + 1) % THEME_MODES.length;
   const t = THEME_MODES[currentThemeIndex];
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('APP_SELECTED_THEME', t.id);
-    }
-  } catch(e) {}
-  appStorage.setItem(THEME_KEY, t.id);
-  updateBodyClasses();
-  if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
+
+  const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+
+  if (isAdminUser) {
+    setGlobalAdminTheme(t.id);
+  } else {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('APP_SELECTED_THEME', t.id);
+      }
+    } catch(e) {}
+    appStorage.setItem(THEME_KEY, t.id);
+    updateBodyClasses();
+    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
+  }
 }
 
 function updateThemeIcon() {
@@ -2519,7 +2747,7 @@ function updateThemeIcon() {
 
 const STORE_REMEMBER_LOGIN_CREDS_KEY = 'STORE_REMEMBER_LOGIN_CREDS_V1';
 
-function clearLocalStorageKeepThemeAndTTD() {
+async function clearLocalStorageKeepThemeAndTTD() {
   try {
     // 1. BACK UP THEME SETTINGS
     const globalTheme = appStorage.getItem(GLOBAL_THEME_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(GLOBAL_THEME_KEY) : null);
@@ -2557,9 +2785,8 @@ function clearLocalStorageKeepThemeAndTTD() {
 
     if ('caches' in window && caches.keys) {
       try {
-        caches.keys().then(keys => {
-          keys.forEach(k => caches.delete(k));
-        }).catch(e => {});
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
       } catch(e) {}
     }
 
@@ -2694,7 +2921,7 @@ async function prosesLogin() {
   showLoading('MEMBERSIHKAN CACHE LOKAL & MENGAMBIL DATA DATABASE...');
 
   // 1. FUNGSI HAPUS CACHE & PENYIMPANAN LOKAL SEBELUM PENGAMBILAN DATA (MENJAGA TEMA & TTD)
-  clearLocalStorageKeepThemeAndTTD();
+  await clearLocalStorageKeepThemeAndTTD();
 
   try {
     // 2. TARIK & SINKRONKAN DATA TERBARU DARI DATABASE CLOUD (SUPABASE / FIREBASE)
@@ -2794,7 +3021,7 @@ function fillLogin(u, p) {
 }
 
 function logout() {
-  showConfirm('YAKIN INGIN KELUAR DARI APLIKASI?', () => {
+  showConfirm('YAKIN INGIN KELUAR DARI APLIKASI?', async () => {
     let rememberedCreds = null;
     try {
       rememberedCreds = appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
@@ -2805,7 +3032,7 @@ function logout() {
 
     currentUser = null;
 
-    clearLocalStorageKeepThemeAndTTD();
+    await clearLocalStorageKeepThemeAndTTD();
 
     if (rememberedCreds) {
       try {
@@ -3667,6 +3894,40 @@ async function uploadPhotoToSupabaseStorage(file) {
   return await kompresiFoto(file, 400, 0.4);
 }
 
+async function deletePhotosFromSupabaseStorage(photoUrls) {
+  if (!Array.isArray(photoUrls) || photoUrls.length === 0) return;
+
+  const sb = (typeof supabase !== 'undefined' && supabase) ? supabase : ((typeof window.supabaseClient !== 'undefined' && window.supabaseClient) ? window.supabaseClient : null);
+  if (!sb || !sb.storage) return;
+
+  const fileNames = photoUrls.map(url => {
+    if (!url || typeof url !== 'string') return null;
+    if (url.startsWith('data:')) return null;
+    try {
+      const cleanUrl = url.split('?')[0];
+      const name = cleanUrl.substring(cleanUrl.lastIndexOf('/') + 1);
+      return name && name.includes('.') ? name : null;
+    } catch(e) {
+      return null;
+    }
+  }).filter(Boolean);
+
+  if (fileNames.length > 0) {
+    try {
+      const { data, error } = await sb.storage.from('photos').remove(fileNames);
+      if (!error && data) {
+        console.log('⚡ [SUPABASE STORAGE DELETE SUCCESS]: Berhasil menghapus foto dari bucket Supabase photos:', fileNames);
+      } else {
+        await sb.storage.from('permintaan_photos').remove(fileNames).catch(() => {});
+        await sb.storage.from('foto-permintaan').remove(fileNames).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('[SUPABASE STORAGE DELETE EXCEPTION]:', err);
+    }
+  }
+}
+window.deletePhotosFromSupabaseStorage = deletePhotosFromSupabaseStorage;
+
 async function previewFoto(event) {
   const files = Array.from(event.target.files);
   if (!files.length) return;
@@ -3705,6 +3966,10 @@ async function previewFoto(event) {
 }
 
 function hapusFotoItem(idx) {
+  const removedUrl = currentPhotos[idx];
+  if (removedUrl) {
+    deletePhotosFromSupabaseStorage([removedUrl]);
+  }
   currentPhotos.splice(idx, 1);
   renderPhotoGrid();
 }
@@ -4789,6 +5054,7 @@ function hapusData(noSurat) {
     try {
       // 1. HAPUS DARI CACHE LOKAL SEKETIKA
       const currentReqs = getRequestsFromDB();
+      const targetReq = currentReqs.find(r => r.noSurat === noSurat);
       const updatedReqs = currentReqs.filter(r => r.noSurat !== noSurat);
       
       const delReqs = JSON.parse(appStorage.getItem(DELETED_REQUESTS_KEY) || '[]');
@@ -4796,6 +5062,13 @@ function hapusData(noSurat) {
       appStorage.setItem(DELETED_REQUESTS_KEY, JSON.stringify(delReqs));
 
       saveRequestsToDB(updatedReqs);
+
+      // HAPUS FOTO TERKAIT DARI SUPABASE STORAGE BUCKET
+      if (targetReq && Array.isArray(targetReq.photos) && targetReq.photos.length > 0) {
+        if (typeof deletePhotosFromSupabaseStorage === 'function') {
+          deletePhotosFromSupabaseStorage(targetReq.photos);
+        }
+      }
 
       // 2. HAPUS DOKUMEN DARI SUPABASE, FIREBASE FIRESTORE & REALTIME DB ONLINE
       const docId = String(noSurat).replace(/[\/\.]/g, '_');
@@ -5219,7 +5492,7 @@ function renderFullPdfPreviewDocument(modelId) {
 
   let tableHeaderBg = '#0284c7';
   let headerTitleHtml = `
-    <div style="text-align: center; font-size: 20px; font-weight: 800; border-bottom: 2.5px solid #0f172a; padding-bottom: 6px; margin-bottom: 14px; letter-spacing: 0.5px; color: #0f172a; text-transform: uppercase;">
+    <div style="text-align: center; font-size: 20px; font-weight: 800; border-bottom: 2.5px solid #0f172a; padding-bottom: 20px; margin-bottom: 20px; letter-spacing: 0.5px; color: #0f172a; text-transform: uppercase;">
       PERMINTAAN TOKO
     </div>
   `;
@@ -5227,28 +5500,28 @@ function renderFullPdfPreviewDocument(modelId) {
   if (modelId === 'MODEL_2') {
     tableHeaderBg = '#334155';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 10px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 14px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
+      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 10px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (modelId === 'MODEL_3') {
     tableHeaderBg = '#0f172a';
     headerTitleHtml = `
-      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 8px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 14px; letter-spacing: 1.5px; text-transform: uppercase;">
+      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 8px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (modelId === 'MODEL_4') {
     tableHeaderBg = '#059669';
     headerTitleHtml = `
-      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 6px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 14px; letter-spacing: 1px; border-left: 6px solid #047857;">
+      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 6px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (modelId === 'MODEL_5') {
     tableHeaderBg = '#7c3aed';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 12px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 14px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
+      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 12px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
         PERMINTAAN TOKO
       </div>
     `;
@@ -5352,13 +5625,13 @@ function bukaPdfModal(noSurat) {
 
   let itemRowsHtml = req.items.map((i, idx) => `
     <tr style="border-bottom:1px solid #cbd5e1;">
-      <td style="text-align:center; padding:7px 8px; border:1px solid #cbd5e1;">${idx + 1}</td>
-      <td style="padding:7px 8px; border:1px solid #cbd5e1;">${i.type}</td>
-      <td style="padding:7px 8px; border:1px solid #cbd5e1;">${i.seri}</td>
-      ${req.jenis === 'DUS' ? `<td style="padding:7px 8px; border:1px solid #cbd5e1; color:#d97706; font-weight:600;">${i.dus || '-'}</td>` : ''}
-      <td style="padding:7px 8px; border:1px solid #cbd5e1;">${i.barang}</td>
-      <td style="padding:7px 8px; border:1px solid #cbd5e1;">${i.alasan}</td>
-      <td style="text-align:center; padding:7px 8px; border:1px solid #cbd5e1; font-weight:bold;">${i.qty}</td>
+      <td style="text-align:center; padding:6px 4px; border:1px solid #cbd5e1; font-size:11px;">${idx + 1}</td>
+      <td style="padding:6px 6px; border:1px solid #cbd5e1; font-size:11px; word-break:break-word;">${i.type}</td>
+      <td style="padding:6px 6px; border:1px solid #cbd5e1; font-size:11px; word-break:break-all;">${i.seri}</td>
+      ${req.jenis === 'DUS' ? `<td style="padding:6px 6px; border:1px solid #cbd5e1; color:#d97706; font-weight:600; font-size:11px; word-break:break-all;">${i.dus || '-'}</td>` : ''}
+      <td style="padding:6px 6px; border:1px solid #cbd5e1; font-size:11px; word-break:break-word;">${i.barang}</td>
+      <td style="padding:6px 6px; border:1px solid #cbd5e1; font-size:11px; word-break:break-word;">${i.alasan}</td>
+      <td style="text-align:center; padding:6px 4px; border:1px solid #cbd5e1; font-weight:bold; font-size:11px;">${i.qty}</td>
     </tr>
   `).join('');
 
@@ -5382,6 +5655,11 @@ function bukaPdfModal(noSurat) {
   }
   if (!dmTTD) {
     dmTTD = ttdMap['DM'] || ttdMap['DM'] || '';
+  }
+
+  let tokoTTD = '';
+  if (req.createdBy) {
+    tokoTTD = ttdMap[req.createdBy] || ttdMap[req.toko] || '';
   }
 
   const nowPrint = new Date();
@@ -5421,7 +5699,7 @@ function bukaPdfModal(noSurat) {
 
   let tableHeaderBg = '#0284c7';
   let headerTitleHtml = `
-    <div style="text-align: center; font-size: 20px; font-weight: 800; border-bottom: 2.5px solid #0f172a; padding-bottom: 6px; margin-bottom: 14px; letter-spacing: 0.5px; color: #0f172a; text-transform: uppercase;">
+    <div style="text-align: center; font-size: 20px; font-weight: 800; border-bottom: 2.5px solid #0f172a; padding-bottom: 20px; margin-bottom: 20px; letter-spacing: 0.5px; color: #0f172a; text-transform: uppercase;">
       PERMINTAAN TOKO
     </div>
   `;
@@ -5429,28 +5707,28 @@ function bukaPdfModal(noSurat) {
   if (activeModel === 'MODEL_2') {
     tableHeaderBg = '#334155';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 10px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 14px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
+      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 10px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (activeModel === 'MODEL_3') {
     tableHeaderBg = '#0f172a';
     headerTitleHtml = `
-      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 8px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 14px; letter-spacing: 1.5px; text-transform: uppercase;">
+      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 8px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (activeModel === 'MODEL_4') {
     tableHeaderBg = '#059669';
     headerTitleHtml = `
-      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 6px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 14px; letter-spacing: 1px; border-left: 6px solid #047857;">
+      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 6px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (activeModel === 'MODEL_5') {
     tableHeaderBg = '#7c3aed';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 12px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 14px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
+      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 12px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
         PERMINTAAN TOKO
       </div>
     `;
@@ -5461,40 +5739,42 @@ function bukaPdfModal(noSurat) {
       <div>
         ${headerTitleHtml}
 
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12px; background: transparent; border: none;">
+        <table class="pdf-info-grid" style="width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 11.5px; background: transparent; border: none; table-layout: fixed;">
           <tr>
-            <td style="padding: 4px 0; width: 14%; font-weight: bold; border: none;">NO SURAT</td>
-            <td style="padding: 4px 0; width: 2%; border: none;">:</td>
-            <td style="padding: 4px 0; width: 34%; font-weight: 700; color: #0284c7; border: none;">${req.noSurat}</td>
-            <td style="padding: 4px 0; width: 14%; font-weight: bold; border: none;">TANGGAL</td>
-            <td style="padding: 4px 0; width: 2%; border: none;">:</td>
-            <td style="padding: 4px 0; width: 34%; font-weight: 600; border: none;">${formatDateDDMMYYYYString(req.tanggal)}</td>
+            <td style="padding: 4px 2px 4px 0; width: 78px; font-weight: bold; border: none; white-space: nowrap;">NO SURAT</td>
+            <td style="padding: 4px 2px; width: 8px; border: none;">:</td>
+            <td style="padding: 4px 6px 4px 0; font-weight: 700; color: #0284c7; border: none; word-break: break-all;">${req.noSurat}</td>
+            <td style="padding: 4px 2px; width: 68px; font-weight: bold; border: none; white-space: nowrap;">TANGGAL</td>
+            <td style="padding: 4px 2px; width: 8px; border: none;">:</td>
+            <td style="padding: 4px 0; width: 95px; font-weight: 600; border: none; white-space: nowrap;">${formatDateDDMMYYYYString(req.tanggal)}</td>
           </tr>
           <tr>
-            <td style="padding: 4px 0; font-weight: bold; border: none;">TOKO</td>
-            <td style="padding: 4px 0; border: none;">:</td>
-            <td style="padding: 4px 0; font-weight: 700; border: none;">${req.toko}</td>
-            <td style="padding: 4px 0; font-weight: bold; border: none;">JENIS</td>
-            <td style="padding: 4px 0; border: none;">:</td>
-            <td style="padding: 4px 0; font-weight: 700; color: #16a34a; border: none;">${req.jenis || 'DEFAULT'}</td>
+            <td style="padding: 4px 2px 4px 0; font-weight: bold; border: none; white-space: nowrap;">TOKO</td>
+            <td style="padding: 4px 2px; border: none;">:</td>
+            <td style="padding: 4px 6px 4px 0; font-weight: 700; border: none; word-break: break-word;">${req.toko}</td>
+            <td style="padding: 4px 2px; font-weight: bold; border: none; white-space: nowrap;">JENIS</td>
+            <td style="padding: 4px 2px; border: none;">:</td>
+            <td style="padding: 4px 0; font-weight: 700; color: #16a34a; border: none; white-space: nowrap;">${req.jenis || 'DEFAULT'}</td>
           </tr>
         </table>
 
         <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; color: #0f172a;">DETAIL PERMINTAAN:</div>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11.5px; border: 1px solid #cbd5e1;">
-          <thead>
-            <tr style="background: ${tableHeaderBg}; color: #ffffff;">
-              <th style="width: 32px; text-align:center; padding:6px 8px; border:1px solid #cbd5e1;">NO</th>
-              <th style="padding:6px 8px; border:1px solid #cbd5e1;">TIPE BARANG</th>
-              <th style="padding:6px 8px; border:1px solid #cbd5e1;">NO. SERI</th>
-              ${req.jenis === 'DUS' ? `<th style="padding:6px 8px; border:1px solid #cbd5e1;">NO. SERI DUS</th>` : ''}
-              <th style="padding:6px 8px; border:1px solid #cbd5e1;">PERMINTAAN BARANG</th>
-              <th style="padding:6px 8px; border:1px solid #cbd5e1;">ALASAN PERMINTAAN</th>
-              <th style="width: 45px; text-align:center; padding:6px 8px; border:1px solid #cbd5e1;">QTY</th>
-            </tr>
-          </thead>
-          <tbody>${itemRowsHtml}</tbody>
-        </table>
+        <div class="pdf-table-responsive" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; border-radius: 6px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px; border: 1px solid #cbd5e1; min-width: 100%;">
+            <thead>
+              <tr style="background: ${tableHeaderBg}; color: #ffffff;">
+                <th style="width: 28px; text-align:center; padding:6px 4px; border:1px solid #cbd5e1;">NO</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">TIPE BARANG</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">NO. SERI</th>
+                ${req.jenis === 'DUS' ? `<th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">NO. SERI DUS</th>` : ''}
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">PERMINTAAN BARANG</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">ALASAN PERMINTAAN</th>
+                <th style="width: 38px; text-align:center; padding:6px 4px; border:1px solid #cbd5e1;">QTY</th>
+              </tr>
+            </thead>
+            <tbody>${itemRowsHtml}</tbody>
+          </table>
+        </div>
 
         ${photoSection}
 
@@ -5515,35 +5795,37 @@ function bukaPdfModal(noSurat) {
       </div>
 
       <div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 28px; text-align: center; font-size: 11px;">
-          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
-            <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">PEMOHON</div>
-            <div style="height: 55px;"></div>
-            <div>
-              <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">${req.toko}</div>
-              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">PEMOHON (TOKO)</div>
+        <div style="display: flex; justify-content: space-between; align-items: stretch; margin-top: 28px; text-align: center !important; font-size: 11px;">
+          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; align-items: center !important; min-height: 130px; text-align: center !important;">
+            <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; width: 100%; text-align: center !important;">PEMOHON</div>
+            <div style="flex: 1; display: flex; align-items: center !important; justify-content: center !important; width: 100%; min-height: 55px; margin: 4px 0; text-align: center !important;">
+              ${tokoTTD ? `<img src="${tokoTTD}" style="max-height: 52px; max-width: 90%; object-fit: contain; display: block !important; margin: 0 auto !important;">` : ''}
+            </div>
+            <div style="width: 100%; text-align: center !important;">
+              <div style="font-weight: 800; color: #0f172a; font-size: 11.5px; text-align: center !important;">${req.toko}</div>
+              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; text-align: center !important;">PEMOHON (TOKO)</div>
             </div>
           </div>
 
-          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
-            <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DIPERIKSA</div>
-            <div style="height: 55px; display: flex; align-items: center; justify-content: center;">
-              ${serviceTTD ? `<img src="${serviceTTD}" style="max-height: 52px; max-width: 100%; object-fit: contain;">` : ''}
+          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; align-items: center !important; min-height: 130px; text-align: center !important;">
+            <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; width: 100%; text-align: center !important;">DIPERIKSA</div>
+            <div style="flex: 1; display: flex; align-items: center !important; justify-content: center !important; width: 100%; min-height: 55px; margin: 4px 0; text-align: center !important;">
+              ${serviceTTD ? `<img src="${serviceTTD}" style="max-height: 52px; max-width: 90%; object-fit: contain; display: block !important; margin: 0 auto !important;">` : ''}
             </div>
-            <div>
-              <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">${serviceName}</div>
-              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">${hodsAreaTitle}</div>
+            <div style="width: 100%; text-align: center !important;">
+              <div style="font-weight: 800; color: #0f172a; font-size: 11.5px; text-align: center !important;">${serviceName}</div>
+              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; text-align: center !important;">${hodsAreaTitle}</div>
             </div>
           </div>
 
-          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 125px;">
-            <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">DISETUJUI</div>
-            <div style="height: 55px; display: flex; align-items: center; justify-content: center;">
-              ${dmTTD ? `<img src="${dmTTD}" style="max-height: 52px; max-width: 100%; object-fit: contain;">` : ''}
+          <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; align-items: center !important; min-height: 130px; text-align: center !important;">
+            <div style="font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; width: 100%; text-align: center !important;">DISETUJUI</div>
+            <div style="flex: 1; display: flex; align-items: center !important; justify-content: center !important; width: 100%; min-height: 55px; margin: 4px 0; text-align: center !important;">
+              ${dmTTD ? `<img src="${dmTTD}" style="max-height: 52px; max-width: 90%; object-fit: contain; display: block !important; margin: 0 auto !important;">` : ''}
             </div>
-            <div>
-              <div style="font-weight: 800; color: #0f172a; font-size: 11.5px;">FERRY EDIYANTO</div>
-              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase;">DISTRICT MANAGER</div>
+            <div style="width: 100%; text-align: center !important;">
+              <div style="font-weight: 800; color: #0f172a; font-size: 11.5px; text-align: center !important;">FERRY EDIYANTO</div>
+              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; text-align: center !important;">DISTRICT MANAGER</div>
             </div>
           </div>
         </div>
@@ -5759,14 +6041,180 @@ function draw(e) {
 
 function stopDraw() { isDrawing = false; }
 
+function pilihFotoTTD() {
+  const input = document.getElementById('fotoTTDInput');
+  if (input) input.click();
+}
+window.pilihFotoTTD = pilihFotoTTD;
+
+async function prosesFotoKeTTD(event) {
+  const file = event.target.files ? event.target.files[0] : null;
+  if (!file) return;
+
+  if (typeof showLoading === 'function') showLoading('MEMPROSES FOTO MENJADI TTD DIGITAL TRANSPARAN...');
+
+  try {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        if (!canvasTTD || !ctxTTD) {
+          if (typeof hideLoading === 'function') hideLoading();
+          return;
+        }
+
+        const cWidth = canvasTTD.width || 600;
+        const cHeight = canvasTTD.height || 300;
+
+        const tempCanvas = document.createElement('canvas');
+        const tCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = cWidth;
+        tempCanvas.height = cHeight;
+
+        let drawWidth = img.width;
+        let drawHeight = img.height;
+        const scale = Math.min(cWidth / drawWidth, cHeight / drawHeight) * 0.82;
+
+        drawWidth = Math.round(drawWidth * scale);
+        drawHeight = Math.round(drawHeight * scale);
+
+        const offsetX = Math.round((cWidth - drawWidth) / 2);
+        const offsetY = Math.round((cHeight - drawHeight) / 2);
+
+        tCtx.fillStyle = '#ffffff';
+        tCtx.fillRect(0, 0, cWidth, cHeight);
+        tCtx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+        const imgData = tCtx.getImageData(0, 0, cWidth, cHeight);
+        const data = imgData.data;
+
+        let totalBrightness = 0;
+        const totalPixels = cWidth * cHeight;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          totalBrightness += lum;
+        }
+
+        const avgBrightness = totalBrightness / totalPixels;
+        const threshold = Math.min(195, Math.max(110, avgBrightness - 15));
+
+        const outputImgData = ctxTTD.createImageData(cWidth, cHeight);
+        const outData = outputImgData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+          if (lum < threshold) {
+            outData[i] = 15;      // R (dark navy ink)
+            outData[i + 1] = 23;  // G
+            outData[i + 2] = 42;  // B
+            const alpha = Math.min(255, Math.max(170, Math.round(((threshold - lum) / threshold) * 255 * 1.6)));
+            outData[i + 3] = alpha;
+          } else {
+            outData[i] = 0;
+            outData[i + 1] = 0;
+            outData[i + 2] = 0;
+            outData[i + 3] = 0; // Transparent paper background
+          }
+        }
+
+        ctxTTD.clearRect(0, 0, cWidth, cHeight);
+        ctxTTD.putImageData(outputImgData, 0, 0);
+
+        if (typeof hideLoading === 'function') hideLoading();
+        showNotif('BERHASIL MENGONVERSI FOTO MENJADI TTD DIGITAL TRANSPARAN!', 'success');
+      };
+
+      img.onerror = () => {
+        if (typeof hideLoading === 'function') hideLoading();
+        showNotif('GAGAL MEMBACA BERKAS FOTO TTD!', 'error');
+      };
+
+      img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+  } catch (err) {
+    if (typeof hideLoading === 'function') hideLoading();
+    console.error('Proses foto TTD error:', err);
+    showNotif('TERJADI KESALAHAN SAAT MEMPROSES FOTO TTD!', 'error');
+  }
+
+  event.target.value = '';
+}
+window.prosesFotoKeTTD = prosesFotoKeTTD;
+
 function hapusTTD() {
   if (ctxTTD && canvasTTD) ctxTTD.clearRect(0, 0, canvasTTD.width, canvasTTD.height);
 }
 
+function cropAndCenterCanvasSignature(srcCanvas) {
+  if (!srcCanvas) return '';
+  try {
+    const ctx = srcCanvas.getContext('2d');
+    const w = srcCanvas.width;
+    const h = srcCanvas.height;
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+
+    let minX = w, minY = h, maxX = -1, maxY = -1;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
+        const alpha = data[idx + 3];
+        if (alpha > 15) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    if (maxX < minX || maxY < minY) {
+      return srcCanvas.toDataURL('image/png');
+    }
+
+    const strokeW = maxX - minX + 1;
+    const strokeH = maxY - minY + 1;
+    const pad = 12;
+
+    const cropX = Math.max(0, minX - pad);
+    const cropY = Math.max(0, minY - pad);
+    const cropW = Math.min(w - cropX, strokeW + (pad * 2));
+    const cropH = Math.min(h - cropY, strokeH + (pad * 2));
+
+    const targetCanvas = document.createElement('canvas');
+    targetCanvas.width = cropW;
+    targetCanvas.height = cropH;
+    const targetCtx = targetCanvas.getContext('2d');
+
+    targetCtx.drawImage(
+      srcCanvas,
+      cropX, cropY, cropW, cropH,
+      0, 0, cropW, cropH
+    );
+
+    return targetCanvas.toDataURL('image/png');
+  } catch (e) {
+    console.warn('Error cropping signature:', e);
+    return srcCanvas.toDataURL('image/png');
+  }
+}
+window.cropAndCenterCanvasSignature = cropAndCenterCanvasSignature;
+
 function simpanTTD() {
   showConfirm('SIMPAN TANDA TANGAN DIGITAL INI?', () => {
     if (!canvasTTD) return;
-    const png = canvasTTD.toDataURL('image/png');
+    const png = cropAndCenterCanvasSignature(canvasTTD);
     const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
     const key = currentUser.category === 'DM' ? 'DM' : `SERVICE_${currentUser.area}`;
     ttdMap[key] = png;
@@ -5823,7 +6271,7 @@ function simpanTTD() {
     }
     
     pushCentralCloudDB();
-    showNotif('TANDA TANGAN BERHASIL DISIMPAN KE SUPABASE & CLOUD DATABASE!', 'info');
+    showNotif('TANDA TANGAN DIGITAL BERHASIL DISIMPAN!', 'success');
     tutupTTD();
   });
 }
@@ -6908,7 +7356,7 @@ function simpanUserData() {
         pushCentralCloudDB();
       }
 
-      showNotif(`USER ${username} DIPERBARUI & DISINKRONKAN KE SUPABASE!`, 'info');
+      showNotif(`DATA USER ${username} BERHASIL DIPERBARUI!`, 'info');
       tutupUserModal();
       loadUsersManagement();
       return;
@@ -7384,7 +7832,7 @@ function prosesUploadExcelLookup(event) {
         }
 
         hideLoading();
-        showNotif(`BERHASIL MEMPERBARUI ${count} KODE SERI BARANG & TERSINKRON KE DATABASE!`, 'info');
+        showNotif(`BERHASIL MEMPERBARUI ${count} KODE SERI BARANG!`, 'info');
         const statusEl = document.getElementById('lookupUploadStatus');
         if (statusEl) statusEl.textContent = `✅ ${count} KODE SERI BERHASIL DITAMBAHKAN!`;
       } else {
