@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260808_v1154">
-  <script src="app.js?v=20260808_v1154"></script>
+  <link rel="stylesheet" href="styles.css?v=20260809_v1164">
+  <script src="app.js?v=20260809_v1164"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -415,6 +415,49 @@
               TOGGLE ON / OFF
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- ADMIN CONTROL: PENGATURAN TEMA GLOBAL UNTUK SEMUA PERANGKAT -->
+      <div class="box" style="border-left: 4px solid #0284c7; margin-bottom: 20px; background: rgba(2, 132, 199, 0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+          <div>
+            <h3 style="color: #0284c7; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span class="material-symbols-rounded">palette</span> KONTROL TEMA GLOBAL ADMIN (ATUR TEMA SEMUA PERANGKAT)
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+              ADMIN DAPAT MEMILIH TEMA UTAMA UNTUK DITERAPKAN KE SUPABASE SERTA SELURUH PERANGKAT USER.
+            </p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <button type="button" class="btnDownload" style="background: #1e293b;" onclick="setGlobalAdminTheme('dark-mode')"><span class="material-symbols-rounded">light_mode</span> DARK</button>
+          <button type="button" class="btnDownload" style="background: #0284c7; color: #ffffff;" onclick="setGlobalAdminTheme('light-mode')"><span class="material-symbols-rounded">dark_mode</span> LIGHT</button>
+          <button type="button" class="btnDownload" style="background: #2563eb;" onclick="setGlobalAdminTheme('classic-mode')"><span class="material-symbols-rounded">menu_book</span> CLASSIC</button>
+          <button type="button" class="btnDownload" style="background: #06b6d4;" onclick="setGlobalAdminTheme('neon-mode')"><span class="material-symbols-rounded">bolt</span> NEON</button>
+          <button type="button" class="btnDownload" style="background: #059669;" onclick="setGlobalAdminTheme('forest-mode')"><span class="material-symbols-rounded">eco</span> FOREST</button>
+          <button type="button" class="btnDownload" style="background: #ea580c;" onclick="setGlobalAdminTheme('sunset-mode')"><span class="material-symbols-rounded">wb_sunny</span> SUNSET</button>
+          <button type="button" class="btnDownload" style="background: #0284c7;" onclick="setGlobalAdminTheme('ocean-mode')"><span class="material-symbols-rounded">water</span> OCEAN</button>
+          <button type="button" class="btnDownload" style="background: #78350f;" onclick="setGlobalAdminTheme('coffee-mode')"><span class="material-symbols-rounded">coffee</span> COFFEE</button>
+          <button type="button" class="btnDownload" style="background: #7c3aed;" onclick="setGlobalAdminTheme('purple-mode')"><span class="material-symbols-rounded">purple</span> PURPLE</button>
+          <button type="button" class="btnDownload" style="background: #dc2626;" onclick="setGlobalAdminTheme('crimson-mode')"><span class="material-symbols-rounded">local_fire_department</span> CRIMSON</button>
+        </div>
+      </div>
+
+      <!-- ADMIN CONTROL: HAPUS GAMBAR / FOTO SUPABASE -->
+      <div class="box" style="border-left: 4px solid #ef4444; margin-bottom: 20px; background: rgba(239, 68, 68, 0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="color: #ef4444; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span class="material-symbols-rounded">delete</span> HAPUS GAMBAR / FOTO SUPABASE
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+              MENGHAPUS SEMUA GAMBAR/FOTO DARI SUPABASE CLOUD DAN APLIKASI UNTUK MENGHEMAT KAPASITAS PENYIMPANAN.
+            </p>
+          </div>
+          <button type="button" class="btnDownload" style="background: #dc2626; color: #ffffff; padding: 10px 16px; font-weight: 700;" onclick="hapusSemuaFotoBiasa()">
+            <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 4px;">delete_forever</span> HAPUS SEMUA FOTO
+          </button>
         </div>
       </div>
 

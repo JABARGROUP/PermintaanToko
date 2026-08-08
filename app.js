@@ -83,7 +83,6 @@ async function pingSupabaseKeepAlive() {
 }
 try {
   pingSupabaseKeepAlive();
-  setInterval(pingSupabaseKeepAlive, 30000);
 } catch (e) {}
 
 // FIREBASE LIVE CONNECTION MONITOR
@@ -116,18 +115,22 @@ function getSavedDesignMode() {
   return 'normal';
 }
 
-function updateBodyClasses() {
-  const savedTheme = (typeof localStorage !== 'undefined' ? localStorage.getItem('APP_SELECTED_THEME') : null) || appStorage.getItem(THEME_KEY) || 'dark-mode';
+function updateBodyClasses(specificTheme) {
+  const savedTheme = specificTheme || (typeof localStorage !== 'undefined' ? localStorage.getItem('APP_SELECTED_THEME') : null) || (typeof appStorage !== 'undefined' ? appStorage.getItem(THEME_KEY) : null) || 'dark-mode';
   
-  if (typeof THEME_MODES !== 'undefined' && Array.isArray(THEME_MODES)) {
-    THEME_MODES.forEach(t => document.body.classList.remove(t.id));
-  }
+  const allThemes = ['dark-mode', 'light-mode', 'classic-mode', 'neon-mode', 'forest-mode', 'sunset-mode', 'ocean-mode', 'coffee-mode', 'purple-mode', 'crimson-mode'];
   
-  // Clean all potential design mode class names & inline background styles
+  allThemes.forEach(t => {
+    document.body.classList.remove(t);
+    document.documentElement.classList.remove(t);
+  });
+  
   document.body.classList.remove('design-mode-normal', 'design-mode-3d-kayu-gold', 'design-mode-3d-emerald-glass', 'design-mode-3d-stealth-black', 'design-mode-3d-neumorphism', 'design-mode-3d-glassmorphism', 'design-mode-3d-embossed', 'design-mode-3d-isometric');
   document.body.style.background = '';
   document.body.style.color = '';
 
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.body.setAttribute('data-theme', savedTheme);
   document.body.classList.add(savedTheme);
   document.body.classList.add('design-mode-normal');
 
@@ -135,8 +138,12 @@ function updateBodyClasses() {
     const idx = THEME_MODES.findIndex(t => t.id === savedTheme);
     currentThemeIndex = idx !== -1 ? idx : 0;
   }
-  updateThemeIcon();
+  if (typeof updateThemeIcon === 'function') {
+    updateThemeIcon();
+  }
 }
+window.updateBodyClasses = updateBodyClasses;
+window.applyThemeToDocument = updateBodyClasses;
 
 function loadSavedDesignMode() {
   updateBodyClasses();
@@ -282,9 +289,9 @@ async function setGlobalAdminTheme(themeName) {
       } catch(e) {}
     }
 
-    showNotif(`TEMA '${themeName.toUpperCase()}' BERHASIL DISIMPAN & DISINKRONKAN KE SEMUA USER!`, 'success');
+    // Theme notification silent
   } else {
-    showNotif(`TEMA '${themeName.toUpperCase()}' BERHASIL DISIMPAN DI PERANGKAT INI.`, 'info');
+    // Theme notification silent
   }
 }
 window.setGlobalAdminTheme = setGlobalAdminTheme;
@@ -308,7 +315,7 @@ function toggleTheme() {
     }
     try { localStorage.setItem(LOCAL_USER_THEME_KEY, newTheme); } catch(e) {}
     applyThemeToDocument(newTheme);
-    showNotif(`TEMA TAMPILAN '${newTheme.toUpperCase()}' TERPASANG DI PERANGKAT INI!`, 'info');
+    // Theme notification silent
   }
 }
 window.toggleTheme = toggleTheme;
@@ -401,8 +408,12 @@ function shouldEmitImportantNotification(targetRoles, targetArea, message, noSur
   const importantPatterns = [
     'PERMINTAAN BARU',
     'DISETUJUI SERVICE',
+    'DISETUJUI DM',
+    'TELAH DISETUJUI DM',
     'APPROVAL DM',
     'MOHON APPROVAL DM',
+    'DITOLAK DM',
+    'DITOLAK SERVICE',
     'DITOLAK',
     'SELESAI (DONE)',
     'REMINDER PENDING'
@@ -565,6 +576,57 @@ function getAccessibleNotifications() {
         });
       }
     });
+
+    // A2. UNTUK SERVICE (NOTIFIKASI DARI DM KETIKA DI-APPROVE ATAU DI-TOLAK OLEH DM)
+    const dmApprovedReqs = requests.filter(r => {
+      if (clearedAt && r.createdAt) {
+        const reqTime = new Date(r.createdAt).getTime();
+        if (reqTime <= clearedAt) return false;
+      }
+      const isAreaMatch = (!r.area || r.area.toUpperCase() === userArea || userArea === 'ALL' || isSysAdmin);
+      const isApprovedByDm = (r.serviceApprove === true && r.status === 'APPROVE');
+      return isAreaMatch && isApprovedByDm;
+    });
+
+    dmApprovedReqs.forEach(r => {
+      const exists = filtered.some(n => n.noSurat === r.noSurat && String(n.message || '').includes('DISETUJUI DM'));
+      if (!exists) {
+        filtered.unshift({
+          id: `NTF-SRV-DM-APP-${r.noSurat}`,
+          targetRoles: ['SERVICE'],
+          targetArea: r.area || userArea,
+          message: `PERMINTAAN #${r.noSurat} DARI ${r.toko} TELAH DISETUJUI DM. SILAKAN DIPROSES.`,
+          noSurat: r.noSurat,
+          time: r.tanggalInput || r.createdAt || getFormattedDateDDMMYYYY(),
+          readBy: []
+        });
+      }
+    });
+
+    const dmRejectedReqs = requests.filter(r => {
+      if (clearedAt && r.createdAt) {
+        const reqTime = new Date(r.createdAt).getTime();
+        if (reqTime <= clearedAt) return false;
+      }
+      const isAreaMatch = (!r.area || r.area.toUpperCase() === userArea || userArea === 'ALL' || isSysAdmin);
+      const isRejectedByDm = (r.status === 'REJECT' && String(r.catatan || '').includes('DM'));
+      return isAreaMatch && isRejectedByDm;
+    });
+
+    dmRejectedReqs.forEach(r => {
+      const exists = filtered.some(n => n.noSurat === r.noSurat && String(n.message || '').includes('DITOLAK DM'));
+      if (!exists) {
+        filtered.unshift({
+          id: `NTF-SRV-DM-REJ-${r.noSurat}`,
+          targetRoles: ['SERVICE'],
+          targetArea: r.area || userArea,
+          message: `PERMINTAAN #${r.noSurat} DARI ${r.toko} DITOLAK DM. CATATAN: ${r.catatan || '-'}`,
+          noSurat: r.noSurat,
+          time: r.tanggalInput || r.createdAt || getFormattedDateDDMMYYYY(),
+          readBy: []
+        });
+      }
+    });
   }
 
   // B. UNTUK DM (TUNGGU DM - MENUNGGU APPROVAL DM DARI SEMUA AREA)
@@ -633,34 +695,10 @@ function getAccessibleNotifications() {
 let globalRealtimeLoopInterval = null;
 
 function startGlobalRealtimeLoop() {
-  if (globalRealtimeLoopInterval) return;
-
-  globalRealtimeLoopInterval = setInterval(() => {
-    if (!currentUser || (document.getElementById('loginPage') && document.getElementById('loginPage').classList.contains('active'))) return;
-
-    // 1. UPDATE LONCENG NOTIFIKASI & ANGKA JUMLAH
-    if (typeof updateNotifBellCounter === 'function') {
-      updateNotifBellCounter();
-    }
-
-    // 2. UPDATE BADGE CHAT BANTUAN UNREAD
-    if (typeof cekUnreadNotif === 'function') {
-      cekUnreadNotif();
-    }
-
-    // 3. REFRESH LIST NOTIFIKASI JIKA POPUP NOTIF TERBUKA
-    const popupNotifList = document.getElementById('popupNotifList');
-    if (popupNotifList && (popupNotifList.classList.contains('show') || popupNotifList.style.display === 'flex')) {
-      if (typeof loadNotificationList === 'function') {
-        loadNotificationList();
-      }
-    }
-
-    // 4. REALTIME SYNC SUPABASE GLOBAL THEME & SYSTEM NOTIFS FOR ALL ACTIVE CLIENTS
-    if (typeof syncSupabaseNotifsAndChatToLocalCache === 'function') {
-      syncSupabaseNotifsAndChatToLocalCache().catch(() => {});
-    }
-  }, 3000);
+  if (globalRealtimeLoopInterval) {
+    clearInterval(globalRealtimeLoopInterval);
+    globalRealtimeLoopInterval = null;
+  }
 }
 
 function updateNotifBellCounter() {
@@ -1408,12 +1446,19 @@ function tesKirimAdminReminder() {
 window.tesKirimAdminReminder = tesKirimAdminReminder;
 
 let adminReminderIntervalId = null;
+
 function startAdminReminderTimeChecker() {
-  if (adminReminderIntervalId) clearInterval(adminReminderIntervalId);
+  if (adminReminderIntervalId) {
+    clearInterval(adminReminderIntervalId);
+    adminReminderIntervalId = null;
+  }
   adminReminderIntervalId = setInterval(() => {
-    checkAndTriggerPendingReminders(false);
-  }, 20000);
+    if (typeof checkAndTriggerPendingReminders === 'function') {
+      checkAndTriggerPendingReminders(false);
+    }
+  }, 60000);
 }
+window.startAdminReminderTimeChecker = startAdminReminderTimeChecker;
 
 let cloudSyncInterval = null;
 
@@ -1643,100 +1688,15 @@ function startCentralCloudSyncEngine() {
 }
 
 function initGlobalRealtimeSyncEngine() {
-  if (window.isRealtimeEngineStarted) return;
-  window.isRealtimeEngineStarted = true;
-
-  // 1. SUPABASE REALTIME WEBSOCKET LISTENER (INSTANT REALTIME ACROSS DEVICES)
-  if (typeof supabase !== 'undefined' && supabase) {
-    try {
-      supabase.channel('supabase_realtime_all_tables')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'permintaan_toko' }, () => onGlobalDataChangedRealtime('permintaan_toko'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => onGlobalDataChangedRealtime('requests'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => onGlobalDataChangedRealtime('users'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'toko_list' }, () => onGlobalDataChangedRealtime('toko_list'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'stores' }, () => onGlobalDataChangedRealtime('stores'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat' }, () => onGlobalDataChangedRealtime('chat'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => onGlobalDataChangedRealtime('chat_messages'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => onGlobalDataChangedRealtime('notifications'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'lookup' }, () => onGlobalDataChangedRealtime('lookup'))
-        .subscribe();
-    } catch(e) {
-      console.warn('[SUPABASE REALTIME INIT NOTICE]:', e);
+  if (window.globalFastRealtimeTimer) {
+    clearInterval(window.globalFastRealtimeTimer);
+    window.globalFastRealtimeTimer = null;
+  }
+  window.globalFastRealtimeTimer = setInterval(() => {
+    if (typeof syncAllDataToCache === 'function') {
+      syncAllDataToCache().catch(() => {});
     }
-  }
-
-  // 2. FIRESTORE SNAPSHOT LISTENERS FOR INSTANT MULTI-DEVICE SYNC
-  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-    try {
-      dbFirestore.collection('requests').onSnapshot(snapshot => {
-        if (snapshot && !snapshot.empty) {
-          const delReqs = new Set(
-            (JSON.parse(appStorage.getItem(DELETED_REQUESTS_KEY) || '[]') || [])
-              .filter(Boolean)
-              .map(v => String(v).trim())
-          );
-          const fsReqs = [];
-          snapshot.forEach(doc => {
-            const data = doc.data();
-            if (data && data.noSurat && !delReqs.has(String(data.noSurat).trim())) {
-              fsReqs.push(data);
-            }
-          });
-          if (fsReqs.length > 0) {
-            fsReqs.sort((a,b) => (b.noSurat || '').localeCompare(a.noSurat || ''));
-            appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(fsReqs));
-          }
-        }
-        onGlobalDataChangedRealtime('firestore_requests');
-      }, err => {});
-
-      dbFirestore.collection('users').onSnapshot(snapshot => {
-        if (snapshot && !snapshot.empty) {
-          const fsUsers = [];
-          snapshot.forEach(doc => {
-            const u = doc.data();
-            if (u && u.username) fsUsers.push(u);
-          });
-          if (fsUsers.length > 0) {
-            appStorage.setItem(USERS_DB_KEY, JSON.stringify(fsUsers));
-          }
-        }
-        onGlobalDataChangedRealtime('firestore_users');
-      }, err => {});
-    } catch(e) {
-      console.warn('[FIRESTORE SNAPSHOT NOTICE]:', e);
-    }
-  }
-
-  // 3. FIREBASE REALTIME DB LISTENER
-  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-    try {
-      dbRealtime.ref('requests').on('value', snapshot => {
-        const val = snapshot.val();
-        if (val) {
-          const reqList = Array.isArray(val) ? val : Object.values(val);
-          const delReqs = new Set(
-            (JSON.parse(appStorage.getItem(DELETED_REQUESTS_KEY) || '[]') || [])
-              .filter(Boolean)
-              .map(v => String(v).trim())
-          );
-          const cleanReqs = reqList.filter(r => r && r.noSurat && !delReqs.has(String(r.noSurat).trim()));
-          if (cleanReqs.length > 0) {
-            cleanReqs.sort((a,b) => (b.noSurat || '').localeCompare(a.noSurat || ''));
-            appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(cleanReqs));
-            onGlobalDataChangedRealtime('realtime_db_requests');
-          }
-        }
-      });
-    } catch(e) {}
-  }
-
-  // 4. FAST 2-SECOND BACKGROUND POLLING HEARTBEAT (GUARANTEED SYNC FALLBACK)
-  if (!window.globalFastRealtimeTimer) {
-    window.globalFastRealtimeTimer = setInterval(() => {
-      onGlobalDataChangedRealtime('heartbeat');
-    }, 2000);
-  }
+  }, 3000);
 }
 
 async function onGlobalDataChangedRealtime(source) {
@@ -1957,17 +1917,15 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
             if (themeObj && themeObj.theme) {
               const cloudTime = Number(themeObj.time || 0);
               const lastAdminTime = Number(appStorage.getItem(LAST_ADMIN_THEME_TIME_KEY) || 0);
+              const userThemeTime = Number(appStorage.getItem('STORE_USER_THEME_TIME') || 0);
 
               if (cloudTime > lastAdminTime) {
                 appStorage.setItem(GLOBAL_THEME_KEY, themeObj.theme);
-                appStorage.setItem(LOCAL_USER_THEME_KEY, themeObj.theme);
+                appStorage.setItem(THEME_KEY, themeObj.theme);
                 appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(cloudTime));
-                try { localStorage.setItem(GLOBAL_THEME_KEY, themeObj.theme); } catch(e) {}
-                try { localStorage.setItem(LOCAL_USER_THEME_KEY, themeObj.theme); } catch(e) {}
-                try { localStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(cloudTime)); } catch(e) {}
-
-                if (typeof applyThemeToDocument === 'function') {
-                  applyThemeToDocument(themeObj.theme);
+                try { localStorage.setItem('APP_SELECTED_THEME', themeObj.theme); } catch(e) {}
+                if (typeof updateBodyClasses === 'function') {
+                  updateBodyClasses(themeObj.theme);
                 }
               }
             }
@@ -2070,24 +2028,19 @@ async function syncSupabaseThemeToLocalCache() {
 
     if (cloudTheme) {
       const lastAdminTime = Number(appStorage.getItem(LAST_ADMIN_THEME_TIME_KEY) || 0);
-      if (cloudTime >= lastAdminTime || !lastAdminTime) {
-        appStorage.setItem(GLOBAL_THEME_KEY, cloudTheme);
-        appStorage.setItem(LOCAL_USER_THEME_KEY, cloudTheme);
-        appStorage.setItem(THEME_KEY, cloudTheme);
-        if (cloudTime) {
-          appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(cloudTime));
-        }
+      const userThemeTime = Number(appStorage.getItem('STORE_USER_THEME_TIME') || 0);
 
-        try { localStorage.setItem(GLOBAL_THEME_KEY, cloudTheme); } catch(e) {}
-        try { localStorage.setItem(LOCAL_USER_THEME_KEY, cloudTheme); } catch(e) {}
-        try { localStorage.setItem(THEME_KEY, cloudTheme); } catch(e) {}
+      if (cloudTime > lastAdminTime) {
+        appStorage.setItem(GLOBAL_THEME_KEY, cloudTheme);
+        appStorage.setItem(THEME_KEY, cloudTheme);
+        appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(cloudTime));
         try { localStorage.setItem('APP_SELECTED_THEME', cloudTheme); } catch(e) {}
 
         const idx = THEME_MODES.findIndex(m => m.id === cloudTheme);
         if (idx !== -1) currentThemeIndex = idx;
 
-        if (typeof applyThemeToDocument === 'function') {
-          applyThemeToDocument(cloudTheme);
+        if (typeof updateBodyClasses === 'function') {
+          updateBodyClasses(cloudTheme);
         }
       }
     }
@@ -2122,10 +2075,6 @@ async function syncAllDataToCache() {
         const configDoc = await dbFirestore.collection('app_settings').doc('config').get();
         if (configDoc.exists) {
           const cfg = configDoc.data() || {};
-          if (cfg.theme) {
-            appStorage.setItem(THEME_KEY, cfg.theme);
-            if (typeof loadSavedTheme === 'function') loadSavedTheme();
-          }
           if (cfg.fonteToken) appStorage.setItem(FONTE_TOKEN_KEY, cfg.fonteToken);
           if (cfg.adminReminder !== undefined) appStorage.setItem(ADMIN_REMINDER_KEY, String(cfg.adminReminder));
           if (cfg.adminReminderTime) appStorage.setItem(ADMIN_REMINDER_TIME_KEY, cfg.adminReminderTime);
@@ -2801,19 +2750,17 @@ async function setGlobalAdminTheme(themeId) {
   const themeStr = JSON.stringify(themeObj);
 
   appStorage.setItem(GLOBAL_THEME_KEY, themeId);
-  appStorage.setItem(LOCAL_USER_THEME_KEY, themeId);
   appStorage.setItem(THEME_KEY, themeId);
   appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(nowTime));
 
   try { localStorage.setItem(GLOBAL_THEME_KEY, themeId); } catch(e) {}
-  try { localStorage.setItem(LOCAL_USER_THEME_KEY, themeId); } catch(e) {}
   try { localStorage.setItem(THEME_KEY, themeId); } catch(e) {}
   try { localStorage.setItem('APP_SELECTED_THEME', themeId); } catch(e) {}
   try { localStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(nowTime)); } catch(e) {}
 
   const idx = THEME_MODES.findIndex(m => m.id === themeId);
   if (idx !== -1) currentThemeIndex = idx;
-  if (typeof updateBodyClasses === 'function') updateBodyClasses();
+  updateBodyClasses(themeId);
 
   const sb = (typeof supabase !== 'undefined' && supabase) ? supabase : null;
   if (sb) {
@@ -2834,9 +2781,9 @@ async function setGlobalAdminTheme(themeId) {
         created_at: new Date().toISOString()
       };
       await sb.from('permintaan_toko').upsert(themeRow);
-      console.log('⚡ [SUPABASE GLOBAL THEME SYNC SUCCESS]:', themeId);
+      console.log('⚡ [SUPABASE GLOBAL THEME BROADCAST SUCCESS]:', themeId);
     } catch(err) {
-      console.warn('[SUPABASE GLOBAL THEME SYNC NOTICE]:', err);
+      console.warn('[SUPABASE GLOBAL THEME BROADCAST NOTICE]:', err);
     }
   }
 
@@ -2850,10 +2797,191 @@ async function setGlobalAdminTheme(themeId) {
       await dbRealtime.ref('settings/global_theme').set(themeObj);
     } catch(e) {}
   }
-
-  showNotif(`TEMA DIPERBARUI KE "${themeId.toUpperCase()}" OLEH ADMIN & DISINKRONKAN KE SELURUH PERANGKAT!`, 'success');
 }
 window.setGlobalAdminTheme = setGlobalAdminTheme;
+
+async function bersihkanFotoSupabase(mode = 'SELESAI') {
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+
+  if (!isSysAdmin) {
+    showNotif('HANYA ADMIN UTAMA YANG MEMILIKI HAK AKSES BERSIHKAN FOTO SUPABASE!', 'warning');
+    return;
+  }
+
+  const modeText = mode === 'SEMUA' ? 'SEMUA FOTO DOKUMEN' : 'FOTO DOKUMEN STATUS SELESAI & REJECT';
+  showConfirm(`APAKAH ANDA YAKIN INGIN MENGHAPUS ${modeText} DARI SUPABASE CLOUD?\n\n(Tindakan ini akan mengosongkan data foto untuk menghemat kuota penyimpanan database. Rincian data permintaan tidak akan terhapus).`, async () => {
+    showLoading('MEMPROSES PEMBERSIHAN FOTO DI SUPABASE CLOUD...');
+    try {
+      const sb = (typeof supabase !== 'undefined' && supabase) ? supabase : null;
+      let countUpdated = 0;
+      let allPhotoUrlsToDelete = [];
+
+      // 1. Fetch target records from Supabase
+      if (sb) {
+        let query = sb.from('permintaan_toko').select('no_surat, photos, status');
+        if (mode !== 'SEMUA') {
+          query = query.in('status', ['DONE', 'REJECT', 'SELESAI', 'DONE_SERVICE']);
+        }
+        const { data: rows, error: fetchErr } = await query;
+        if (!fetchErr && Array.isArray(rows)) {
+          for (const row of rows) {
+            if (row.no_surat && row.no_surat.startsWith('PRMT/')) {
+              let pArr = [];
+              if (Array.isArray(row.photos)) {
+                pArr = row.photos;
+              } else if (typeof row.photos === 'string' && row.photos.trim()) {
+                try { pArr = JSON.parse(row.photos); } catch(e) {}
+              }
+
+              if (Array.isArray(pArr) && pArr.length > 0) {
+                allPhotoUrlsToDelete.push(...pArr);
+                countUpdated++;
+              }
+              // Update row in Supabase table
+              await sb.from('permintaan_toko').update({ photos: [] }).eq('no_surat', row.no_surat);
+            }
+          }
+        }
+      }
+
+      // 2. Delete collected files from Supabase Storage buckets if any exist
+      if (allPhotoUrlsToDelete.length > 0 && typeof deletePhotosFromSupabaseStorage === 'function') {
+        await deletePhotosFromSupabaseStorage(allPhotoUrlsToDelete);
+      }
+
+      // 3. Update local requests cache
+      const requests = getRequestsFromDB();
+      requests.forEach(r => {
+        if (mode === 'SEMUA' || r.status === 'DONE' || r.status === 'REJECT' || r.status === 'SELESAI' || r.status === 'DONE_SERVICE') {
+          r.photos = [];
+        }
+      });
+      saveRequestsToDB(requests);
+
+      if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+        await syncSupabaseRequestsToLocalCache();
+      }
+
+      hideLoading();
+      showNotif(`BERHASIL MENGHAPUS FOTO DARI SUPABASE CLOUD & STORAGE! (${countUpdated} DOKUMEN DIBERSIHKAN)`, 'info');
+      loadRiwayat();
+      loadDashboard();
+    } catch(err) {
+      hideLoading();
+      console.error('[SUPABASE DELETE PHOTOS ERROR]:', err);
+      showNotif(`GAGAL MENGHAPUS FOTO DI SUPABASE: ${err.message || err}`, 'warning');
+    }
+  });
+}
+window.bersihkanFotoSupabase = bersihkanFotoSupabase;
+
+async function hapusSemuaFotoBiasa() {
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+
+  if (!isSysAdmin) {
+    showNotif('HANYA ADMIN YANG DAPAT MENGHAPUS FOTO!', 'warning');
+    return;
+  }
+
+  showConfirm('APAKAH ANDA YAKIN INGIN MENGHAPUS SEMUA FOTO DARI APLIKASI DAN BUCKET STORAGE SUPABASE?', async () => {
+    showLoading('MENGHAPUS SEMUA FOTO DARI SUPABASE CLOUD & BUCKET...');
+    try {
+      let totalStorageFilesDeleted = 0;
+      const candidateBuckets = ['photos', 'permintaan_photos', 'foto-permintaan', 'request-photos', 'documents'];
+
+      if (typeof supabase !== 'undefined' && supabase) {
+        // 1. Direct empty files in Storage buckets (photos, etc.)
+        for (const bucketName of candidateBuckets) {
+          try {
+            const { data: fileList, error: listErr } = await supabase.storage.from(bucketName).list('', { limit: 1000, offset: 0 });
+            if (!listErr && Array.isArray(fileList) && fileList.length > 0) {
+              const names = fileList.map(f => f.name).filter(n => n && n !== '.emptyFolderPlaceholder');
+              if (names.length > 0) {
+                const { data: delData, error: delErr } = await supabase.storage.from(bucketName).remove(names);
+                if (!delErr) {
+                  totalStorageFilesDeleted += names.length;
+                  console.log(`⚡ [SUPABASE STORAGE BUCKET ${bucketName} CLEANED]:`, names.length, 'file(s) deleted.');
+                }
+              }
+            }
+          } catch(eStorage) {
+            console.warn(`[SUPABASE BUCKET ${bucketName} NOTICE]:`, eStorage);
+          }
+        }
+
+        // 2. Clear photos column in Supabase table
+        try {
+          await supabase.from('permintaan_toko').update({ photos: [] }).neq('no_surat', '');
+        } catch(eTbl) {
+          console.warn('[SUPABASE TABLE PHOTOS NOTICE]:', eTbl);
+        }
+      }
+
+      // 3. Clear local cache requests
+      const requests = getRequestsFromDB();
+      requests.forEach(r => { r.photos = []; });
+      saveRequestsToDB(requests);
+
+      if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+        await syncSupabaseRequestsToLocalCache();
+      }
+
+      hideLoading();
+      showNotif(`SEMUA FOTO BERHASIL DIHAPUS DARI BUCKET STORAGE SUPABASE & DATABASE! (${totalStorageFilesDeleted} BERKAS FOTO DIBERSIHKAN)`, 'info');
+      if (typeof loadRiwayat === 'function') loadRiwayat();
+      if (typeof loadDashboard === 'function') loadDashboard();
+    } catch (err) {
+      hideLoading();
+      console.error('[HAPUS FOTO ERROR]:', err);
+      showNotif('GAGAL MENGHAPUS FOTO: ' + (err.message || err), 'warning');
+    }
+  });
+}
+window.hapusSemuaFotoBiasa = hapusSemuaFotoBiasa;
+
+async function hapusFotoDokumenBiasa(noSurat) {
+  if (!noSurat) return;
+  showConfirm(`HAPUS FOTO PADA DOKUMEN #${noSurat}?`, async () => {
+    showLoading('MENGHAPUS FOTO DOKUMEN...');
+    try {
+      const requests = getRequestsFromDB();
+      const idx = requests.findIndex(r => r.noSurat === noSurat);
+      let photoUrls = [];
+      if (idx !== -1) {
+        photoUrls = [...(requests[idx].photos || [])];
+        requests[idx].photos = [];
+        saveRequestsToDB(requests);
+      }
+
+      if (typeof supabase !== 'undefined' && supabase) {
+        // Delete from Storage buckets
+        if (photoUrls.length > 0 && typeof deletePhotosFromSupabaseStorage === 'function') {
+          await deletePhotosFromSupabaseStorage(photoUrls);
+        }
+        // Update table row
+        await supabase.from('permintaan_toko').update({ photos: [] }).eq('no_surat', noSurat);
+      }
+
+      hideLoading();
+      showNotif(`FOTO DOKUMEN #${noSurat} BERHASIL DIHAPUS!`, 'info');
+      if (typeof loadRiwayat === 'function') loadRiwayat();
+      if (typeof loadDashboard === 'function') loadDashboard();
+
+      const modal = document.getElementById('popupDetailBarangV2') || document.getElementById('popupDetail');
+      if (modal) { modal.style.display = 'none'; modal.classList.remove('show'); }
+    } catch(err) {
+      hideLoading();
+      showNotif('GAGAL MENGHAPUS FOTO: ' + (err.message || err), 'warning');
+    }
+  });
+}
+window.hapusFotoDokumenBiasa = hapusFotoDokumenBiasa;
 
 function loadSavedTheme() {
   updateBodyClasses();
@@ -2862,21 +2990,29 @@ function loadSavedTheme() {
 function toggleTheme() {
   currentThemeIndex = (currentThemeIndex + 1) % THEME_MODES.length;
   const t = THEME_MODES[currentThemeIndex];
+  const now = Date.now();
 
-  const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('APP_SELECTED_THEME', t.id);
+    }
+  } catch(e) {}
+  appStorage.setItem(THEME_KEY, t.id);
+  appStorage.setItem(LOCAL_USER_THEME_KEY, t.id);
+  appStorage.setItem('STORE_USER_THEME_TIME', String(now));
+  updateBodyClasses();
 
-  if (isAdminUser) {
-    setGlobalAdminTheme(t.id);
-  } else {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('APP_SELECTED_THEME', t.id);
-      }
-    } catch(e) {}
-    appStorage.setItem(THEME_KEY, t.id);
-    updateBodyClasses();
-    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
+  if (currentUser) {
+    currentUser.theme = t.id;
+    if (typeof supabase !== 'undefined' && supabase && currentUser.id) {
+      supabase.from('users').update({ theme: t.id }).eq('id', currentUser.id).then(({ error }) => {
+        if (error) console.warn('[SUPABASE USER THEME NOTICE]:', error.message);
+        else console.log('⚡ [SUPABASE USER THEME SAVED]:', currentUser.username, t.id);
+      });
+    }
   }
+
+  if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
 }
 
 function updateThemeIcon() {
@@ -3090,6 +3226,7 @@ async function prosesLogin() {
             phone: String(u.phone || '').trim(),
             category: String(u.category || 'TOKO').trim().toUpperCase(),
             area: String(u.area || 'BDG').trim().toUpperCase(),
+            theme: u.theme || '',
             createdAt: u.created_at || (typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '')
           }));
           saveUsersToDB(formatted);
@@ -3100,6 +3237,12 @@ async function prosesLogin() {
 
     if (user) {
       currentUser = user;
+
+      if (user.theme) {
+        appStorage.setItem(THEME_KEY, user.theme);
+        try { localStorage.setItem('APP_SELECTED_THEME', user.theme); } catch(e) {}
+        updateBodyClasses();
+      }
 
       appStorage.setItem(SESSION_KEY, JSON.stringify(user));
       if (remember) {
@@ -4979,6 +5122,8 @@ function approveDM(noSurat) {
         loadRiwayat();
         loadDashboard();
         if (currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
+        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+        if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
       }
     }, 300);
   });
@@ -5239,6 +5384,8 @@ function kirimReject() {
       loadRiwayat();
       loadDashboard();
       if (currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
+      if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+      if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
     }
   }, 300);
 }
@@ -5926,9 +6073,19 @@ function bukaPdfModal(noSurat) {
 
   let photoSection = '';
   if (req.photos && req.photos.length > 0) {
+    const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+    const deleteBtnHtml = isAdminUser ? `
+      <button type="button" onclick="hapusFotoDokumenBiasa('${req.noSurat}')" style="background:#dc2626; color:#ffffff; border:none; border-radius:4px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+        <span class="material-symbols-rounded" style="font-size:13px;">delete</span> HAPUS FOTO DOKUMEN INI
+      </button>
+    ` : '';
+
     photoSection = `
       <div style="margin-top: 12px; margin-bottom: 12px;">
-        <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; color: #1e293b;">FOTO BARANG PENDUKUNG:</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: bold; color: #1e293b;">FOTO BARANG PENDUKUNG:</span>
+          ${deleteBtnHtml}
+        </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           ${req.photos.map(p => `
             <div style="width: 95px; height: 95px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #000;">
@@ -6582,23 +6739,11 @@ function refreshActiveChatUI() {
 }
 
 function startActiveChatRefresh() {
-  if (activeChatRefreshInterval) return;
-  activeChatRefreshInterval = setInterval(() => {
-    const popupBantuan = document.getElementById('popupBantuan');
-    if (popupBantuan && (popupBantuan.classList.contains('show') || popupBantuan.style.display === 'block')) {
-      if (typeof syncAllDataToCache === 'function') {
-        syncAllDataToCache().then(() => {
-          refreshActiveChatUI();
-        }).catch(() => {
-          refreshActiveChatUI();
-        });
-      } else {
-        refreshActiveChatUI();
-      }
-    } else {
-      stopActiveChatRefresh();
-    }
-  }, 2000);
+  if (activeChatRefreshInterval) {
+    clearInterval(activeChatRefreshInterval);
+    activeChatRefreshInterval = null;
+  }
+  refreshActiveChatUI();
 }
 
 function stopActiveChatRefresh() {
