@@ -201,6 +201,92 @@ const ADMIN_REMINDER_KEY = 'STORE_ADMIN_REMINDER_KEY_V7_CLEAN';
 const ADMIN_SECRET_KEY_STORAGE_KEY = 'STORE_ADMIN_SECRET_KEY_V7_CLEAN';
 const ADMIN_SCRIPT_URL_KEY = 'STORE_ADMIN_SCRIPT_URL_V7_CLEAN';
 const FIREBASE_USER_CONFIG_KEY = 'STORE_FIREBASE_USER_CONFIG_V7_CLEAN';
+const GLOBAL_THEME_KEY = 'STORE_GLOBAL_APP_THEME_V7_CLEAN';
+
+function applyThemeToDocument(theme) {
+  const t = theme || (typeof appStorage !== 'undefined' ? appStorage.getItem(GLOBAL_THEME_KEY) : null) || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  document.body.setAttribute('data-theme', t);
+
+  if (t === 'dark') {
+    document.body.classList.add('dark-mode');
+    document.body.classList.remove('light-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+    document.body.classList.add('light-mode');
+  }
+}
+window.applyThemeToDocument = applyThemeToDocument;
+
+async function setGlobalAdminTheme(themeName) {
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+
+  if (typeof appStorage !== 'undefined') {
+    appStorage.setItem(GLOBAL_THEME_KEY, themeName);
+  }
+  try { localStorage.setItem(GLOBAL_THEME_KEY, themeName); } catch(e) {}
+  applyThemeToDocument(themeName);
+
+  if (isSysAdmin) {
+    if (typeof supabase !== 'undefined' && supabase) {
+      try {
+        const themeRow = {
+          id: '__SYSTEM_GLOBAL_THEME__',
+          no_surat: '__SYSTEM_GLOBAL_THEME__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify({ theme: themeName, updatedBy: currentUser.username, time: Date.now() }),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'ADMIN',
+          created_at: new Date().toISOString()
+        };
+        await supabase.from('permintaan_toko').upsert(themeRow);
+      } catch(e) {
+        console.warn('[SUPABASE GLOBAL THEME SAVE ERROR]:', e);
+      }
+    }
+
+    if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+      try {
+        dbRealtime.ref('settings/global_theme').set({ theme: themeName, updatedBy: currentUser.username, time: Date.now() });
+      } catch(e) {}
+    }
+
+    showNotif(`⚡ [ADMIN TEMA]: TEMA '${themeName.toUpperCase()}' BERHASIL DISIMPAN & SINKRON KE SEMUA AKUN / PERANGKAT!`, 'success');
+  } else {
+    showNotif('TEMA APLIKASI DIATUR TERPUSAT OLEH ADMIN. HANYA AKUN ADMIN YANG BISA MENGUBAH TEMA SEMUA PERANGKAT.', 'info');
+  }
+}
+window.setGlobalAdminTheme = setGlobalAdminTheme;
+
+function toggleTheme() {
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+
+  if (!isSysAdmin) {
+    showNotif('TEMA APLIKASI DIATUR SECARA TERPUSAT OLEH ADMIN. HANYA AKUN ADMIN YANG BISA MENGUBAH TEMA SEMUA USER.', 'warning');
+    return;
+  }
+
+  const currentTheme = (typeof appStorage !== 'undefined' ? appStorage.getItem(GLOBAL_THEME_KEY) : null) || 'light';
+  const newTheme = (currentTheme === 'light') ? 'dark' : 'light';
+  setGlobalAdminTheme(newTheme);
+}
+window.toggleTheme = toggleTheme;
+
+try {
+  applyThemeToDocument();
+} catch(e) {}
 
 if (!window.appStorage) {
   const fallbackMemory = {};
@@ -335,56 +421,70 @@ function getAccessibleNotifications() {
 
     if (isSysAdmin) return true;
 
-    // 1. FILTER AREA PER LOGGED-IN ACCOUNT
+    // 1. STRICT AREA FILTER: MUST MATCH USER'S AREA OR ALL
     const targetArea = String(n.targetArea || 'ALL').toUpperCase();
     const areaMatch = (targetArea === 'ALL' || targetArea === userArea || userArea === 'ALL');
     if (!areaMatch) return false;
 
-    // 2. FILTER ROLE / PER LOGIN CATEGORY
+    // 2. STRICT ROLE MATCH PER LOGIN CATEGORY
     const targetRoles = Array.isArray(n.targetRoles) ? n.targetRoles.map(r => String(r).toUpperCase()) : [];
     const roleMatch = (
       targetRoles.includes('ALL') ||
       targetRoles.includes(userCat) ||
-      targetRoles.includes('ADMIN') ||
-      (userCat === 'DM' && targetRoles.includes('SALES')) ||
-      (userCat === 'SALES' && targetRoles.includes('DM'))
+      (userCat === 'DM' && targetRoles.includes('DM')) ||
+      (userCat === 'SERVICE' && targetRoles.includes('SERVICE')) ||
+      (userCat === 'TOKO' && targetRoles.includes('TOKO')) ||
+      (userCat === 'SALES' && (targetRoles.includes('SALES') || targetRoles.includes('TOKO')))
     );
     if (!roleMatch) return false;
 
-    // 3. STRICT TOKO FILTER: Only filter TOKO user's own requests
-    if (userCat === 'TOKO') {
-      if (n.noSurat && Array.isArray(requests)) {
-        const req = requests.find(r => r && r.noSurat === n.noSurat);
-        if (req) {
-          const isMyRequest = (
-            req.userId === currentUser.id ||
-            String(req.createdBy || '').toUpperCase() === userUname ||
-            String(req.createdBy || '').toUpperCase() === userFullName ||
-            String(req.toko || '').toUpperCase() === userFullName
-          );
-          if (!isMyRequest) return false;
-        }
-      }
-    }
-
-    // 4. STRICT SERVICE AREA FILTER: Only show notifications for requests in currentUser's area
-    if (userCat === 'SERVICE') {
-      if (n.noSurat && Array.isArray(requests)) {
-        const req = requests.find(r => r && r.noSurat === n.noSurat);
-        if (req && req.area && req.area.toUpperCase() !== userArea && userArea !== 'ALL') {
-          return false;
-        }
+    // 3. STRICT CREATOR MATCH FOR TOKO / SALES USER
+    if ((userCat === 'TOKO' || userCat === 'SALES') && n.noSurat && Array.isArray(requests)) {
+      const req = requests.find(r => r && r.noSurat === n.noSurat);
+      if (req) {
+        const isMyRequest = (
+          req.userId === currentUser.id ||
+          String(req.createdBy || '').toUpperCase() === userUname ||
+          String(req.createdBy || '').toUpperCase() === userFullName ||
+          String(req.toko || '').toUpperCase() === userFullName
+        );
+        if (!isMyRequest) return false;
       }
     }
 
     return true;
   });
 
-  // SINTESIS PERMINTAAN TUNGGU APPROVAL DM UNTUK USER DM / SALES / ADMIN
-  if (userCat === 'DM' || userCat === 'SALES' || isSysAdmin) {
+  // 4. DYNAMIC SYNTHESIS ACCORDING TO SPECIFIC ROLES & AREA
+  // A. UNTUK SERVICE (PPRV SERVICE / PENDING - MENUNGGU APPROVAL SERVICE IN USER'S AREA)
+  if (userCat === 'SERVICE' || isSysAdmin) {
+    const servicePendingReqs = requests.filter(r => {
+      const isAreaMatch = (!r.area || r.area.toUpperCase() === userArea || userArea === 'ALL' || isSysAdmin);
+      const isWaitingService = (!r.serviceApprove && r.status === 'PENDING');
+      return isAreaMatch && isWaitingService;
+    });
+
+    servicePendingReqs.forEach(r => {
+      const exists = filtered.some(n => n.noSurat === r.noSurat && String(n.message || '').includes('SERVICE'));
+      if (!exists) {
+        filtered.unshift({
+          id: `NTF-SRV-${r.noSurat}`,
+          targetRoles: ['SERVICE'],
+          targetArea: r.area || userArea,
+          message: `PERMINTAAN BARU #${r.noSurat} DARI ${r.toko}. MOHON APPROVAL SERVICE.`,
+          noSurat: r.noSurat,
+          time: r.tanggalInput || r.createdAt || getFormattedDateDDMMYYYY(),
+          readBy: []
+        });
+      }
+    });
+  }
+
+  // B. UNTUK DM (TUNGGU DM - MENUNGGU APPROVAL DM IN USER'S AREA)
+  if (userCat === 'DM' || isSysAdmin) {
     const dmPendingReqs = requests.filter(r => {
       const isAreaMatch = (!r.area || r.area.toUpperCase() === userArea || userArea === 'ALL' || isSysAdmin);
-      const isWaitingDm = (r.serviceApprove === true) && (r.status === 'PENDING' || String(r.status || '').toUpperCase().includes('DM'));
+      const isWaitingDm = (r.serviceApprove === true && r.status === 'PENDING');
       return isAreaMatch && isWaitingDm;
     });
 
@@ -393,7 +493,7 @@ function getAccessibleNotifications() {
       if (!exists) {
         filtered.unshift({
           id: `NTF-DM-${r.noSurat}`,
-          targetRoles: ['DM', 'SALES', 'ADMIN'],
+          targetRoles: ['DM'],
           targetArea: r.area || userArea,
           message: `MOHON APPROVAL DM: Permintaan #${r.noSurat} dari ${r.toko} telah disetujui Service & menanti Approval DM Anda.`,
           noSurat: r.noSurat,
@@ -404,8 +504,8 @@ function getAccessibleNotifications() {
     });
   }
 
-  // SINTESIS STATUS TRANSAKSI PENDING UNTUK USER TOKO ONLY
-  if (userCat === 'TOKO') {
+  // C. UNTUK CREATOR / TOKO / SALES
+  if (userCat === 'TOKO' || userCat === 'SALES') {
     const tokoPendingReqs = requests.filter(r => {
       const isMine = (
         r.userId === currentUser.id ||
@@ -460,6 +560,11 @@ function startGlobalRealtimeLoop() {
       if (typeof loadNotificationList === 'function') {
         loadNotificationList();
       }
+    }
+
+    // 4. REALTIME SYNC SUPABASE GLOBAL THEME & SYSTEM NOTIFS FOR ALL ACTIVE CLIENTS
+    if (typeof syncSupabaseNotifsAndChatToLocalCache === 'function') {
+      syncSupabaseNotifsAndChatToLocalCache().catch(() => {});
     }
   }, 3000);
 }
@@ -1393,7 +1498,7 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
     const { data, error } = await supabase
       .from('permintaan_toko')
       .select('*')
-      .in('no_surat', ['__SYSTEM_NOTIFICATIONS__', '__SYSTEM_CHAT_MESSAGES__']);
+      .in('no_surat', ['__SYSTEM_NOTIFICATIONS__', '__SYSTEM_CHAT_MESSAGES__', '__SYSTEM_TTD_MAP__', '__SYSTEM_GLOBAL_THEME__']);
 
     if (!error && Array.isArray(data)) {
       data.forEach(row => {
@@ -1440,6 +1545,33 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
               });
 
               appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(Array.from(roomMap.values())));
+            }
+          } catch(e) {}
+        } else if (ns === '__SYSTEM_TTD_MAP__' && row.catatan) {
+          try {
+            const cloudTtd = JSON.parse(row.catatan);
+            if (cloudTtd && typeof cloudTtd === 'object') {
+              const localTtd = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+              const mergedTtd = { ...localTtd, ...cloudTtd };
+              appStorage.setItem(TTD_DB_KEY, JSON.stringify(mergedTtd));
+              try {
+                if (typeof localStorage !== 'undefined') {
+                  localStorage.setItem('APP_USER_TTD_MAP', JSON.stringify(mergedTtd));
+                }
+              } catch(e) {}
+            }
+          } catch(e) {}
+        } else if (ns === '__SYSTEM_GLOBAL_THEME__' && row.catatan) {
+          try {
+            const themeObj = JSON.parse(row.catatan);
+            if (themeObj && themeObj.theme) {
+              const currentApplied = appStorage.getItem(GLOBAL_THEME_KEY);
+              if (currentApplied !== themeObj.theme) {
+                appStorage.setItem(GLOBAL_THEME_KEY, themeObj.theme);
+                if (typeof applyThemeToDocument === 'function') {
+                  applyThemeToDocument(themeObj.theme);
+                }
+              }
             }
           } catch(e) {}
         }
@@ -1555,6 +1687,24 @@ async function pushCentralCloudDB() {
           created_at: new Date().toISOString()
         };
         await supabase.from('permintaan_toko').upsert(systemChatRow);
+
+        const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+        const systemTtdRow = {
+          id: '__SYSTEM_TTD_MAP__',
+          no_surat: '__SYSTEM_TTD_MAP__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify(ttdMap),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        await supabase.from('permintaan_toko').upsert(systemTtdRow);
       } catch (sbErr) {
         console.warn('[SUPABASE PUSH NOTICE]:', sbErr);
       }
@@ -1930,6 +2080,8 @@ function loadFonteToken() {
   }
 }
 
+const sentWaCache = {};
+
 function kirimNotifikasiWA(targetPhone, message) {
   if (!targetPhone || targetPhone === '-' || String(targetPhone).trim() === '') return false;
 
@@ -1943,6 +2095,14 @@ function kirimNotifikasiWA(targetPhone, message) {
   } else if (!cleanPhone.startsWith('62')) {
     cleanPhone = '62' + cleanPhone;
   }
+
+  const msgHash = `${cleanPhone}_${String(message).trim()}`;
+  const now = Date.now();
+  if (sentWaCache[msgHash] && (now - sentWaCache[msgHash]) < 60000) {
+    console.log('[WA SKIPPED - DUPLICATE PREVENTED]:', cleanPhone);
+    return false;
+  }
+  sentWaCache[msgHash] = now;
 
   const formData = new FormData();
   formData.append('target', cleanPhone);
@@ -2038,20 +2198,63 @@ async function prosesLogin() {
     return;
   }
 
-  showLoading('MEMPROSES LOGIN...');
+  showLoading('MEMBERSIHKAN CACHE LOKAL & MENGAMBIL DATA DATABASE...');
+
+  // 1. FUNGSI HAPUS CACHE & PENYIMPANAN LOKAL SEBELUM PENGAMBILAN DATA DARI DATABASE
+  try {
+    const rememberCreds = appStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
+    const fonteToken = typeof getFonteToken === 'function' ? getFonteToken() : '';
+    const secretKey = typeof getSavedAdminSecretKey === 'function' ? getSavedAdminSecretKey() : '';
+
+    if ('caches' in window && caches.keys) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      } catch(e) {}
+    }
+
+    if (typeof appStorage !== 'undefined' && appStorage.clear) {
+      appStorage.clear();
+    }
+
+    if (rememberCreds) appStorage.setItem(STORE_REMEMBER_LOGIN_CREDS_KEY, rememberCreds);
+    if (fonteToken) appStorage.setItem(FONTE_TOKEN_KEY, fonteToken);
+    if (secretKey) appStorage.setItem(ADMIN_SECRET_KEY_STORAGE_KEY, secretKey);
+  } catch(e) {
+    console.warn('[PRE-LOGIN CACHE CLEAR NOTICE]:', e);
+  }
 
   try {
+    // 2. TARIK & SINKRONKAN DATA TERBARU DARI DATABASE CLOUD (SUPABASE / FIREBASE)
+    if (typeof syncAllDataToCache === 'function') {
+      try {
+        await syncAllDataToCache();
+      } catch (e) {}
+    }
+
     let users = getUsersFromDB();
     let user = users.find(x => x && x.username && String(x.username).trim().toUpperCase() === u && String(x.password).trim() === p);
 
-    // JIKA USER TIDAK DITEMUKAN PADA CACHE LOKAL (MISAL SETELAH REFRESH HALAMAN SEBELUM CLOUD SYNC SELESAI),
-    // SINKRONKAN DENGAN DATABASE CLOUD TERLEBIH DAHULU SEBELUM MENAMPILKAN PASSWORD SALAH
-    if (!user && typeof syncAllDataToCache === 'function') {
+    // Fallback search in Supabase if not yet cached locally
+    if (!user && typeof supabase !== 'undefined' && supabase) {
       try {
-        await syncAllDataToCache();
-        users = getUsersFromDB();
-        user = users.find(x => x && x.username && String(x.username).trim().toUpperCase() === u && String(x.password).trim() === p);
-      } catch (e) {}
+        const { data: supaUsers } = await supabase.from('users').select('*');
+        if (Array.isArray(supaUsers) && supaUsers.length > 0) {
+          const formatted = supaUsers.map(u => ({
+            id: u.id,
+            username: String(u.username || '').trim(),
+            password: String(u.password || '').trim(),
+            fullName: String(u.full_name || u.fullName || '').trim(),
+            storeCode: String(u.store_code || u.storeCode || '').trim(),
+            phone: String(u.phone || '').trim(),
+            category: String(u.category || 'TOKO').trim().toUpperCase(),
+            area: String(u.area || 'BDG').trim().toUpperCase(),
+            createdAt: u.created_at || (typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '')
+          }));
+          saveUsersToDB(formatted);
+          user = formatted.find(x => x && x.username && String(x.username).trim().toUpperCase() === u && String(x.password).trim() === p);
+        }
+      } catch(sbErr) {}
     }
 
     if (user) {
@@ -3291,7 +3494,7 @@ function prosesSimpanKeDB(toko, jenis, catatan, items) {
       showNotif(`PERMINTAAN #${noSurat} DATA BERHASIL DISIMPAN!`, 'success');
       bersihkanForm();
 
-      tambahNotifikasiSistem(['SERVICE', 'ADMIN', 'DM'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI TOKO ${toko} (PENDING).`, noSurat);
+      tambahNotifikasiSistem(['SERVICE'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI TOKO ${toko}. MOHON APPROVAL SERVICE.`, noSurat);
 
       const allUsers = getUsersFromDB();
       const serviceUsers = allUsers.filter(u => u.category === 'SERVICE' && (u.area === currentUser.area || u.area === 'ALL'));
@@ -3719,7 +3922,7 @@ function approveService(noSurat) {
         saveRequestsToDB(requests);
         showNotif(`APPROVE BERHASIL`, 'info');
 
-        tambahNotifikasiSistem(['DM', 'ADMIN', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DISETUJUI SERVICE (${currentUser.fullName || currentUser.username}). MOHON APPROVAL DM.`, noSurat);
+        tambahNotifikasiSistem(['DM'], requests[idx].area, `PERMINTAAN #${noSurat} DISETUJUI SERVICE (${currentUser.fullName || currentUser.username}). MOHON APPROVAL DM.`, noSurat);
 
         const users = getUsersFromDB();
         const dmUsers = users.filter(u => u.category === 'DM' && (u.area === requests[idx].area || u.area === 'ALL'));
@@ -3828,7 +4031,7 @@ function doneService(noSurat) {
         saveRequestsToDB(requests);
         showNotif(`PERMINTAAN #${noSurat} DITANDAI DONE!`, 'info');
 
-        tambahNotifikasiSistem(['TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH SELESAI (DONE).`, noSurat);
+        tambahNotifikasiSistem(['TOKO', 'SALES', 'DM'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH SELESAI (DONE).`, noSurat);
         const users = getUsersFromDB();
         const creator = users.find(u => u.id === requests[idx].userId || u.fullName === requests[idx].createdBy);
         if (creator && creator.phone) {
@@ -3845,6 +4048,12 @@ function doneService(noSurat) {
 
 function batalApproveService(noSurat) {
   if (!noSurat) return;
+  const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+  if (!isAdminUser) {
+    showNotif('FUNGSI BATAL APPROVAL SERVICE HANYA DAPAT DILAKUKAN OLEH AKUN ADMIN!', 'warning');
+    return;
+  }
+
   showConfirm(`BATALKAN APPROVAL SERVICE UNTUK PERMINTAAN #${noSurat}?`, () => {
     showLoading('');
     setTimeout(async () => {
@@ -3889,6 +4098,12 @@ window.batalApproveService = batalApproveService;
 
 function batalApproveDM(noSurat) {
   if (!noSurat) return;
+  const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+  if (!isAdminUser) {
+    showNotif('FUNGSI BATAL APPROVAL DM HANYA DAPAT DILAKUKAN OLEH AKUN ADMIN!', 'warning');
+    return;
+  }
+
   showConfirm(`BATALKAN APPROVAL DM UNTUK PERMINTAAN #${noSurat}?`, () => {
     showLoading('');
     setTimeout(async () => {
@@ -4287,8 +4502,8 @@ function lihatDetail(noSurat, fromDashboard = false) {
     `);
   }
 
-  // BATAL APPROVE SERVICE / DM BUTTONS FOR ADMIN AND MANAGEMENT
-  if (isAdminUser || role === 'SERVICE' || role === 'DM') {
+  // BATAL APPROVE SERVICE / DM BUTTONS EXCLUSIVELY VISIBLE FOR ADMIN LOGIN ACCOUNT ONLY (HILANGKAN DARI SERVICE, DM, TOKO, SALES)
+  if (isAdminUser) {
     if (req.serviceApprove) {
       actionButtons.push(`
         <button type="button" class="btnIcon btnIconOnly" title="BATAL APPROVE SERVICE" onclick="tutupDetailBarangV2(); batalApproveService('${req.noSurat}');" style="background: #eab308 !important; color: #ffffff !important;">
@@ -5091,9 +5306,35 @@ function simpanTTD() {
       if (currentUser.id) appStorage.setItem(`LOCAL_TTD_${currentUser.id}`, png);
       if (currentUser.username) appStorage.setItem(`LOCAL_TTD_${currentUser.username}`, png);
     }
+
+    if (typeof supabase !== 'undefined' && supabase) {
+      try {
+        const systemTtdRow = {
+          id: '__SYSTEM_TTD_MAP__',
+          no_surat: '__SYSTEM_TTD_MAP__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify(ttdMap),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        supabase.from('permintaan_toko').upsert(systemTtdRow).then(({ error }) => {
+          if (error) console.warn('[SUPABASE TTD SAVE NOTICE]:', error.message);
+          else console.log('⚡ [SUPABASE TTD SUCCESS]: TTD berhasil disimpan ke Supabase Database!');
+        });
+      } catch(sbErr) {
+        console.warn('[SUPABASE TTD SAVE NOTICE]:', sbErr);
+      }
+    }
     
     pushCentralCloudDB();
-    showNotif('TANDA TANGAN BERHASIL DISIMPAN!', 'info');
+    showNotif('TANDA TANGAN BERHASIL DISIMPAN KE SUPABASE & CLOUD DATABASE!', 'info');
     tutupTTD();
   });
 }
