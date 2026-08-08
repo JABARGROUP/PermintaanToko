@@ -1310,22 +1310,6 @@ input:focus, select:focus, textarea:focus {
   z-index: 10 !important;
 }
 
-#inputPage .box,
-#inputPage {
-  padding-bottom: 2cm !important;
-}
-
-@media (max-width: 768px) {
-  #inputPage #btnSimpan,
-  #btnSimpan,
-  .btn-primary#btnSimpan {
-    margin-bottom: 2.2cm !important;
-  }
-
-  #inputPage .box {
-    padding-bottom: 2.2cm !important;
-  }
-}
 
 #userTableBody tr:last-child td,
 #tableUserMgmt tr:last-child td {
@@ -1492,18 +1476,56 @@ input:focus, select:focus, textarea:focus {
   text-align: left !important;
 }
 
-#inputPage,
-.page#inputPage,
-html body #inputPage {
-  padding-bottom: 1mm !important;
+/* PC / DESKTOP (min-width: 769px) - FITS SCREEN PROPERLY WITHOUT JUMPING OR HUGE EMPTY GAP */
+@media (min-width: 769px) {
+  #inputPage,
+  .page#inputPage,
+  html body #inputPage {
+    padding-bottom: 24px !important;
+    margin-bottom: 24px !important;
+    max-width: 1050px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  #inputPage .box {
+    padding-bottom: 24px !important;
+    margin-bottom: 16px !important;
+  }
+
+  #inputPage #btnSimpan,
+  #btnSimpan,
+  .btn-primary#btnSimpan {
+    margin-top: 16px !important;
+    margin-bottom: 16px !important;
+    position: relative !important;
+    z-index: 10 !important;
+    height: 48px !important;
+  }
 }
 
-#inputPage .box {
-  padding-bottom: 1mm !important;
-}
+/* MOBILE / HP (max-width: 768px) - SAFELY FLOATS ABOVE BOTTOM HOME MENU (#bottomMenu) */
+@media (max-width: 768px) {
+  #inputPage,
+  .page#inputPage,
+  html body #inputPage {
+    padding-bottom: 100px !important;
+    margin-bottom: 20px !important;
+  }
 
-#inputPage #btnSimpan {
-  margin-bottom: 1mm !important;
+  #inputPage .box {
+    padding-bottom: 80px !important;
+    margin-bottom: 16px !important;
+  }
+
+  #inputPage #btnSimpan,
+  #btnSimpan,
+  .btn-primary#btnSimpan {
+    margin-top: 14px !important;
+    margin-bottom: 85px !important;
+    position: relative !important;
+    z-index: 10 !important;
+  }
 }
 
 /* DETAIL DATA / RIWAYAT TABLE STYLING - THEME MATCHED BACKGROUND WITH THIN BORDER LINES */
@@ -4603,7 +4625,7 @@ div.rowHighlightOrange {
     isolation: isolate !important;
     background: var(--primary) !important;
     color: #ffffff !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+    box-shadow: none !important;
   }
 }
 
@@ -4802,4 +4824,220 @@ html body.design-mode-normal .popupBox,
 html body.design-mode-normal .akunBox,
 html body.design-mode-normal .confirmBox {
   border-radius: 16px !important;
+}
+
+/* =============================================================================
+   UNIVERSAL FLAT SEAMLESS TABLE HEADER (EXACTLY MATCHING ACTIVE THEME)
+   APPLIES TO DASHBOARD TABLE, RIWAYAT TABLE, MASTER DB TABLE, USER MGMT TABLE
+   ============================================================================= */
+html body table th,
+html body .dashboardTable th,
+html body .dashboardTable thead th,
+html body .historyTable th,
+html body .historyTable thead th,
+html body #tableMasterDb th,
+html body #tableUserMgmt th,
+html body .detailTable2 th,
+html body .tableWrap table th,
+html body .tableWrap th,
+html body .lastHeader,
+html body .lastHeader > div {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  padding: 10px 14px !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.18) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  outline: none !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html body thead,
+html body thead tr,
+html body .historyTable thead,
+html body .historyTable thead tr,
+html body .dashboardTable thead,
+html body .dashboardTable thead tr {
+  background: var(--primary) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* =============================================================================
+   100% FLAT DESIGN SYSTEM FOR RIWAYATPAGE (NO 3D SHADOWS, NO 3D BEVELS, NO ELEVATION)
+   CLEAN, FLAT, MODERN TABLE & TOOLBAR INTERFACE MATCHING ACTIVE THEME PERFECTLY
+   ============================================================================= */
+#riwayatPage,
+#riwayatPage *,
+#riwayatPage .riwayatContent,
+#riwayatPage .searchToolbar,
+#riwayatPage #searchRiwayat,
+#riwayatPage #filterStatusDropdown,
+#riwayatPage .btnDownload,
+#riwayatPage .tableWrap,
+#riwayatPage .historyTable,
+#riwayatPage .historyTable thead,
+#riwayatPage .historyTable thead tr,
+#riwayatPage .historyTable th,
+#riwayatPage .historyTable tbody,
+#riwayatPage .historyTable tr,
+#riwayatPage .historyTable td,
+#riwayatPage .btnIcon {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+#riwayatPage .searchToolbar input,
+#riwayatPage .searchToolbar select,
+#riwayatPage #searchRiwayat,
+#riwayatPage #filterStatusDropdown {
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+#riwayatPage .btnDownload {
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  border: none !important;
+  transform: none !important;
+  transition: background 0.15s ease !important;
+}
+
+#riwayatPage .btnDownload:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+#riwayatPage .tableWrap {
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  background: var(--bg-box) !important;
+}
+
+#riwayatPage .historyTable th,
+#riwayatPage table th {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  padding: 10px 14px !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.18) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  outline: none !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+#riwayatPage .btnIcon {
+  transform: none !important;
+  box-shadow: none !important;
+  border-radius: 6px !important;
+}
+
+#riwayatPage .btnIcon:hover {
+  transform: none !important;
+  opacity: 0.85 !important;
+  box-shadow: none !important;
+}
+
+/* UNIVERSAL RESPONSIVE SPACING SPECIFICITY OVERRIDE FOR INPUT PAGE & BTN SIMPAN */
+@media (min-width: 769px) {
+  html body #inputPage,
+  html body .page#inputPage {
+    padding-bottom: 24px !important;
+    margin-bottom: 24px !important;
+    max-width: 1050px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  html body #inputPage .box {
+    padding-bottom: 20px !important;
+    margin-bottom: 16px !important;
+  }
+
+  html body #inputPage #btnSimpan,
+  html body #btnSimpan,
+  html body .btn-primary#btnSimpan {
+    margin-top: 16px !important;
+    margin-bottom: 16px !important;
+    position: relative !important;
+    z-index: 10 !important;
+    height: 46px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  html body #inputPage,
+  html body .page#inputPage {
+    padding-bottom: 100px !important;
+    margin-bottom: 20px !important;
+  }
+
+  html body #inputPage .box {
+    padding-bottom: 80px !important;
+    margin-bottom: 16px !important;
+  }
+
+  html body #inputPage #btnSimpan,
+  html body #btnSimpan,
+  html body .btn-primary#btnSimpan {
+    margin-top: 14px !important;
+    margin-bottom: 85px !important;
+    position: relative !important;
+    z-index: 10 !important;
+  }
+}
+
+/* POPUP VIEW PDF FULL HEIGHT & TOP SHIFTED OVERRIDE */
+#pdfModal.popupOverlay,
+html body #pdfModal.popupOverlay {
+  align-items: flex-start !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+#pdfModal .popupBox,
+html body #pdfModal .popupBox {
+  height: calc(100vh - 8px) !important;
+  max-height: calc(100vh - 8px) !important;
+  margin-top: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  border-radius: 12px !important;
+}
+
+#pdfModal #pdfDocumentContent,
+html body #pdfModal #pdfDocumentContent {
+  flex: 1 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
 }

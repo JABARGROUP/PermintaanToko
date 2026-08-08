@@ -623,6 +623,15 @@ function loadNotificationList() {
   if (!container) return;
   container.innerHTML = '';
 
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+  const btnHapusNotif = document.getElementById('btnHapusSemuaNotifSystem');
+  if (btnHapusNotif) {
+    btnHapusNotif.style.display = isSysAdmin ? 'inline-block' : 'none';
+  }
+
   const userNotifs = getAccessibleNotifications();
 
   if (userNotifs.length === 0) {
@@ -720,10 +729,52 @@ function markAllNotifAsRead() {
     if (!n.readBy.includes(currentUser.username)) n.readBy.push(currentUser.username);
   });
   appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
+  if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
   updateNotifBellCounter();
   loadNotificationList();
   showNotif('SEMUA NOTIFIKASI DITANDAI DIBACA!', 'info');
 }
+window.markAllNotifAsRead = markAllNotifAsRead;
+
+function hapusSemuaNotifikasiSystem() {
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+  if (!isSysAdmin) {
+    showNotif('FUNGSI MENGHAPUS SEMUA NOTIFIKASI HANYA DAPAT DILAKUKAN OLEH AKUN ADMIN!', 'warning');
+    return;
+  }
+
+  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI DARI SISTEM?', () => {
+    appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify([]));
+    if (typeof supabase !== 'undefined' && supabase) {
+      try {
+        const systemNotifRow = {
+          id: '__SYSTEM_NOTIFICATIONS__',
+          no_surat: '__SYSTEM_NOTIFICATIONS__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify([]),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        supabase.from('permintaan_toko').upsert(systemNotifRow);
+      } catch(e) {}
+    }
+    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
+    updateNotifBellCounter();
+    if (typeof loadNotificationList === 'function') loadNotificationList();
+    showNotif('SELURUH NOTIFIKASI BERHASIL DIHAPUS & SINKRON KE SEMUA USER!', 'success');
+  });
+}
+window.hapusSemuaNotifikasiSystem = hapusSemuaNotifikasiSystem;
 
 function generateStoreCode(namaToko) {
   if (!namaToko) return 'TK';
@@ -5439,6 +5490,15 @@ async function bukaBantuan() {
   // SERVICE TSM or ADMIN acts as Customer Service Support Receiver
   isAdminChat = isServiceTSMUser();
 
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+  const btnHapusChatHeader = document.getElementById('btnHapusSemuaChatHeader');
+  if (btnHapusChatHeader) {
+    btnHapusChatHeader.style.display = isSysAdmin ? 'inline-flex' : 'none';
+  }
+
   const popup = document.getElementById('popupBantuan');
   const btnHelp = document.getElementById('helpButton');
   if (btnHelp) btnHelp.style.display = 'none';
@@ -5504,6 +5564,11 @@ function loadDaftarChatAdmin() {
   const rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
   chatList.innerHTML = '';
 
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+
   if (!rooms || rooms.length === 0) {
     chatList.innerHTML = `
       <div style="padding:30px 16px; text-align:center; color:var(--text-muted); font-size:12.5px;">
@@ -5518,6 +5583,13 @@ function loadDaftarChatAdmin() {
     const item = document.createElement('div');
     item.style.cssText = 'padding:12px 14px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.2s; display:flex; justify-content:space-between; align-items:center;';
     const unreadBadgeHtml = r.unreadAdmin > 0 ? `<span style="background:#ef4444; color:#fff; border-radius:10px; padding:2px 8px; font-size:10px; font-weight:bold;">${r.unreadAdmin} UNREAD</span>` : '';
+    
+    const deleteRoomBtnHtml = isSysAdmin ? `
+      <button type="button" class="btnIcon btnDelete" onclick="event.stopPropagation(); hapusChatRoom('${r.room}', '${r.user}')" title="HAPUS CHAT USER INI" style="padding:6px; background:rgba(239,68,68,0.1); color:#ef4444; border-radius:6px; border:none; cursor:pointer;">
+        <span class="material-symbols-rounded" style="font-size:18px;">delete</span>
+      </button>
+    ` : '';
+
     item.innerHTML = `
       <div style="flex:1; min-width:0; margin-right:8px;" onclick="bukaRoomAdmin('${r.room}', '${r.user}')">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -5528,15 +5600,21 @@ function loadDaftarChatAdmin() {
         </div>
         <div style="color:var(--text-muted); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${r.last || '-'}</div>
       </div>
-      <button type="button" class="btnIcon btnDelete" onclick="event.stopPropagation(); hapusChatRoom('${r.room}', '${r.user}')" title="HAPUS CHAT USER INI" style="padding:6px; background:rgba(239,68,68,0.1); color:#ef4444; border-radius:6px; border:none; cursor:pointer;">
-        <span class="material-symbols-rounded" style="font-size:18px;">delete</span>
-      </button>
+      ${deleteRoomBtnHtml}
     `;
     chatList.appendChild(item);
   });
 }
 
 function hapusChatRoom(roomTarget, userTarget) {
+  const isSysAdmin = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+  if (!isSysAdmin) {
+    showNotif('HANYA AKUN ADMIN YANG DAPAT MENGHAPUS ROOM CHAT!', 'warning');
+    return;
+  }
   const roomUpper = String(roomTarget || '').toUpperCase();
   const userUpper = String(userTarget || '').toUpperCase();
 
