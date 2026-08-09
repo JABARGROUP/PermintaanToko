@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260809_v1164">
-  <script src="app.js?v=20260809_v1164"></script>
+  <link rel="stylesheet" href="styles.css?v=20260809_v1168">
+  <script src="app.js?v=20260809_v1168"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -457,6 +457,23 @@
           </div>
           <button type="button" class="btnDownload" style="background: #dc2626; color: #ffffff; padding: 10px 16px; font-weight: 700;" onclick="hapusSemuaFotoBiasa()">
             <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 4px;">delete_forever</span> HAPUS SEMUA FOTO
+          </button>
+        </div>
+      </div>
+
+      <!-- ADMIN CONTROL: BERSIHKAN PENYIMPANAN LOKAL BROWSER -->
+      <div class="box" style="border-left: 4px solid #0284c7; margin-bottom: 20px; background: rgba(2, 132, 199, 0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="color: #0284c7; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span class="material-symbols-rounded">cleaning_services</span> BERSIHKAN PENYIMPANAN LOKAL & TARIK SUPABASE
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+              MENGHAPUS PENYIMPANAN LOKAL BROWSER LAMA DAN MEMATUHI SUPABASE CLOUD SEBAGAI SATU-SATUNYA SUMBER DATA UTAMA (TETAP MENJAGA TEMA & TTD).
+            </p>
+          </div>
+          <button type="button" class="btnDownload" style="background: #0284c7; color: #ffffff; padding: 10px 16px; font-weight: 700;" onclick="eksekusiHapusPenyimpananLokal()">
+            <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 4px;">cleaning_services</span> BERSIHKAN PENYIMPANAN
           </button>
         </div>
       </div>

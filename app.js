@@ -3196,13 +3196,13 @@ async function prosesLogin() {
     return;
   }
 
-  showLoading('MEMPROSES LOGIN & MEMUAT DATA TERBARU...');
-
-  // 1. FUNGSI HAPUS CACHE & PENYIMPANAN LOKAL SEBELUM PENGAMBILAN DATA (MENJAGA TEMA & TTD)
-  await clearLocalStorageKeepThemeAndTTD();
+  showLoading('MENGHAPUS PENYIMPANAN LOKAL & MEMUAT DATA SUPABASE CLOUD...');
 
   try {
-    // 2. TARIK & SINKRONKAN DATA TERBARU DARI DATABASE CLOUD (SUPABASE / FIREBASE)
+    // 1. HAPUS SEMUA DATA PENYIMPANAN LOKAL (KECUALI SETTINGAN TEMA & TTD)
+    await clearLocalStorageKeepThemeAndTTD();
+
+    // 2. TARIK DATA DARI SUPABASE CLOUD
     if (typeof syncAllDataToCache === 'function') {
       try {
         await syncAllDataToCache();
@@ -3255,18 +3255,9 @@ async function prosesLogin() {
       }
 
       catatLogLogin(user.username, user.fullName, user.area, 'BERHASIL');
-      bukaMainApp();
+      await bukaMainApp();
 
-      if (typeof syncAllDataToCache === 'function') {
-        syncAllDataToCache().catch(() => {});
-      }
-
-      setTimeout(() => {
-        if (typeof aturTampilanLonceng === 'function') aturTampilanLonceng('dashboardPage');
-        if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
-        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-      }, 150);
-
+      showNotif(`LOGIN BERHASIL! SELAMAT DATANG ${user.fullName || user.username}`, 'success');
     } else {
       currentUser = null;
       appStorage.removeItem(SESSION_KEY);
@@ -3350,8 +3341,14 @@ function logout() {
   });
 }
 
-function bukaMainApp() {
+async function bukaMainApp() {
   updateBodyClasses();
+
+  if (typeof syncAllDataToCache === 'function') {
+    try {
+      await syncAllDataToCache();
+    } catch (e) {}
+  }
 
   const loginPage = document.getElementById('loginPage');
   if (loginPage) loginPage.classList.remove('active');
@@ -3367,15 +3364,12 @@ function bukaMainApp() {
   isAdminChat = typeof isServiceTSMUser === 'function' ? isServiceTSMUser() : (isAdmin || (currentUser && currentUser.category === 'SERVICE'));
 
   pindahHalaman('dashboardPage');
+  if (typeof loadDashboard === 'function') loadDashboard();
+  if (typeof loadRiwayat === 'function') loadRiwayat();
+
   if (typeof setupBottomMenuAutoHide === 'function') {
     setupBottomMenuAutoHide();
   }
-
-  setTimeout(() => {
-    if (typeof aturTampilanLonceng === 'function') {
-      aturTampilanLonceng('dashboardPage');
-    }
-  }, 100);
 
   setTimeout(() => {
     if (typeof aturTampilanLonceng === 'function') {
@@ -3394,6 +3388,34 @@ function bukaMainApp() {
   if (typeof startAdminReminderTimeChecker === 'function') startAdminReminderTimeChecker();
   if (typeof checkAndTriggerPendingReminders === 'function') checkAndTriggerPendingReminders(false);
 }
+window.bukaMainApp = bukaMainApp;
+
+async function eksekusiHapusPenyimpananLokal() {
+  showConfirm('BERSIHKAN PENYIMPANAN LOKAL BROWSER & AMBIL DATA TERBARU DARI SUPABASE?', async () => {
+    showLoading('BERSIHKAN PENYIMPANAN LOKAL & MEMUAT DATA SUPABASE...');
+    try {
+      await clearLocalStorageKeepThemeAndTTD();
+
+      if (typeof syncAllDataToCache === 'function') {
+        await syncAllDataToCache();
+      }
+
+      hideLoading();
+      showNotif('PENYIMPANAN LOKAL BERHASIL DIBERSIHKAN & DATA SUPABASE DITERAPKAN!', 'success');
+
+      if (currentUser) {
+        if (typeof loadRiwayat === 'function') loadRiwayat();
+        if (typeof loadDashboard === 'function') loadDashboard();
+        if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+        if (typeof loadUsersManagement === 'function') loadUsersManagement();
+      }
+    } catch(err) {
+      hideLoading();
+      showNotif('GAGAL BERSIHKAN PENYIMPANAN: ' + (err.message || err), 'warning');
+    }
+  });
+}
+window.eksekusiHapusPenyimpananLokal = eksekusiHapusPenyimpananLokal;
 
 function isFormDirtyOrFilled() {
   if (typeof modeEdit !== 'undefined' && modeEdit) return true;
@@ -5212,6 +5234,9 @@ function batalApproveService(noSurat) {
             }).eq('no_surat', noSurat);
           } catch(e) {}
         }
+        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+          await syncSupabaseRequestsToLocalCache();
+        }
 
         showNotif(`BERHASIL MEMBATALKAN APPROVAL SERVICE #${noSurat}!`, 'info');
 
@@ -5260,6 +5285,9 @@ function batalApproveDM(noSurat) {
               status: 'PENDING'
             }).eq('no_surat', noSurat);
           } catch(e) {}
+        }
+        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+          await syncSupabaseRequestsToLocalCache();
         }
 
         showNotif(`BERHASIL MEMBATALKAN APPROVAL DM #${noSurat}!`, 'info');
@@ -7685,7 +7713,7 @@ function tutupUserModal() {
   if (modal) modal.style.display = 'none';
 }
 
-function simpanUserData() {
+async function simpanUserData() {
   let editId = document.getElementById('editUserId') ? document.getElementById('editUserId').value : '';
   if (typeof editId !== 'string' || editId.startsWith('[object')) {
     editId = '';
@@ -7730,7 +7758,7 @@ function simpanUserData() {
 
       const docId = String(username).toUpperCase();
       if (typeof supabase !== 'undefined' && supabase) {
-        supabase.from('users').upsert({
+        await supabase.from('users').upsert({
           id: users[idx].id || docId,
           username: users[idx].username,
           password: users[idx].password,
@@ -7740,10 +7768,12 @@ function simpanUserData() {
           category: users[idx].category,
           area: users[idx].area,
           created_at: users[idx].createdAt
-        }).then(({ error }) => {
-          if (error) console.warn('[SUPABASE USER SAVE ERROR]:', error.message);
         });
       }
+      if (typeof syncSupabaseUsersToLocalCache === 'function') {
+        await syncSupabaseUsersToLocalCache();
+      }
+
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
         dbFirestore.collection('users').doc(docId).set(users[idx], { merge: true }).catch(e => console.warn(e));
       }
@@ -7807,7 +7837,7 @@ function simpanUserData() {
 
   const docId = String(username).toUpperCase();
   if (typeof supabase !== 'undefined' && supabase) {
-    supabase.from('users').upsert({
+    await supabase.from('users').upsert({
       id: newUser.id,
       username: newUser.username,
       password: newUser.password,
@@ -7817,10 +7847,10 @@ function simpanUserData() {
       category: newUser.category,
       area: newUser.area,
       created_at: newUser.createdAt
-    }).then(({ error }) => {
-      if (error) console.warn('[SUPABASE NEW USER SAVE ERROR]:', error.message);
-      else console.log('⚡ [SUPABASE USER SUCCESS]: User baru tersimpan ke Supabase!');
     });
+  }
+  if (typeof syncSupabaseUsersToLocalCache === 'function') {
+    await syncSupabaseUsersToLocalCache();
   }
   if (typeof dbFirestore !== 'undefined' && dbFirestore) {
     dbFirestore.collection('users').doc(docId).set(newUser).catch(e => console.warn(e));
@@ -7887,6 +7917,9 @@ function hapusUser(userId) {
           } catch (sbErr) {
             console.warn('[SUPABASE DELETE USER NOTICE]:', sbErr);
           }
+        }
+        if (typeof syncSupabaseUsersToLocalCache === 'function') {
+          await syncSupabaseUsersToLocalCache();
         }
 
         // 3. HAPUS DARI FIREBASE ONLINE (FIRESTORE & REALTIME DB)
@@ -8554,6 +8587,10 @@ function simpanTokoBaru() {
           } catch (e) {
             console.warn('[SUPABASE TOKO_LIST UPDATE WARNING]:', e);
           }
+        }
+
+        if (typeof syncSupabaseStoresToLocalCache === 'function') {
+          await syncSupabaseStoresToLocalCache();
         }
 
         // 4. SINKRONKAN CLOUD DATABASE
