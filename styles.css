@@ -1225,9 +1225,13 @@ input:focus, select:focus, textarea:focus {
 .dashboardTable th,
 .dashboardTable td {
   padding: 10px 12px !important;
+  font-size: 13px !important;
   vertical-align: middle !important;
-  box-sizing: border-box !important;
-  white-space: nowrap !important;
+}
+
+.dashboardTable th:nth-child(4),
+.dashboardTable td:nth-child(4) {
+  text-align: left !important;
 }
 
 .dashboardTable th,
@@ -2152,7 +2156,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   animation: fade .25s ease-out;
 }
 
-/* PERFECTLY BALANCED POPUP AKUN (IDEAL GOLDILOCKS POSITION) */
+/* PERFECTLY BALANCED POPUP AKUN (RAISED POSITION & OPTIMIZED HEIGHT) */
 .popupAkun,
 #popupAkun {
   position: fixed !important;
@@ -2164,7 +2168,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   height: 100vh !important;
   justify-content: center !important;
   align-items: flex-start !important;
-  padding: 22px 10px 10px 10px !important;
+  padding: 8px 10px 10px 10px !important;
   box-sizing: border-box !important;
 }
 
@@ -2172,12 +2176,12 @@ body.design-mode-3d-isometric .dashboardTable th {
 .popupAkun .akunBox,
 .akunBox {
   width: 450px !important;
-  max-width: 93vw !important;
+  max-width: 94vw !important;
   min-width: 0 !important;
-  max-height: 90vh !important;
+  max-height: 95vh !important;
   overflow-y: auto !important;
-  margin: 5px auto auto auto !important;
-  transform: translateY(-8px) !important;
+  margin: 0 auto auto auto !important;
+  transform: translateY(-25px) !important;
   padding: 18px 20px !important;
   border-radius: 20px !important;
   box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
@@ -3461,6 +3465,8 @@ table th,
   .akunBox {
     width: 94vw !important;
     max-width: 94vw !important;
+    max-height: 95vh !important;
+    transform: translateY(-25px) !important;
     padding: 16px 14px !important;
   }
 
@@ -5229,4 +5235,116 @@ html body #pdfModal #pdfDocumentContent {
   height: 100% !important;
   overflow-y: auto !important;
   box-sizing: border-box !important;
+}
+
+/* =============================================================================
+   ABSOLUTE FIXED UNTOUCHABLE SCROLL LOCK FOR RIWAYAT & MASTER DB PAGE
+   ============================================================================= */
+html:has(#riwayatPage.active),
+body:has(#riwayatPage.active),
+html:has(#masterDbPage.active),
+body:has(#masterDbPage.active) {
+  overflow: hidden !important;
+  height: 100vh !important;
+  touch-action: none !important;
+}
+
+#riwayatPage.active,
+#masterDbPage.active,
+#riwayatPage.page.active,
+#masterDbPage.page.active {
+  display: flex !important;
+  flex-direction: column !important;
+  height: calc(100vh - 65px) !important;
+  max-height: calc(100vh - 65px) !important;
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  touch-action: none !important;
+  padding: 8px 4px 0 4px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#riwayatPage .riwayatContent,
+#masterDbPage .box {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  touch-action: none !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#riwayatPage h3,
+#masterDbPage h3,
+#riwayatPage .searchToolbar,
+#masterDbPage .searchToolbar {
+  flex-shrink: 0 !important;
+  touch-action: none !important;
+  user-select: none !important;
+}
+
+#riwayatPage .tableWrap,
+#masterDbPage .tableWrap {
+  flex: 1 !important;
+  height: 100% !important;
+  max-height: calc(100vh - 195px) !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+  overscroll-behavior: contain !important;
+  position: relative !important;
+  margin-bottom: 75px !important;
+}
+
+#riwayatPage .historyTable thead th,
+#masterDbPage .historyTable thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+/* FIXED MODAL OVERLAY & SCROLLABLE TABLE BODY FOR DETAIL DATA POPUP V2 */
+#popupDetailBarangV2.popupOverlay {
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+
+#popupDetailBarangV2 .popupBoxDetailV2 {
+  max-height: calc(100vh - 20px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+
+#popupDetailBarangV2 #popupBodyV2 {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+
+#popupDetailBarangV2 .tableCardV2.tableWrap {
+  flex: 1 !important;
+  max-height: calc(100vh - 160px) !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+  overscroll-behavior: contain !important;
+}
+
+#popupDetailBarangV2 .detailTableV2 thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
 }

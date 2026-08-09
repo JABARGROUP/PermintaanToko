@@ -1387,14 +1387,16 @@ function checkAndTriggerPendingReminders(forceNow = false) {
       const userPendingReqs = pendingServiceReqs.filter(r => r.area === srv.area || srv.area === 'ALL');
       if (userPendingReqs.length > 0) {
         const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
-        const itemsListStr = userPendingReqs.map((r, idx) => `  ${idx + 1}. #${r.noSurat} - TOKO ${r.toko} (${r.area}) [${r.jenis}]`).join('\n');
+        const itemsListStr = userPendingReqs.map((r, idx) => {
+          const directLink = typeof getAppDirectLink === 'function' ? getAppDirectLink(r.noSurat) : '';
+          return `📌 #${r.noSurat} - TOKO ${r.toko} (${r.area})\n🔗 Link Detail: ${directLink}`;
+        }).join('\n\n');
         
         const combinedMessage = 
           `Yth. Bapak/Ibu ${srvName},\n\n` +
-          `PEMBERITAHUAN REMINDER OTOMATIS (JAM ${scheduledTime}):\n` +
-          `Terdapat ${userPendingReqs.length} pengajuan permintaan barang MASIH PENDING dan membutuhkan persetujuan Service:\n\n` +
+          `PEMBERITAHUAN REMINDER PENDING SERVICE (${userPendingReqs.length} PERMINTAAN):\n\n` +
           `${itemsListStr}\n\n` +
-          `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`;
+          `Silakan klik link di atas untuk langsung membuka detail data. Terima kasih.`;
 
         kirimNotifikasiWA(srv.phone, combinedMessage);
       }
@@ -1417,14 +1419,16 @@ function checkAndTriggerPendingReminders(forceNow = false) {
       const userPendingReqs = pendingDMReqs.filter(r => r.area === dm.area || dm.area === 'ALL');
       if (userPendingReqs.length > 0) {
         const dmName = dm.fullName || dm.username || 'Bapak/Ibu DM';
-        const itemsListStr = userPendingReqs.map((r, idx) => `  ${idx + 1}. #${r.noSurat} - TOKO ${r.toko} (${r.area}) [${r.jenis}]`).join('\n');
+        const itemsListStr = userPendingReqs.map((r, idx) => {
+          const directLink = typeof getAppDirectLink === 'function' ? getAppDirectLink(r.noSurat) : '';
+          return `📌 #${r.noSurat} - TOKO ${r.toko} (${r.area})\n🔗 Link Detail: ${directLink}`;
+        }).join('\n\n');
         
         const combinedMessage = 
           `Yth. Bapak/Ibu ${dmName},\n\n` +
-          `PEMBERITAHUAN REMINDER OTOMATIS (JAM ${scheduledTime}):\n` +
-          `Terdapat ${userPendingReqs.length} pengajuan permintaan barang SUDAH DI-APPROVE SERVICE & MENUNGGU APPROVAL DM:\n\n` +
+          `PEMBERITAHUAN REMINDER PENDING DM (${userPendingReqs.length} PERMINTAAN):\n\n` +
           `${itemsListStr}\n\n` +
-          `Mohon dapat segera diperiksa dan di-approve pada aplikasi. Terima kasih.`;
+          `Silakan klik link di atas untuk langsung membuka detail data. Terima kasih.`;
 
         kirimNotifikasiWA(dm.phone, combinedMessage);
       }
@@ -2699,6 +2703,60 @@ function loadFonteToken() {
   }
 }
 
+function getAppDirectLink(noSurat) {
+  if (!noSurat) return '';
+  try {
+    const rawNoSurat = String(noSurat).trim();
+    
+    const customBaseUrl = typeof appStorage !== 'undefined' ? appStorage.getItem('CUSTOM_APP_BASE_URL') : null;
+    if (customBaseUrl && String(customBaseUrl).startsWith('http')) {
+      const cleanCustom = customBaseUrl.endsWith('/') ? customBaseUrl : (customBaseUrl + '/');
+      return `${cleanCustom}index.html?noSurat=${encodeURIComponent(rawNoSurat)}`;
+    }
+
+    if (window.location && window.location.href && (window.location.href.startsWith('http://') || window.location.href.startsWith('https://'))) {
+      const originPath = window.location.origin + window.location.pathname;
+      return `${originPath}?noSurat=${encodeURIComponent(rawNoSurat)}`;
+    }
+    
+    return `https://jabargroup.github.io/PermintaanToko/index.html?noSurat=${encodeURIComponent(rawNoSurat)}`;
+  } catch (e) {
+    return `https://jabargroup.github.io/PermintaanToko/index.html?noSurat=${encodeURIComponent(noSurat)}`;
+  }
+}
+window.getAppDirectLink = getAppDirectLink;
+
+async function checkUrlDirectNoSuratOpen() {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    let targetNoSurat = urlParams.get('noSurat');
+    if (!targetNoSurat) return;
+
+    const decodedNoSurat = decodeURIComponent(targetNoSurat).trim();
+    if (!decodedNoSurat) return;
+
+    window.PENDING_URL_NO_SURAT = decodedNoSurat;
+
+    const executeOpenDetail = async () => {
+      const currentTarget = window.PENDING_URL_NO_SURAT;
+      if (!currentTarget) return;
+
+      if (typeof lihatDetail === 'function') {
+        const opened = await lihatDetail(currentTarget, true);
+        if (opened) {
+          window.PENDING_URL_NO_SURAT = null;
+        }
+      }
+    };
+
+    setTimeout(executeOpenDetail, 200);
+    setTimeout(executeOpenDetail, 800);
+    setTimeout(executeOpenDetail, 2000);
+    setTimeout(executeOpenDetail, 4000);
+  } catch(e) {}
+}
+window.checkUrlDirectNoSuratOpen = checkUrlDirectNoSuratOpen;
+
 const sentWaCache = {};
 
 function kirimNotifikasiWA(targetPhone, message) {
@@ -3387,6 +3445,7 @@ async function bukaMainApp() {
   if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
   if (typeof startAdminReminderTimeChecker === 'function') startAdminReminderTimeChecker();
   if (typeof checkAndTriggerPendingReminders === 'function') checkAndTriggerPendingReminders(false);
+  if (typeof checkUrlDirectNoSuratOpen === 'function') checkUrlDirectNoSuratOpen();
 }
 window.bukaMainApp = bukaMainApp;
 
@@ -3869,7 +3928,7 @@ function loadDashboard() {
       <td style="width: 18%; text-align: left; white-space: nowrap;">${formatDateDDMMYYYYString(r.tanggal)}</td>
       <td style="width: 32%; text-align: left;">${r.noSurat}</td>
       <td style="width: 30%; text-align: left;">${r.toko} <small>(${r.area})</small></td>
-      <td style="width: 20%; text-align: center;">${getBadgeStatus(r)}</td>
+      <td style="width: 20%; text-align: left !important;">${getBadgeStatus(r)}</td>
     `;
     lastDataContainer.appendChild(tr);
   });
@@ -4531,6 +4590,26 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       const seqNo = String(requests.length + 1).padStart(2, '0');
       const noSurat = `PRMT/${currentUser.area}-${storeCode}/${codeYear}${codeMonth}${codeDay}${seqNo}`;
       
+      const isDMUser = currentUser && currentUser.category === 'DM';
+      const autoServiceApprove = isDMUser ? true : false;
+      const serviceUserNameVal = isDMUser ? (currentUser.fullName || currentUser.username) : '';
+
+      let autoServiceTTD = '';
+      if (isDMUser) {
+        const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+        autoServiceTTD = ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap['SERVICE_' + currentUser.area] || ttdMap['SERVICE'] || ttdMap['DM'] || '';
+      }
+
+      const initialLog = [];
+      if (isDMUser) {
+        initialLog.push({
+          action: 'AUTO_APPROVE_SERVICE',
+          user: currentUser.fullName || currentUser.username,
+          notes: 'AUTO APPROVE SERVICE (DIBUAT OLEH DM)',
+          time: `${getFormattedDateDDMMYYYY(now)} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+        });
+      }
+
       const newRecord = {
         noSurat,
         tanggal: getFormattedDateDDMMYYYY(now),
@@ -4542,10 +4621,12 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
         items,
         photos: [...currentPhotos],
         status: 'PENDING',
-        serviceApprove: false,
+        serviceApprove: autoServiceApprove,
+        serviceUserName: serviceUserNameVal,
+        serviceTTD: autoServiceTTD,
         createdBy: currentUser.fullName,
         createdAt: `${getFormattedDateDDMMYYYY(now)} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
-        log: []
+        log: initialLog
       };
       requests.unshift(newRecord);
       saveRequestsToDB(requests);
@@ -4591,7 +4672,11 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       showNotif(`PERMINTAAN #${noSurat} DATA BERHASIL DISIMPAN!`, 'success');
       bersihkanForm();
 
-      tambahNotifikasiSistem(['SERVICE'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI TOKO ${toko}. MOHON APPROVAL SERVICE.`, noSurat);
+      if (isDMUser) {
+        tambahNotifikasiSistem(['DM'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI DM (${currentUser.fullName}). SILAKAN MEMPROSES APPROVAL DM.`, noSurat);
+      } else {
+        tambahNotifikasiSistem(['SERVICE'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI TOKO ${toko}. MOHON APPROVAL SERVICE.`, noSurat);
+      }
 
       const allUsers = getUsersFromDB();
       const serviceUsers = allUsers.filter(u => u.category === 'SERVICE' && (u.area === currentUser.area || u.area === 'ALL'));
@@ -4604,7 +4689,8 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
             `Telah dibuat pengajuan permintaan barang baru dengan rincian berikut:\n` +
             `• Nomor Dokumen : #${noSurat}\n` +
             `• Toko / Pemohon : ${toko} (${currentUser.area})\n` +
-            `• Waktu Pengajuan : ${newRecord.createdAt}\n\n` +
+            `• Waktu Pengajuan : ${newRecord.createdAt}\n` +
+            `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
             `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`
           );
         }
@@ -5554,10 +5640,43 @@ function tutupDetailBarangV2() {
 window.tutupDetailBarangV2 = tutupDetailBarangV2;
 window.closeDetail = tutupDetailBarangV2;
 
-function lihatDetail(noSurat, fromDashboard = false) {
-  const requests = getRequestsFromDB();
-  const req = requests.find(r => r.noSurat === noSurat);
-  if (!req) return;
+async function lihatDetail(noSuratOrObj, fromDashboard = false) {
+  let req = null;
+  if (typeof noSuratOrObj === 'object' && noSuratOrObj !== null) {
+    req = noSuratOrObj;
+  } else {
+    const targetStr = String(noSuratOrObj || '').trim();
+    if (!targetStr) return false;
+    const requests = typeof getRequestsFromDB === 'function' ? getRequestsFromDB() : [];
+    req = requests.find(r => r && (r.noSurat === targetStr || decodeURIComponent(r.noSurat || '') === targetStr || r.noSurat === decodeURIComponent(targetStr)));
+
+    if (!req && typeof supabase !== 'undefined' && supabase) {
+      try {
+        const { data, error } = await supabase.from('permintaan_toko').select('*').eq('no_surat', targetStr);
+        if (data && data.length > 0) {
+          const raw = data[0];
+          req = {
+            id: raw.id,
+            noSurat: raw.no_surat,
+            tanggal: raw.tanggal,
+            toko: raw.toko,
+            area: raw.area,
+            jenis: raw.jenis,
+            catatan: raw.catatan,
+            items: raw.items,
+            photos: raw.photos,
+            status: raw.status,
+            serviceApprove: raw.service_approve,
+            createdBy: raw.created_by,
+            createdAt: raw.created_at,
+            userId: raw.user_id
+          };
+        }
+      } catch(e) {}
+    }
+  }
+
+  if (!req) return false;
 
   const isDus = String(req.jenis || '').toUpperCase() === 'DUS';
   const popupTitleV2 = document.getElementById('popupTitleV2');
@@ -5788,6 +5907,7 @@ function lihatDetail(noSurat, fromDashboard = false) {
   if (typeof aturTampilanLonceng === 'function') {
     aturTampilanLonceng(activePageId);
   }
+  return true;
 }
 
 // LISTEN FOR MOBILE DEVICE / BROWSER BACK BUTTON TO CLOSE POPUP DETAIL
@@ -9744,3 +9864,14 @@ document.addEventListener('keydown', function(e) {
     }
   }
 });
+
+// PREVENT FULL PAGE SCROLLING ON RIWAYAT PAGE & MASTER DB PAGE WHEN TOUCHING NON-TABLE ELEMENTS (E.G. H3, TOOLBAR)
+document.addEventListener('touchmove', function (e) {
+  const activePage = typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : '';
+  if (activePage === 'riwayatPage' || activePage === 'masterDbPage') {
+    const isInsideTable = e.target.closest('.tableWrap');
+    if (!isInsideTable) {
+      if (e.cancelable) e.preventDefault();
+    }
+  }
+}, { passive: false });
