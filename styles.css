@@ -2191,8 +2191,8 @@ body.design-mode-3d-isometric .dashboardTable th {
 #popupAkun .akunBox h2 {
   font-size: 16px !important;
   font-weight: 800 !important;
-  margin-top: 0 !important;
-  margin-bottom: 14px !important;
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
   text-align: center !important;
   letter-spacing: 0.5px !important;
 }
