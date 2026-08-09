@@ -2634,7 +2634,7 @@ table th,
   height: auto !important;
   max-height: 92vh !important;
   overflow: visible !important;
-  padding: 18px 20px !important;
+  padding: 18px 20px 40px 20px !important;
   border-radius: 18px !important;
   box-sizing: border-box !important;
   margin: auto !important;
