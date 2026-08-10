@@ -5895,6 +5895,11 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
   const tdStyle = "padding: 7px 10px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; text-align: left !important;";
 
+  const role = currentUser ? currentUser.category : '';
+  const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+  const isServiceUser = (role === 'SERVICE' || isAdminUser);
+  const canServiceRowDelete = isServiceUser && req.status !== 'DONE';
+
   let itemsHtml = itemsList.map((i, idx) => {
     const typeVal = i.type || i.tipe || i.jenis || '-';
     const seriVal = i.seri || i.sn || i.serial || '-';
@@ -5902,6 +5907,14 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     const dusVal = i.dus || i.snDus || i.seriDus || i.seri || '-';
     const alasanVal = i.alasan || i.keterangan || '-';
     const qtyVal = i.qty || i.jumlah || 1;
+
+    const actionTdHtml = canServiceRowDelete ? `
+      <td style="${tdStyle} text-align: center !important;">
+        <button type="button" class="btnIcon btnDelete" onclick="hapusBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="HAPUS BARIS ITEM INI" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #ef4444 !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
+          <span class="material-symbols-rounded" style="font-size: 15px !important;">delete</span>
+        </button>
+      </td>
+    ` : '';
 
     if (isDus) {
       return `
@@ -5913,6 +5926,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
           <td style="${tdStyle} text-align: left !important; color: #d97706 !important; font-weight: 600 !important;">${dusVal}</td>
           <td style="${tdStyle} text-align: left !important;">${alasanVal}</td>
           <td style="${tdStyle} text-align: center !important;">${qtyVal}</td>
+          ${actionTdHtml}
         </tr>
       `;
     } else {
@@ -5924,6 +5938,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
           <td style="${tdStyle} text-align: left !important;">${barangVal}</td>
           <td style="${tdStyle} text-align: left !important;">${alasanVal}</td>
           <td style="${tdStyle} text-align: center !important;">${qtyVal}</td>
+          ${actionTdHtml}
         </tr>
       `;
     }
@@ -5931,8 +5946,6 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
   let bottomActionsHtml = '';
   let actionButtons = [];
-  const role = currentUser ? currentUser.category : '';
-  const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
 
   if (req.status === 'PENDING') {
     if (role === 'SERVICE' || isAdminUser) {
@@ -5988,6 +6001,14 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     actionButtons.push(`
       <button type="button" class="btnIcon btnDone btnIconOnly" title="SET DONE" onclick="tutupDetailBarangV2(); doneService('${req.noSurat}');">
         <span class="material-symbols-rounded">task_alt</span>
+      </button>
+    `);
+  }
+
+  if (canServiceRowDelete) {
+    actionButtons.push(`
+      <button type="button" class="btnIcon btnSave btnIconOnly" title="SIMPAN PERUBAHAN KE CLOUD" onclick="simpanPerubahanDetailAdmin('${req.noSurat}');" style="background: #059669 !important; color: #ffffff !important;">
+        <span class="material-symbols-rounded">save</span>
       </button>
     `);
   }
@@ -6050,27 +6071,31 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     `;
   }
 
+  const thActionHtml = canServiceRowDelete ? `<th style="${thStyleCenter}">AKSI</th>` : '';
+
   const tableHeaderHtml = isDus ? `
     <thead>
       <tr style="background: var(--primary) !important; color: #ffffff !important;">
         <th style="${thStyleCenter}">NO</th>
-        <th style="${thStyleLeft('15%')}">TYPE</th>
-        <th style="${thStyleLeft('18%')}">SERI BARANG</th>
-        <th style="${thStyleLeft('22%')}">PERMINTAAN</th>
-        <th style="${thStyleLeft('18%')}">SERI DUS</th>
-        <th style="${thStyleLeft('18%')}">ALASAN</th>
+        <th style="${thStyleLeft('14%')}">TYPE</th>
+        <th style="${thStyleLeft('16%')}">SERI BARANG</th>
+        <th style="${thStyleLeft('20%')}">PERMINTAAN</th>
+        <th style="${thStyleLeft('16%')}">SERI DUS</th>
+        <th style="${thStyleLeft('16%')}">ALASAN</th>
         <th style="${thStyleQty}">QTY</th>
+        ${thActionHtml}
       </tr>
     </thead>
   ` : `
     <thead>
       <tr style="background: var(--primary) !important; color: #ffffff !important;">
         <th style="${thStyleCenter}">NO</th>
-        <th style="${thStyleLeft('18%')}">TYPE</th>
+        <th style="${thStyleLeft('16%')}">TYPE</th>
         <th style="${thStyleLeft('18%')}">SERI BARANG</th>
-        <th style="${thStyleLeft('28%')}">PERMINTAAN</th>
-        <th style="${thStyleLeft('26%')}">ALASAN</th>
+        <th style="${thStyleLeft('24%')}">PERMINTAAN</th>
+        <th style="${thStyleLeft('22%')}">ALASAN</th>
         <th style="${thStyleQty}">QTY</th>
+        ${thActionHtml}
       </tr>
     </thead>
   `;
