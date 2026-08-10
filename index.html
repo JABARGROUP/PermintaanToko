@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260810_v1183">
-  <script src="app.js?v=20260810_v1183"></script>
+  <link rel="stylesheet" href="styles.css?v=20260810_v1225">
+  <script src="app.js?v=20260810_v1225"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -883,6 +883,37 @@
         <div class="confirmButton" style="display: flex; gap: 10px;">
           <button type="button" class="btnBatal" onclick="closeReject()" style="flex: 1; height: 38px; border-radius: 10px; font-weight: 700; cursor: pointer;">BATAL</button>
           <button type="button" class="btnHapus" onclick="kirimReject()" style="flex: 1; height: 38px; border-radius: 10px; background: #ef4444; color: #fff; font-weight: 700; border: none; cursor: pointer;">KIRIM PENOLAKAN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. POPUP UPLOAD BUKTI PROSES ARTEMIS MODAL (HALF SCREEN COMPACT CARD) -->
+  <div id="artemisOverlay" class="popupOverlay" style="z-index: 10000000; display: none;">
+    <div class="artemisBoxPopup" style="width: 460px !important; max-width: 92vw !important; margin: auto !important; border-radius: 18px !important; overflow: hidden !important; background: var(--bg-box) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;">
+      <div class="artemisHeaderPopup" style="background: var(--primary); color: #ffffff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: #ffffff;"><span class="material-symbols-rounded" style="font-size: 22px;">photo_camera</span> <span id="artemisTitle">BUKTI PROSES ARTEMIS</span></span>
+        <button type="button" class="popupClose" onclick="closeArtemisModal()" style="background: none; border: none; color: #ffffff; font-size: 24px; font-weight: 800; cursor: pointer;">&times;</button>
+      </div>
+      <div class="artemisBodyPopup" style="padding: 18px;">
+        <input type="hidden" id="artemisNoSurat">
+        <p id="artemisSubTitle" style="font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; line-height: 1.4;">UPLOAD FOTO BUKTI PROSES ARTEMIS UNTUK MENYELESAIKAN PERMINTAAN INI:</p>
+        
+        <div style="margin: 10px 0 16px 0; text-align: center; display: flex; justify-content: center;">
+          <input type="file" id="artemisFileInput" accept="image/png, image/jpeg, image/jpg, image/webp, image/heic, image/heif, image/*" multiple style="display: none;" onchange="handleArtemisPhotoSelect(event)">
+          <button type="button" onclick="document.getElementById('artemisFileInput').click();" title="TAMBAH / AMBIL FOTO BUKTI ARTEMIS" style="padding: 12px 24px; border-radius: 14px; background: var(--primary); color: #ffffff; font-weight: 800; font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: none; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.2); transition: all 0.2s;">
+            <span class="material-symbols-rounded" style="font-size: 24px; color: #ffffff;">add_a_photo</span>
+            <span>AMBIL / UPLOAD FOTO</span>
+          </button>
+        </div>
+
+        <div id="artemisPhotoPreviewGrid" style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 180px; overflow-y: auto; margin-bottom: 14px; padding: 6px; background: var(--bg-body); border-radius: 10px; border: 1px dashed var(--border-color);">
+          <!-- Photo previews injected dynamically -->
+        </div>
+
+        <div class="confirmButton" style="display: flex; gap: 10px;">
+          <button type="button" class="btnBatal" onclick="closeArtemisModal()" style="flex: 1; height: 38px; border-radius: 10px; font-weight: 700; cursor: pointer;">BATAL</button>
+          <button type="button" class="btnOkNotif" onclick="prosesSimpanDoneDenganBuktiArtemis()" style="flex: 1; height: 38px; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 700; border: none; cursor: pointer;">SELESAIKAN (DONE)</button>
         </div>
       </div>
     </div>

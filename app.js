@@ -4893,11 +4893,21 @@ function filterRiwayat() {
       <button class="btnIcon btnInfo" onclick="lihatDetail('${r.noSurat}')" title="LIHAT DETAIL"><span class="material-symbols-rounded">visibility</span></button>
     `;
 
-    const isPhotoHidden = (r.status === 'APPROVE' || r.status === 'DONE' || r.status === 'REJECT') || !getFeaturePhotosEnabled();
-    if (r.photos && r.photos.length > 0 && !isPhotoHidden) {
-      aksi += `
-        <button class="btnIcon btnView" onclick="lihatFotoByNoSurat('${r.noSurat}')" title="LIHAT FOTO"><span class="material-symbols-rounded">image</span></button>
-      `;
+    const hasPhotos = (r.photos && Array.isArray(r.photos) && r.photos.length > 0) || (r.artemisPhotos && Array.isArray(r.artemisPhotos) && r.artemisPhotos.length > 0);
+
+    if (r.status === 'DONE') {
+      if (hasPhotos) {
+        aksi += `
+          <button class="btnIcon btnView" onclick="lihatFotoByNoSurat('${r.noSurat}')" title="BUKTI PROSES ARTEMIS (${(r.artemisPhotos || r.photos).length})" style="background: var(--primary) !important; color: #ffffff !important; box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;"><span class="material-symbols-rounded" style="font-size: 16px !important;">photo_library</span></button>
+        `;
+      }
+    } else {
+      const isPhotoHidden = (r.status === 'APPROVE' || r.status === 'REJECT') || !getFeaturePhotosEnabled();
+      if (hasPhotos && !isPhotoHidden) {
+        aksi += `
+          <button class="btnIcon btnView" onclick="lihatFotoByNoSurat('${r.noSurat}')" title="LIHAT FOTO PERMINTAAN"><span class="material-symbols-rounded">image</span></button>
+        `;
+      }
     }
 
 function isPdfButtonAllowed(req) {
@@ -4959,14 +4969,23 @@ function lihatFotoByNoSurat(noSurat) {
     return;
   }
   const requests = getRequestsFromDB();
-  const req = requests.find(r => r.noSurat === noSurat || r.id === noSurat);
-  const photos = parsePhotosArray(req ? req.photos : null);
+  const req = requests.find(r => r && (r.noSurat === noSurat || String(r.noSurat) === String(noSurat) || r.id === noSurat));
+  
+  let photos = [];
+  if (req) {
+    const regP = parsePhotosArray(req.photos);
+    const artP = parsePhotosArray(req.artemisPhotos);
+    photos = [...regP, ...artP];
+    photos = Array.from(new Set(photos.filter(Boolean)));
+  }
+
   if (photos && photos.length > 0) {
     bukaViewGambar(photos, 0);
   } else {
-    showNotif('TIDAK ADA FOTO UNTUK PERMINTAAN INI!', 'warning');
+    showNotif('TIDAK ADA FOTO BUKTI UNTUK PERMINTAAN INI!', 'warning');
   }
 }
+window.lihatFotoByNoSurat = lihatFotoByNoSurat;
 
 let viewerCurrentZoom = 1;
 let viewerPanX = 0;
@@ -5278,50 +5297,175 @@ function approveDM(noSurat) {
   });
 }
 
+let tempArtemisPhotos = [];
+
 function doneService(noSurat) {
-  showConfirm(`UBAH STATUS PERMINTAAN #${noSurat} MENJADI DONE?`, () => {
-    showLoading('');
+  if (!noSurat) return;
+  const requests = getRequestsFromDB();
+  const req = requests.find(r => r && (r.noSurat === noSurat || String(r.noSurat) === String(noSurat) || r.id === noSurat));
+  if (!req) {
+    showNotif('DATA PERMINTAAN TIDAK DITEMUKAN!', 'warning');
+    return;
+  }
+
+  const artemisNoSurat = document.getElementById('artemisNoSurat');
+  if (artemisNoSurat) artemisNoSurat.value = noSurat;
+
+  const artemisSubTitle = document.getElementById('artemisSubTitle');
+  if (artemisSubTitle) artemisSubTitle.textContent = `UPLOAD FOTO BUKTI PROSES ARTEMIS UNTUK MENYELESAIKAN PERMINTAAN #${noSurat}:`;
+
+  tempArtemisPhotos = [];
+  renderArtemisPhotoPreviews();
+
+  const overlay = document.getElementById('artemisOverlay');
+  if (overlay) {
+    overlay.classList.add('show');
+    overlay.style.setProperty('display', 'flex', 'important');
+    overlay.style.setProperty('visibility', 'visible', 'important');
+    overlay.style.setProperty('opacity', '1', 'important');
+    overlay.style.setProperty('pointer-events', 'auto', 'important');
+  }
+}
+window.doneService = doneService;
+
+function closeArtemisModal() {
+  const overlay = document.getElementById('artemisOverlay');
+  if (overlay) {
+    overlay.style.setProperty('display', 'none', 'important');
+    overlay.classList.remove('show');
+  }
+}
+window.closeArtemisModal = closeArtemisModal;
+
+function handleArtemisPhotoSelect(e) {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      tempArtemisPhotos.push(event.target.result);
+      renderArtemisPhotoPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+window.handleArtemisPhotoSelect = handleArtemisPhotoSelect;
+
+function renderArtemisPhotoPreviews() {
+  const grid = document.getElementById('artemisPhotoPreviewGrid');
+  if (!grid) return;
+
+  if (tempArtemisPhotos.length === 0) {
+    grid.innerHTML = '<div style="width: 100%; text-align: center; font-size: 11.5px; color: var(--text-muted); padding: 12px;">BELUM ADA FOTO ARTEMIS DIPILIH</div>';
+    return;
+  }
+
+  grid.innerHTML = tempArtemisPhotos.map((imgSrc, idx) => `
+    <div style="position: relative; width: 65px; height: 65px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">
+      <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: cover;">
+      <button type="button" onclick="hapusPhotoArtemisTemp(${idx})" style="position: absolute; top: 2px; right: 2px; background: rgba(239,68,68,0.9); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+    </div>
+  `).join('');
+}
+window.renderArtemisPhotoPreviews = renderArtemisPhotoPreviews;
+
+function hapusPhotoArtemisTemp(idx) {
+  if (idx >= 0 && idx < tempArtemisPhotos.length) {
+    tempArtemisPhotos.splice(idx, 1);
+    renderArtemisPhotoPreviews();
+  }
+}
+window.hapusPhotoArtemisTemp = hapusPhotoArtemisTemp;
+
+function prosesSimpanDoneDenganBuktiArtemis() {
+  const elNo = document.getElementById('artemisNoSurat');
+  const noSurat = elNo ? elNo.value.trim() : '';
+
+  if (!noSurat) {
+    showNotif('NOMOR SURAT PERMINTAAN TIDAK VALID!', 'warning');
+    return;
+  }
+
+  showConfirm(`SELESAIKAN PERMINTAAN #${noSurat} DAN SIMPAN BUKTI PROSES ARTEMIS?`, () => {
+    showLoading('MENYIMPAN DATA BUKTI ARTEMIS & MENYELESAIKAN PERMINTAAN...');
     setTimeout(async () => {
-      hideLoading();
-      const requests = getRequestsFromDB();
-      const idx = requests.findIndex(r => r.noSurat === noSurat);
-      if (idx !== -1) {
-        requests[idx].status = 'DONE';
-        if (!requests[idx].log) requests[idx].log = [];
-        requests[idx].log.push({
-          action: 'DONE',
-          user: currentUser.fullName,
-          notes: 'BARANG TELAH DISERAHKAN / SELESAI',
-          time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
-        });
-        saveRequestsToDB(requests);
+      try {
+        const requests = getRequestsFromDB();
+        const idx = requests.findIndex(r => r && (r.noSurat === noSurat || String(r.noSurat) === String(noSurat) || r.id === noSurat));
 
-        if (typeof supabase !== 'undefined' && supabase) {
-          try {
-            await supabase.from('permintaan_toko').update({
-              status: 'DONE'
-            }).eq('no_surat', noSurat);
-          } catch(e) {}
-        }
-        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-          await syncSupabaseRequestsToLocalCache();
-        }
-        showNotif(`PERMINTAAN #${noSurat} DITANDAI DONE!`, 'info');
+        if (idx !== -1) {
+          requests[idx].status = 'DONE';
+          requests[idx].artemisPhotos = [...tempArtemisPhotos];
 
-        tambahNotifikasiSistem(['TOKO', 'SALES', 'DM'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH SELESAI (DONE).`, noSurat);
-        const users = getUsersFromDB();
-        const creator = users.find(u => u.id === requests[idx].userId || u.fullName === requests[idx].createdBy);
-        if (creator && creator.phone) {
-          kirimNotifikasiWA(creator.phone, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH SELESAI (DONE).`);
-        }
+          if (!Array.isArray(requests[idx].photos)) requests[idx].photos = [];
+          if (tempArtemisPhotos.length > 0) {
+            requests[idx].photos = [...requests[idx].photos, ...tempArtemisPhotos];
+          }
 
-        loadRiwayat();
-        loadDashboard();
-        if (currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
+          if (!requests[idx].log) requests[idx].log = [];
+          requests[idx].log.push({
+            action: 'DONE_WITH_ARTEMIS_PHOTOS',
+            user: currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE',
+            notes: `SELESAI DENGAN ${tempArtemisPhotos.length} BUKTI FOTO ARTEMIS`,
+            time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+          });
+
+          saveRequestsToDB(requests);
+
+          if (typeof supabase !== 'undefined' && supabase) {
+            try {
+              const { error: err1 } = await supabase.from('permintaan_toko').update({
+                status: 'DONE',
+                photos: requests[idx].photos,
+                artemis_photos: tempArtemisPhotos
+              }).eq('no_surat', noSurat);
+
+              if (err1) {
+                await supabase.from('permintaan_toko').update({
+                  status: 'DONE',
+                  photos: requests[idx].photos,
+                  artemis_photos: tempArtemisPhotos
+                }).eq('id', requests[idx].id || noSurat);
+              }
+            } catch (e) {
+              console.error("Supabase update error:", e);
+            }
+          }
+
+          if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+            await syncSupabaseRequestsToLocalCache();
+          }
+
+          if (typeof notifySupabaseDataChanged === 'function') {
+            notifySupabaseDataChanged('permintaan_toko');
+          }
+
+          hideLoading();
+          closeArtemisModal();
+          showNotif(`PERMINTAAN #${noSurat} TELAH SELESAI (DONE) & BUKTI FOTO ARTEMIS DISIMPAN!`, 'success');
+
+          tambahNotifikasiSistem(['TOKO', 'SALES', 'DM'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH SELESAI (DONE) DENGAN BUKTI PROSES ARTEMIS.`, noSurat);
+
+          loadRiwayat();
+          loadDashboard();
+          if (currentUser && currentUser.category === 'SERVICE' && currentUser.area === 'TSM') {
+            if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+          }
+        } else {
+          hideLoading();
+          showNotif('DATA PERMINTAAN TIDAK DITEMUKAN!', 'warning');
+        }
+      } catch (err) {
+        hideLoading();
+        console.error(err);
+        showNotif('GAGAL MENYIMPAN STATUS DONE KE CLOUD', 'danger');
       }
     }, 300);
   });
 }
+window.prosesSimpanDoneDenganBuktiArtemis = prosesSimpanDoneDenganBuktiArtemis;
 
 function batalApproveService(noSurat) {
   if (!noSurat) return;
@@ -5764,6 +5908,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         <tr>
           <td style="${tdStyle} text-align: center !important;">${idx + 1}</td>
           <td style="${tdStyle} text-align: left !important;">${typeVal}</td>
+          <td style="${tdStyle} text-align: left !important;">${seriVal}</td>
           <td style="${tdStyle} text-align: left !important;">${barangVal}</td>
           <td style="${tdStyle} text-align: left !important; color: #d97706 !important; font-weight: 600 !important;">${dusVal}</td>
           <td style="${tdStyle} text-align: left !important;">${alasanVal}</td>
@@ -5883,9 +6028,15 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     `);
   }
 
-  if (req.photos && Array.isArray(req.photos) && req.photos.length > 0) {
+  const allReqPhotos = [
+    ...(Array.isArray(req.photos) ? req.photos : []),
+    ...(Array.isArray(req.artemisPhotos) ? req.artemisPhotos : [])
+  ].filter(Boolean);
+
+  if (allReqPhotos.length > 0) {
+    const isDoneState = req.status === 'DONE';
     actionButtons.push(`
-      <button type="button" class="btnIcon btnPhotoView btnIconOnly" title="LIHAT FOTO BUKTI BARANG (${req.photos.length})" onclick="tutupDetailBarangV2(); lihatFotoByNoSurat('${req.noSurat || req.id}');">
+      <button type="button" class="btnIcon btnPhotoView btnIconOnly" title="${isDoneState ? 'LIHAT BUKTI PROSES ARTEMIS / DONE' : 'LIHAT FOTO BUKTI BARANG'} (${allReqPhotos.length})" onclick="tutupDetailBarangV2(); lihatFotoByNoSurat('${req.noSurat || req.id}');" style="${isDoneState ? 'background: linear-gradient(135deg, #059669, #10b981) !important; color: #ffffff !important;' : ''}">
         <span class="material-symbols-rounded">image</span>
       </button>
     `);
@@ -5903,10 +6054,11 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     <thead>
       <tr style="background: var(--primary) !important; color: #ffffff !important;">
         <th style="${thStyleCenter}">NO</th>
-        <th style="${thStyleLeft('18%')}">TYPE</th>
-        <th style="${thStyleLeft('28%')}">PERMINTAAN</th>
+        <th style="${thStyleLeft('15%')}">TYPE</th>
+        <th style="${thStyleLeft('18%')}">SERI BARANG</th>
+        <th style="${thStyleLeft('22%')}">PERMINTAAN</th>
         <th style="${thStyleLeft('18%')}">SERI DUS</th>
-        <th style="${thStyleLeft('26%')}">ALASAN</th>
+        <th style="${thStyleLeft('18%')}">ALASAN</th>
         <th style="${thStyleQty}">QTY</th>
       </tr>
     </thead>
@@ -5915,7 +6067,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
       <tr style="background: var(--primary) !important; color: #ffffff !important;">
         <th style="${thStyleCenter}">NO</th>
         <th style="${thStyleLeft('18%')}">TYPE</th>
-        <th style="${thStyleLeft('18%')}">SERI</th>
+        <th style="${thStyleLeft('18%')}">SERI BARANG</th>
         <th style="${thStyleLeft('28%')}">PERMINTAAN</th>
         <th style="${thStyleLeft('26%')}">ALASAN</th>
         <th style="${thStyleQty}">QTY</th>
@@ -8538,42 +8690,87 @@ function simpanAkun() {
       return;
     }
 
-    const users = getUsersFromDB();
-    const idx = users.findIndex(u => u.id === currentUser.id);
+    showLoading('MENYIMPAN PERUBAHAN AKUN...');
 
-    if (idx !== -1) {
-      users[idx].fullName = nama;
-      users[idx].phone = hp;
-      if (pass) users[idx].password = pass;
+    setTimeout(async () => {
+      try {
+        const users = getUsersFromDB();
+        const idx = users.findIndex(u => u.id === currentUser.id);
 
-      saveUsersToDB(users);
-      currentUser = users[idx];
-      appStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+        if (idx !== -1) {
+          users[idx].fullName = nama;
+          users[idx].phone = hp;
+          if (pass) users[idx].password = pass;
 
-      showNotif('PROFIL BERHASIL DIPERBARUI!', 'info');
+          saveUsersToDB(users);
+          currentUser = users[idx];
+          appStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
 
-      const akunArea = document.getElementById('akunArea');
-      if (akunArea) akunArea.value = `${currentUser.area} - ${AREA_MAP[currentUser.area] || currentUser.area}`;
+          if (typeof supabase !== 'undefined' && supabase) {
+            try {
+              const userPayload = {
+                id: currentUser.id,
+                username: currentUser.username,
+                password: currentUser.password,
+                full_name: currentUser.fullName,
+                store_code: currentUser.storeCode || '',
+                phone: currentUser.phone || '',
+                category: currentUser.category,
+                area: currentUser.area
+              };
 
-      const akunKategori = document.getElementById('akunKategori');
-      if (akunKategori) akunKategori.value = currentUser.category;
+              const { error: upErr } = await supabase.from('users').upsert(userPayload);
+              if (upErr) {
+                console.warn('[SUPABASE AKUN UPSERT NOTICE]:', upErr);
+              }
+            } catch (e) {
+              console.error("Supabase user update error:", e);
+            }
+          }
 
-      const akunNama = document.getElementById('akunNama');
-      if (akunNama) akunNama.value = currentUser.fullName;
+          if (typeof syncSupabaseUsersToLocalCache === 'function') {
+            await syncSupabaseUsersToLocalCache();
+          }
 
-      const akunHP = document.getElementById('akunHP');
-      if (akunHP) akunHP.value = currentUser.phone || '-';
+          if (typeof notifySupabaseDataChanged === 'function') {
+            notifySupabaseDataChanged('users');
+          }
 
-      const akunPassword = document.getElementById('akunPassword');
-      if (akunPassword) akunPassword.value = '';
+          hideLoading();
+          showNotif('PROFIL AKUN BERHASIL DIPERBARUI & DISINKRONKAN KE ALL DEVICES!', 'success');
 
-      loadDashboard();
-      if (document.getElementById('userTableBody')) {
-        loadUsersManagement();
+          const akunArea = document.getElementById('akunArea');
+          if (akunArea) akunArea.value = `${currentUser.area} - ${AREA_MAP[currentUser.area] || currentUser.area}`;
+
+          const akunKategori = document.getElementById('akunKategori');
+          if (akunKategori) akunKategori.value = currentUser.category;
+
+          const akunNama = document.getElementById('akunNama');
+          if (akunNama) akunNama.value = currentUser.fullName;
+
+          const akunHP = document.getElementById('akunHP');
+          if (akunHP) akunHP.value = currentUser.phone || '-';
+
+          const akunPassword = document.getElementById('akunPassword');
+          if (akunPassword) akunPassword.value = '';
+
+          if (typeof loadDashboard === 'function') loadDashboard();
+          if (document.getElementById('userTableBody') && typeof loadUsersManagement === 'function') {
+            loadUsersManagement();
+          }
+        } else {
+          hideLoading();
+          showNotif('DATA AKUN TIDAK DITEMUKAN!', 'warning');
+        }
+      } catch (err) {
+        hideLoading();
+        console.error(err);
+        showNotif('GAGAL MENYIMPAN PERUBAHAN AKUN KE CLOUD', 'danger');
       }
-    }
+    }, 200);
   });
 }
+window.simpanAkun = simpanAkun;
 
 function bukaModalTambahToko() {
   if (!currentUser) return;
