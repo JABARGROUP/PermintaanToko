@@ -2167,7 +2167,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   width: 100vw !important;
   height: 100vh !important;
   justify-content: center !important;
-  align-items: flex-start !important;
+ align-items: center !important;
   padding: 8px 10px 10px 10px !important;
   box-sizing: border-box !important;
 }
@@ -2181,7 +2181,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   max-height: 95vh !important;
   overflow-y: auto !important;
   margin: 0 auto auto auto !important;
-  transform: translateY(-25px) !important;
+  transform: translateY(0px) !important;
   padding: 18px 20px !important;
   border-radius: 20px !important;
   box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
@@ -3466,7 +3466,7 @@ table th,
     width: 94vw !important;
     max-width: 94vw !important;
     max-height: 95vh !important;
-    transform: translateY(-25px) !important;
+    transform: translateY(0px) !important;
     padding: 16px 14px !important;
   }
 
