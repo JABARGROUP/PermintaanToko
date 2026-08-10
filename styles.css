@@ -2167,8 +2167,8 @@ body.design-mode-3d-isometric .dashboardTable th {
   width: 100vw !important;
   height: 100vh !important;
   justify-content: center !important;
-  align-items: center !important;
-   padding: 8px 10px 10px 10px !important;
+  align-items: flex-start !important;
+  padding: 8px 10px 10px 10px !important;
   box-sizing: border-box !important;
 }
 
@@ -2181,8 +2181,8 @@ body.design-mode-3d-isometric .dashboardTable th {
   max-height: 95vh !important;
   overflow-y: auto !important;
   margin: 0 auto auto auto !important;
-  transform: translateY(0px) !important;
-  padding: 20px 15px !important;
+  transform: translateY(-25px) !important;
+  padding: 18px 20px !important;
   border-radius: 20px !important;
   box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
   box-sizing: border-box !important;
@@ -2191,8 +2191,8 @@ body.design-mode-3d-isometric .dashboardTable th {
 #popupAkun .akunBox h2 {
   font-size: 16px !important;
   font-weight: 800 !important;
-  margin-top: 8px !important;
-  margin-bottom: 8px !important;
+  margin-top: 0 !important;
+  margin-bottom: 14px !important;
   text-align: center !important;
   letter-spacing: 0.5px !important;
 }
@@ -2634,7 +2634,7 @@ table th,
   height: auto !important;
   max-height: 92vh !important;
   overflow: visible !important;
-  padding: 18px 20px 40px 20px !important;
+  padding: 18px 20px !important;
   border-radius: 18px !important;
   box-sizing: border-box !important;
   margin: auto !important;
@@ -3466,7 +3466,7 @@ table th,
     width: 94vw !important;
     max-width: 94vw !important;
     max-height: 95vh !important;
-    transform: translateY(0px) !important;
+    transform: translateY(-25px) !important;
     padding: 16px 14px !important;
   }
 

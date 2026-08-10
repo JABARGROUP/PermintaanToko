@@ -2759,47 +2759,75 @@ window.checkUrlDirectNoSuratOpen = checkUrlDirectNoSuratOpen;
 
 const sentWaCache = {};
 
+function formatCleanPhoneList(targetPhone) {
+  if (!targetPhone || targetPhone === '-' || String(targetPhone).trim() === '') return [];
+  
+  const rawStr = String(targetPhone).trim();
+  const parts = rawStr.split(/[\s;,/|&\n]+/);
+  
+  const cleanedList = [];
+  parts.forEach(part => {
+    let clean = part.replace(/[^0-9]/g, '');
+    if (!clean || clean.length < 5) return;
+    
+    if (clean.startsWith('0')) {
+      clean = '62' + clean.slice(1);
+    } else if (!clean.startsWith('62')) {
+      clean = '62' + clean;
+    }
+    
+    if (!cleanedList.includes(clean)) {
+      cleanedList.push(clean);
+    }
+  });
+  
+  return cleanedList;
+}
+window.formatCleanPhoneList = formatCleanPhoneList;
+
 function kirimNotifikasiWA(targetPhone, message) {
   if (!targetPhone || targetPhone === '-' || String(targetPhone).trim() === '') return false;
 
   const token = getFonteToken();
   if (!token) return false;
 
-  let cleanPhone = String(targetPhone).replace(/[^0-9]/g, '');
-  if (!cleanPhone) return false;
-  if (cleanPhone.startsWith('0')) {
-    cleanPhone = '62' + cleanPhone.slice(1);
-  } else if (!cleanPhone.startsWith('62')) {
-    cleanPhone = '62' + cleanPhone;
-  }
+  const phoneList = formatCleanPhoneList(targetPhone);
+  if (!phoneList || phoneList.length === 0) return false;
 
-  const msgHash = `${cleanPhone}_${String(message).trim()}`;
-  const now = Date.now();
-  if (sentWaCache[msgHash] && (now - sentWaCache[msgHash]) < 60000) {
-    console.log('[WA SKIPPED - DUPLICATE PREVENTED]:', cleanPhone);
-    return false;
-  }
-  sentWaCache[msgHash] = now;
+  let anySent = false;
 
-  const formData = new FormData();
-  formData.append('target', cleanPhone);
-  formData.append('message', message);
-  formData.append('countryCode', '62');
+  phoneList.forEach(cleanPhone => {
+    const msgHash = `${cleanPhone}_${String(message).trim()}`;
+    const now = Date.now();
+    if (sentWaCache[msgHash] && (now - sentWaCache[msgHash]) < 60000) {
+      console.log('[WA SKIPPED - DUPLICATE PREVENTED]:', cleanPhone);
+      return;
+    }
+    sentWaCache[msgHash] = now;
 
-  fetch('https://api.fonnte.com/send', {
-    method: 'POST',
-    headers: {
-      'Authorization': token
-    },
-    body: formData
-  }).then(res => res.json()).then(data => {
-    console.log('[FONTE WA API RESPONSE]:', data);
-  }).catch(err => {
-    console.error('[FONTE WA API ERROR]:', err);
+    const formData = new FormData();
+    formData.append('target', cleanPhone);
+    formData.append('message', message);
+    formData.append('countryCode', '62');
+
+    fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': token
+      },
+      body: formData
+    }).then(res => res.json()).then(data => {
+      console.log('[FONTE WA API RESPONSE]:', cleanPhone, data);
+    }).catch(err => {
+      console.error('[FONTE WA API ERROR]:', cleanPhone, err);
+    });
+
+    anySent = true;
   });
 
-  return true;
+  return anySent;
 }
+window.kirimNotifikasiWA = kirimNotifikasiWA;
 
 async function setGlobalAdminTheme(themeId) {
   if (!themeId) return;
@@ -3406,6 +3434,17 @@ async function bukaMainApp() {
     try {
       await syncAllDataToCache();
     } catch (e) {}
+  }
+
+  if (currentUser) {
+    try {
+      const users = typeof getUsersFromDB === 'function' ? getUsersFromDB() : [];
+      const updatedUser = users.find(u => u && u.id === currentUser.id);
+      if (updatedUser) {
+        currentUser = updatedUser;
+        appStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+      }
+    } catch(e) {}
   }
 
   const loginPage = document.getElementById('loginPage');
@@ -5145,7 +5184,8 @@ function approveService(noSurat) {
               `Pemberitahuan Sistem Permintaan Barang:\n` +
               `Pengajuan permintaan barang berikut telah DISETUJUI oleh Service (${currentUser.fullName || currentUser.username}):\n` +
               `• Nomor Dokumen : #${noSurat}\n` +
-              `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n\n` +
+              `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
+              `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
               `Mohon berkenan untuk melakukan peninjauan dan persetujuan (approval) tingkat DM melalui sistem aplikasi. Terima kasih.`
             );
           }
@@ -5221,7 +5261,8 @@ function approveDM(noSurat) {
               `Pengajuan permintaan barang berikut telah DISETUJUI OLEH DM:\n` +
               `• Nomor Dokumen : #${noSurat}\n` +
               `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-              `• Status : DISETUJUI (APPROVE)\n\n` +
+              `• Status : DISETUJUI (APPROVE)\n` +
+              `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
               `Dokumen saat ini siap diproses oleh Tim Service. Terima kasih atas kerja samanya.`
             );
           }
@@ -5462,7 +5503,8 @@ function kirimReject() {
             `Pengajuan permintaan barang berikut DITOLAK oleh Tim Service:\n` +
             `• Nomor Dokumen : #${noSurat}\n` +
             `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-            `• Catatan / Alasan : ${alasan}\n\n` +
+            `• Catatan / Alasan : ${alasan}\n` +
+            `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
             `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
           );
         }
@@ -5475,7 +5517,8 @@ function kirimReject() {
             `Pengajuan permintaan barang berikut DITOLAK oleh DM Pusat:\n` +
             `• Nomor Dokumen : #${noSurat}\n` +
             `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-            `• Catatan / Alasan : ${alasan}\n\n` +
+            `• Catatan / Alasan : ${alasan}\n` +
+            `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
             `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
           );
         }
@@ -5488,7 +5531,8 @@ function kirimReject() {
               `Pengajuan permintaan barang berikut DITOLAK oleh DM Pusat:\n` +
               `• Nomor Dokumen : #${noSurat}\n` +
               `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-              `• Catatan / Alasan : ${alasan}\n\n` +
+              `• Catatan / Alasan : ${alasan}\n` +
+              `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
               `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
             );
           }
