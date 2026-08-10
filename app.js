@@ -8762,7 +8762,7 @@ function simpanAkun() {
           }
 
           hideLoading();
-          showNotif('PROFIL AKUN BERHASIL DIPERBARUI & DISINKRONKAN KE ALL DEVICES!', 'success');
+          showNotif('PROFIL AKUN BERHASIL DIPERBARUI', 'success');
 
           const akunArea = document.getElementById('akunArea');
           if (akunArea) akunArea.value = `${currentUser.area} - ${AREA_MAP[currentUser.area] || currentUser.area}`;
