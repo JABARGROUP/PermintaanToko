@@ -6628,9 +6628,28 @@ function bukaPdfModal(noSurat) {
     dmTTD = ttdMap['DM'] || ttdMap['DM'] || '';
   }
 
+  const creatorUser = users.find(u => 
+    (u.fullName && String(u.fullName).toUpperCase() === String(req.createdBy || '').toUpperCase()) || 
+    (u.username && String(u.username).toUpperCase() === String(req.createdBy || '').toUpperCase()) || 
+    (u.id && u.id === req.userId)
+  );
+
+  const creatorCategory = creatorUser ? creatorUser.category : '';
+  const isCreatedByServiceOrAdmin = (
+    creatorCategory === 'SERVICE' || 
+    creatorCategory === 'HODS' || 
+    creatorCategory === 'ADMIN' || 
+    creatorCategory === 'DM' || 
+    String(req.createdBy || '').toUpperCase().includes('SERVICE') || 
+    String(req.createdBy || '').toUpperCase().includes('HODS') || 
+    String(req.createdBy || '').toUpperCase().includes('ADMIN')
+  );
+
   let tokoTTD = '';
-  if (req.createdBy) {
-    tokoTTD = ttdMap[req.createdBy] || ttdMap[req.toko] || '';
+  if (!isCreatedByServiceOrAdmin) {
+    if (req.createdBy) {
+      tokoTTD = ttdMap[req.createdBy] || ttdMap[req.toko] || '';
+    }
   }
 
   const nowPrint = new Date();
