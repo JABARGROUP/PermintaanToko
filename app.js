@@ -1127,8 +1127,8 @@ window.isAreaMatch = isAreaMatch;
 function formatUserAreaDisplay(areaInput) {
   if (!areaInput) return '-';
   const areas = getUserAreaList(areaInput);
-  if (areas.includes('ALL')) return 'ALL (SEMUA AREA)';
-  return areas.map(a => AREA_MAP[a] || a).join(', ');
+  if (areas.includes('ALL')) return 'ALL';
+  return areas.join(' / ');
 }
 window.formatUserAreaDisplay = formatUserAreaDisplay;
 
@@ -8394,6 +8394,40 @@ async function simpanUserData() {
         await syncSupabaseUsersToLocalCache();
       }
 
+      if (category === 'TOKO') {
+        try {
+          const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
+          const sIdx = localStores.findIndex(s => s.id === users[idx].id || (s.fullName && s.fullName.toUpperCase() === fullName.toUpperCase()));
+          if (sIdx !== -1) {
+            localStores[sIdx].fullName = fullName;
+            localStores[sIdx].area = area;
+            localStores[sIdx].storeCode = storeCode || generateStoreCode(fullName);
+          } else {
+            localStores.push({
+              id: users[idx].id,
+              fullName: fullName,
+              area: area,
+              storeCode: storeCode || generateStoreCode(fullName),
+              createdBy: currentUser ? currentUser.fullName : 'ADMIN'
+            });
+          }
+          appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
+
+          if (typeof supabase !== 'undefined' && supabase) {
+            await supabase.from('toko_list').upsert({
+              id: users[idx].id,
+              full_name: fullName,
+              area: area,
+              store_code: storeCode || generateStoreCode(fullName),
+              created_by: currentUser ? currentUser.fullName : 'ADMIN'
+            }).catch(e => console.warn(e));
+          }
+          if (typeof syncSupabaseStoresToLocalCache === 'function') {
+            await syncSupabaseStoresToLocalCache().catch(() => {});
+          }
+        } catch(e) {}
+      }
+
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
         dbFirestore.collection('users').doc(docId).set(users[idx], { merge: true }).catch(e => console.warn(e));
       }
@@ -8407,6 +8441,8 @@ async function simpanUserData() {
       showNotif(`DATA USER ${username} BERHASIL DIPERBARUI!`, 'info');
       tutupUserModal();
       loadUsersManagement();
+      if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
+      if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
       return;
     }
   }
@@ -8445,7 +8481,7 @@ async function simpanUserData() {
     username,
     password,
     fullName,
-    storeCode,
+    storeCode: storeCode || generateStoreCode(fullName),
     phone,
     category,
     area,
@@ -8468,9 +8504,41 @@ async function simpanUserData() {
       area: newUser.area,
       created_at: newUser.createdAt
     });
+
+    if (category === 'TOKO') {
+      try {
+        await supabase.from('toko_list').upsert({
+          id: newUser.id,
+          full_name: newUser.fullName,
+          area: newUser.area,
+          store_code: newUser.storeCode,
+          created_by: currentUser ? currentUser.fullName : 'ADMIN'
+        });
+      } catch (e) {}
+    }
   }
+
+  if (category === 'TOKO') {
+    try {
+      const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
+      if (!localStores.some(s => s.id === newUser.id || (s.fullName && s.fullName.toUpperCase() === fullName.toUpperCase()))) {
+        localStores.push({
+          id: newUser.id,
+          fullName: newUser.fullName,
+          area: newUser.area,
+          storeCode: newUser.storeCode,
+          createdBy: currentUser ? currentUser.fullName : 'ADMIN'
+        });
+        appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
+      }
+    } catch (e) {}
+  }
+
   if (typeof syncSupabaseUsersToLocalCache === 'function') {
     await syncSupabaseUsersToLocalCache();
+  }
+  if (typeof syncSupabaseStoresToLocalCache === 'function') {
+    await syncSupabaseStoresToLocalCache();
   }
   if (typeof dbFirestore !== 'undefined' && dbFirestore) {
     dbFirestore.collection('users').doc(docId).set(newUser).catch(e => console.warn(e));
@@ -8486,6 +8554,8 @@ async function simpanUserData() {
 
   tutupUserModal();
   loadUsersManagement();
+  if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
+  if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
 }
 
 function hapusUser(userId) {
@@ -8511,11 +8581,24 @@ function hapusUser(userId) {
     showLoading('MENGHAPUS USER...');
     setTimeout(async () => {
       try {
-        // 1. UPDATE DELETED KEYS & LOKAL STORAGE
+        // 1. UPDATE DELETED KEYS & LOKAL STORAGE FOR USERS & STORES
         try {
           const delUsers = JSON.parse(appStorage.getItem(DELETED_USERS_KEY) || '[]');
           if (!delUsers.includes(u.id)) delUsers.push(u.id);
           appStorage.setItem(DELETED_USERS_KEY, JSON.stringify(delUsers));
+
+          const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
+          const updatedStores = localStores.filter(s => s.id !== u.id && !(s.fullName && u.fullName && s.fullName.toUpperCase() === u.fullName.toUpperCase()));
+          appStorage.setItem(STORES_DB_KEY, JSON.stringify(updatedStores));
+
+          if (u.fullName && u.area) {
+            const storeKey = `${u.fullName.toUpperCase()}_${u.area}`;
+            const deletedStoreKeys = JSON.parse(appStorage.getItem(DELETED_STORES_KEY) || '[]');
+            if (!deletedStoreKeys.includes(storeKey)) {
+              deletedStoreKeys.push(storeKey);
+              appStorage.setItem(DELETED_STORES_KEY, JSON.stringify(deletedStoreKeys));
+            }
+          }
         } catch(e) {}
 
         const updatedUsers = users.filter(x => x.id !== u.id && x.username !== u.username);
@@ -8530,8 +8613,8 @@ function hapusUser(userId) {
           try {
             await supabase.from('users').delete().eq('id', u.id);
             await supabase.from('users').delete().eq('username', u.username);
+            await supabase.from('toko_list').delete().eq('id', u.id);
             if (u.fullName) {
-              await supabase.from('toko_list').delete().eq('id', u.id);
               await supabase.from('toko_list').delete().eq('full_name', u.fullName);
             }
           } catch (sbErr) {
@@ -8540,6 +8623,9 @@ function hapusUser(userId) {
         }
         if (typeof syncSupabaseUsersToLocalCache === 'function') {
           await syncSupabaseUsersToLocalCache();
+        }
+        if (typeof syncSupabaseStoresToLocalCache === 'function') {
+          await syncSupabaseStoresToLocalCache();
         }
 
         // 3. HAPUS DARI FIREBASE ONLINE (FIRESTORE & REALTIME DB)
@@ -8563,6 +8649,8 @@ function hapusUser(userId) {
         hideLoading();
         showNotif(`USER ${u.username} BERHASIL DIHAPUS!`, 'info');
         if (typeof loadUsersManagement === 'function') loadUsersManagement();
+        if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
+        if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
       } catch (err) {
         hideLoading();
         console.error('[HAPUS USER ERROR]:', err);
