@@ -1343,18 +1343,26 @@ const LAST_REMINDER_SENT_KEY = 'STORE_LAST_REMINDER_SENT_KEY_V1';
 function checkAndTriggerPendingReminders(forceNow = false) {
   if (!getAdminReminderEnabled()) return;
 
-  const scheduledTime = getAdminReminderTime(); // e.g. "09:00" or "14:00"
+  const scheduledTimeStr = getAdminReminderTime(); // e.g. "09:00" or "09:00, 14:00"
+  const scheduledTimes = scheduledTimeStr.split(',').map(t => t.trim()).filter(Boolean);
+  if (scheduledTimes.length === 0) scheduledTimes.push('09:00');
+
   const now = new Date();
   const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const todayDateStr = typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : now.toISOString().split('T')[0];
 
-  // UNLESS forceNow IS TRUE (e.g. clicking "TES REMINDER"), ONLY TRIGGER AT THE CONFIGURED ADMIN TIME
-  if (!forceNow) {
-    if (currentHHMM !== scheduledTime) return;
+  let matchedTime = scheduledTimes[0] || '09:00';
 
-    // PREVENT MULTIPLE DISPATCHES IN THE SAME MINUTE
+  // UNLESS forceNow IS TRUE (e.g. clicking "TES REMINDER"), ONLY TRIGGER AT THE CONFIGURED ADMIN TIMES
+  if (!forceNow) {
+    const isTimeToTrigger = scheduledTimes.includes(currentHHMM);
+    if (!isTimeToTrigger) return;
+
+    matchedTime = currentHHMM;
+
+    // PREVENT MULTIPLE DISPATCHES IN THE SAME MINUTE / TIME SLOT
     const lastSentTag = appStorage.getItem(LAST_REMINDER_SENT_KEY);
-    const currentSentTag = `${todayDateStr}_${scheduledTime}`;
+    const currentSentTag = `${todayDateStr}_${matchedTime}`;
     if (lastSentTag === currentSentTag) return;
 
     appStorage.setItem(LAST_REMINDER_SENT_KEY, currentSentTag);
@@ -2766,18 +2774,34 @@ function formatCleanPhoneList(targetPhone) {
   const parts = rawStr.split(/[\s;,/|&\n]+/);
   
   const cleanedList = [];
-  parts.forEach(part => {
-    let clean = part.replace(/[^0-9]/g, '');
-    if (!clean || clean.length < 5) return;
+  parts.forEach(rawPart => {
+    let part = rawPart.trim();
+    if (!part || part.length < 5) return;
     
-    if (clean.startsWith('0')) {
-      clean = '62' + clean.slice(1);
-    } else if (!clean.startsWith('62')) {
-      clean = '62' + clean;
-    }
-    
-    if (!cleanedList.includes(clean)) {
-      cleanedList.push(clean);
+    // Check if target is a WhatsApp Group ID (contains '@g.us', '-', or starts with '120')
+    const isGroup = part.includes('@g.us') || part.includes('-') || part.startsWith('120');
+
+    if (isGroup) {
+      let groupTarget = part;
+      if (!groupTarget.includes('@g.us') && (groupTarget.includes('-') || groupTarget.startsWith('120'))) {
+        groupTarget = groupTarget + '@g.us';
+      }
+      if (!cleanedList.includes(groupTarget)) {
+        cleanedList.push(groupTarget);
+      }
+    } else {
+      let clean = part.replace(/[^0-9]/g, '');
+      if (!clean || clean.length < 5) return;
+      
+      if (clean.startsWith('0')) {
+        clean = '62' + clean.slice(1);
+      } else if (!clean.startsWith('62') && clean.length <= 13) {
+        clean = '62' + clean;
+      }
+      
+      if (!cleanedList.includes(clean)) {
+        cleanedList.push(clean);
+      }
     }
   });
   
@@ -8823,6 +8847,9 @@ function prosesUploadExcelLookup(event) {
 function bukaAkun() {
   if (!currentUser) return;
 
+  if (typeof tutupPdfModal === 'function') tutupPdfModal();
+  if (typeof tutupDetailBarangV2 === 'function') tutupDetailBarangV2();
+
   const currentActivePage = typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : '';
   if (currentActivePage === 'inputPage' && isFormDirtyOrFilled()) {
     const confirmMsg = modeEdit ? 'KELUAR DARI MENU EDIT?' : 'KELUAR DARI FORM PERMINTAAN? (DATA YANG DIISI AKAN HILANG)';
@@ -8847,6 +8874,9 @@ function bukaAkun() {
 }
 
 function prosesBukaAkun() {
+  if (typeof tutupPdfModal === 'function') tutupPdfModal();
+  if (typeof tutupDetailBarangV2 === 'function') tutupDetailBarangV2();
+
   const elNama = document.getElementById('akunNama');
   const elHP = document.getElementById('akunHP');
   const elArea = document.getElementById('akunArea');
@@ -10321,8 +10351,13 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// PREVENT FULL PAGE SCROLLING ON RIWAYAT PAGE & MASTER DB PAGE WHEN TOUCHING NON-TABLE ELEMENTS (E.G. H3, TOOLBAR)
+// PREVENT FULL PAGE SCROLLING ON RIWAYAT PAGE & MASTER DB PAGE WHEN TOUCHING NON-TABLE ELEMENTS (EXEMPT ALL POPUP MODALS LIKE PDF PREVIEW)
 document.addEventListener('touchmove', function (e) {
+  const isInsideModal = e.target.closest('.popupOverlay') || e.target.closest('#pdfModal') || e.target.closest('#pdfDocumentContent') || e.target.closest('#imageViewer');
+  if (isInsideModal) {
+    return; // Allow touch scrolling inside modal!
+  }
+
   const activePage = typeof getCurrentActivePageId === 'function' ? getCurrentActivePageId() : '';
   if (activePage === 'riwayatPage' || activePage === 'masterDbPage') {
     const isInsideTable = e.target.closest('.tableWrap');

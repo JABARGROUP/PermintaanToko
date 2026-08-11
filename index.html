@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260811_v1255">
-  <script src="app.js?v=20260811_v1255"></script>
+  <link rel="stylesheet" href="styles.css?v=20260811_v1275">
+  <script src="app.js?v=20260811_v1275"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -1054,15 +1054,15 @@
   </div>
 
   <!-- 10. POPUP PDF DOCUMENT PREVIEW MODAL -->
-  <div id="pdfModal" class="popupOverlay" onclick="if(event.target === this) tutupPdfModal();" style="align-items: flex-start !important; padding-top: 4px !important; padding-bottom: 4px !important;">
-    <div class="popupBox" style="position: relative; height: calc(100vh - 8px) !important; max-height: calc(100vh - 8px) !important; display: flex !important; flex-direction: column !important; margin-top: 0 !important;">
+  <div id="pdfModal" class="popupOverlay" onclick="if(event.target === this) tutupPdfModal();" style="align-items: flex-start !important; padding-top: 4px !important; padding-bottom: 4px !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important;">
+    <div class="popupBox" style="position: relative; height: calc(100vh - 8px) !important; max-height: calc(100vh - 8px) !important; display: flex !important; flex-direction: column !important; margin-top: 0 !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important;">
       <div class="popupHeader" style="position: relative; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; min-height: 48px; flex-shrink: 0 !important;">
         <button type="button" class="btnPrintHeader" onclick="cetakDokumenPdf()" title="CETAK PDF / PRINT" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #ffffff; color: #0284c7; border: none; border-radius: 6px; font-weight: 800; font-size: 12.5px; cursor: pointer; transform: none !important; animation: none !important; transition: none !important;">
           <span class="material-symbols-rounded" style="font-size: 18px; transform: none !important; animation: none !important;">print</span> PRINT
         </button>
         <button type="button" class="popupClose" onclick="tutupPdfModal()" style="position: absolute !important; right: 14px !important; top: 10px !important; transform: none !important; transition: none !important; animation: none !important; font-size: 26px !important; font-weight: 900 !important; color: #ffffff !important; background: var(--primary) !important; border: 2px solid rgba(255, 255, 255, 0.4) !important; border-radius: 50% !important; width: 34px !important; height: 34px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35) !important; z-index: 999999 !important;" title="TUTUP PDF">&times;</button>
       </div>
-      <div class="popupContent" id="pdfDocumentContent" style="flex: 1; overflow-y: auto; background: #f8fafc; padding: 14px;">
+      <div class="popupContent" id="pdfDocumentContent" style="flex: 1; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important; background: #f8fafc; padding: 14px;">
         <!-- Injected dynamically -->
       </div>
     </div>
