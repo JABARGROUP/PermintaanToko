@@ -4093,7 +4093,7 @@ function updateStoreDropdownOptions(selectedStoreName = '') {
         tokoSelect.innerHTML += `<option value="${s.fullName}" ${isSelected}>${s.fullName} (${s.area || currentUser.area})</option>`;
       });
     } else {
-      tokoSelect.innerHTML = `<option value="INPUT TOKO.....">INPUT TOKO..... (${currentUser.area})</option>`;
+      tokoSelect.innerHTML = `<option value="Silahkan Input Nama Toko">INPUT TOKO..... (${currentUser.area})</option>`;
     }
   }
 
