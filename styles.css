@@ -5212,15 +5212,20 @@ html body .dashboardTable thead tr {
   }
 }
 
-/* POPUP VIEW PDF FULL HEIGHT & TOP SHIFTED OVERRIDE */
+/* POPUP VIEW PDF FULL HEIGHT & TOP SHIFTED OVERRIDE FOR MOBILE HP SCROLLING */
 #pdfModal.popupOverlay,
+#pdfModal.popupOverlay.show,
 html body #pdfModal.popupOverlay {
+  display: flex !important;
   align-items: flex-start !important;
   padding-top: 4px !important;
   padding-bottom: 4px !important;
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 #pdfModal .popupBox,
+#pdfModal.show .popupBox,
 html body #pdfModal .popupBox {
   height: calc(100vh - 8px) !important;
   max-height: calc(100vh - 8px) !important;
@@ -5228,14 +5233,29 @@ html body #pdfModal .popupBox {
   display: flex !important;
   flex-direction: column !important;
   border-radius: 12px !important;
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 #pdfModal #pdfDocumentContent,
+#pdfModal.show #pdfDocumentContent,
 html body #pdfModal #pdfDocumentContent {
   flex: 1 !important;
-  height: 100% !important;
+  height: auto !important;
+  max-height: calc(100vh - 60px) !important;
   overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  overscroll-behavior-y: contain !important;
   box-sizing: border-box !important;
+}
+
+/* OVERRIDE TOUCH ACTION LOCK WHEN PDF MODAL IS OPEN */
+html:has(#pdfModal.show),
+body:has(#pdfModal.show),
+html:has(#pdfModal[style*="display: flex"]),
+body:has(#pdfModal[style*="display: flex"]) {
+  touch-action: pan-y !important;
 }
 
 /* =============================================================================

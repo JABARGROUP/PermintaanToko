@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260810_v1230">
-  <script src="app.js?v=20260810_v1230"></script>
+  <link rel="stylesheet" href="styles.css?v=20260811_v1255">
+  <script src="app.js?v=20260811_v1255"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -897,14 +897,18 @@
       </div>
       <div class="artemisBodyPopup" style="padding: 18px;">
         <input type="hidden" id="artemisNoSurat">
-        <p id="artemisSubTitle" style="font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; line-height: 1.4;">UPLOAD FOTO BUKTI PROSES ARTEMIS UNTUK MENYELESAIKAN PERMINTAAN INI:</p>
+        <p id="artemisSubTitle" style="font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; line-height: 1.4;">UPLOAD FOTO BUKTI PROSES ARTEMIS UNTUK MENYELESAIKAN PERMINTAAN INI:</p>
         
-        <div style="margin: 10px 0 16px 0; text-align: center; display: flex; justify-content: center;">
-          <input type="file" id="artemisFileInput" accept="image/png, image/jpeg, image/jpg, image/webp, image/heic, image/heif, image/*" multiple style="display: none;" onchange="handleArtemisPhotoSelect(event)">
-          <button type="button" onclick="document.getElementById('artemisFileInput').click();" title="TAMBAH / AMBIL FOTO BUKTI ARTEMIS" style="padding: 12px 24px; border-radius: 14px; background: var(--primary); color: #ffffff; font-weight: 800; font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: none; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.2); transition: all 0.2s;">
-            <span class="material-symbols-rounded" style="font-size: 24px; color: #ffffff;">add_a_photo</span>
-            <span>AMBIL / UPLOAD FOTO</span>
-          </button>
+        <input type="file" id="artemisFileInput" accept="image/jpeg, image/jpg, .jpg, .jpeg, image/*" multiple style="display: none;" onchange="handleArtemisPhotoSelect(event)">
+
+        <div id="artemisPasteBox" tabindex="0" onclick="document.getElementById('artemisFileInput').click();" title="PASTE DI SINI / KLIK UNTUK UPLOAD" style="margin: 6px 0 14px 0; padding: 14px 12px; border: 2px dashed var(--primary); border-radius: 14px; background: rgba(2, 132, 199, 0.04); text-align: center; cursor: pointer; transition: all 0.2s; outline: none;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px;">
+            <span class="material-symbols-rounded" style="font-size: 26px; color: var(--primary);">content_paste_go</span>
+            <span class="material-symbols-rounded" style="font-size: 26px; color: var(--primary);">add_a_photo</span>
+          </div>
+          <div style="font-size: 13.5px; font-weight: 800; color: var(--primary); letter-spacing: 0.5px;">
+            PASTE DI SINI / KLIK UNTUK UPLOAD
+          </div>
         </div>
 
         <div id="artemisPhotoPreviewGrid" style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 180px; overflow-y: auto; margin-bottom: 14px; padding: 6px; background: var(--bg-body); border-radius: 10px; border: 1px dashed var(--border-color);">

@@ -3342,8 +3342,6 @@ async function prosesLogin() {
 
       catatLogLogin(user.username, user.fullName, user.area, 'BERHASIL');
       await bukaMainApp();
-
-      showNotif(`LOGIN BERHASIL! SELAMAT DATANG ${user.fullName || user.username}`, 'success');
     } else {
       currentUser = null;
       appStorage.removeItem(SESSION_KEY);
@@ -3422,8 +3420,6 @@ function logout() {
       loadRememberedCredentials();
     }
     if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-
-    showNotif('BERHASIL LOGOUT!', 'success');
   });
 }
 
@@ -5337,19 +5333,92 @@ function closeArtemisModal() {
 }
 window.closeArtemisModal = closeArtemisModal;
 
-function handleArtemisPhotoSelect(e) {
+function convertImageToJpeg(fileOrBlob) {
+  return new Promise((resolve, reject) => {
+    if (!fileOrBlob) return reject('File tidak valid');
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        resolve(jpegDataUrl);
+      };
+      img.onerror = () => reject('Gagal memuat format gambar');
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject('Gagal membaca berkas gambar');
+    reader.readAsDataURL(fileOrBlob);
+  });
+}
+window.convertImageToJpeg = convertImageToJpeg;
+
+async function handleArtemisGlobalPaste(e) {
+  const overlay = document.getElementById('artemisOverlay');
+  if (!overlay || overlay.style.display === 'none' || !overlay.classList.contains('show')) return;
+
+  const clipboardData = e.clipboardData || (e.originalEvent && e.originalEvent.clipboardData);
+  if (!clipboardData || !clipboardData.items) return;
+
+  const items = clipboardData.items;
+  let addedCount = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type && items[i].type.indexOf('image') !== -1) {
+      const blob = items[i].getAsFile();
+      if (blob) {
+        try {
+          if (typeof showLoading === 'function') showLoading('MEMROSES PASTE SCREENSHOT...');
+          const jpegDataUrl = await convertImageToJpeg(blob);
+          tempArtemisPhotos.push(jpegDataUrl);
+          addedCount++;
+        } catch (err) {
+          console.error('[PASTE ARTEMIS ERROR]:', err);
+        } finally {
+          if (typeof hideLoading === 'function') hideLoading();
+        }
+      }
+    }
+  }
+
+  if (addedCount > 0) {
+    if (e.preventDefault) e.preventDefault();
+    renderArtemisPhotoPreviews();
+  }
+}
+window.handleArtemisGlobalPaste = handleArtemisGlobalPaste;
+
+// Attach global paste listener once initialized
+if (typeof window !== 'undefined') {
+  window.removeEventListener('paste', handleArtemisGlobalPaste);
+  window.addEventListener('paste', handleArtemisGlobalPaste);
+}
+
+async function handleArtemisPhotoSelect(e) {
   const files = e.target.files;
   if (!files || files.length === 0) return;
 
-  Array.from(files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      tempArtemisPhotos.push(event.target.result);
-      renderArtemisPhotoPreviews();
-    };
-    reader.readAsDataURL(file);
-  });
-  e.target.value = '';
+  if (typeof showLoading === 'function') showLoading('MEMROSES FOTO BUKTI...');
+
+  try {
+    for (const file of Array.from(files)) {
+      const jpegDataUrl = await convertImageToJpeg(file);
+      tempArtemisPhotos.push(jpegDataUrl);
+    }
+    renderArtemisPhotoPreviews();
+  } catch (err) {
+    console.error('[UPLOAD ARTEMIS ERROR]:', err);
+    showNotif('GAGAL MEMROSES FOTO BUKTI!', 'warning');
+  } finally {
+    if (typeof hideLoading === 'function') hideLoading();
+    e.target.value = '';
+  }
 }
 window.handleArtemisPhotoSelect = handleArtemisPhotoSelect;
 
@@ -5827,6 +5896,115 @@ function tutupDetailBarangV2() {
 }
 window.tutupDetailBarangV2 = tutupDetailBarangV2;
 window.closeDetail = tutupDetailBarangV2;
+
+let isItemModifiedMap = {};
+
+function hapusBarisItemDetailAdmin(noSurat, itemIndex) {
+  if (!noSurat) return;
+
+  const requests = getRequestsFromDB();
+  const idx = requests.findIndex(r => r && (r.noSurat === noSurat || String(r.noSurat) === String(noSurat) || r.id === noSurat));
+  if (idx === -1) return;
+
+  let rawItems = requests[idx].items;
+  let itemsList = [];
+  if (Array.isArray(rawItems)) {
+    itemsList = [...rawItems];
+  } else if (typeof rawItems === 'string') {
+    try { itemsList = JSON.parse(rawItems || '[]'); } catch (e) { itemsList = []; }
+  }
+
+  if (itemIndex >= 0 && itemIndex < itemsList.length) {
+    const deletedItemName = itemsList[itemIndex].barang || itemsList[itemIndex].permintaan || itemsList[itemIndex].type || `Baris ${itemIndex + 1}`;
+    
+    showConfirm(`APAKAH ANDA YAKIN INGIN MENGHAPUS BARIS ITEM '${deletedItemName}' INI?`, () => {
+      itemsList.splice(itemIndex, 1);
+      requests[idx].items = itemsList;
+
+      if (!requests[idx].log) requests[idx].log = [];
+      requests[idx].log.push({
+        action: 'SERVICE_DELETE_ITEM_ROW',
+        user: currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE',
+        notes: `Hapus baris item '${deletedItemName}'`,
+        time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+      });
+
+      saveRequestsToDB(requests);
+      isItemModifiedMap[noSurat] = true;
+
+      showNotif(`BARIS ITEM BERHASIL DIHAPUS DARI DRAFT! KLIK ICON SIMPAN UNTUK MENYIMPAN KE CLOUD.`, 'info');
+      lihatDetail(noSurat);
+    });
+  }
+}
+window.hapusBarisItemDetailAdmin = hapusBarisItemDetailAdmin;
+
+function simpanPerubahanDetailAdmin(noSurat) {
+  if (!noSurat) return;
+
+  const isModified = isItemModifiedMap[noSurat];
+
+  if (!isModified) {
+    showNotif('TIDAK ADA PERUBAHAN PADA ITEM BARANG!', 'warning');
+    return;
+  }
+
+  showConfirm(`APAKAH ANDA YAKIN INGIN MENYIMPAN PERUBAHAN ITEM PERMINTAAN #${noSurat} KE CLOUD?`, () => {
+    showLoading('MENYIMPAN PERUBAHAN ITEM KE CLOUD...');
+    setTimeout(async () => {
+      try {
+        const requests = getRequestsFromDB();
+        const req = requests.find(r => r && (r.noSurat === noSurat || String(r.noSurat) === String(noSurat) || r.id === noSurat));
+        if (!req) {
+          hideLoading();
+          showNotif('DATA PERMINTAAN TIDAK DITEMUKAN!', 'warning');
+          return;
+        }
+
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            const { error: err1 } = await supabase.from('permintaan_toko').update({
+              items: req.items
+            }).eq('no_surat', noSurat);
+            if (err1) {
+              await supabase.from('permintaan_toko').update({
+                items: req.items
+              }).eq('id', req.id || noSurat);
+            }
+          } catch (e) {
+            console.error("Supabase update error:", e);
+          }
+        }
+
+        isItemModifiedMap[noSurat] = false;
+
+        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
+          await syncSupabaseRequestsToLocalCache();
+        }
+
+        if (typeof notifySupabaseDataChanged === 'function') {
+          notifySupabaseDataChanged('permintaan_toko');
+        }
+
+        hideLoading();
+        showNotif(`PERUBAHAN ITEM PERMINTAAN #${noSurat} BERHASIL DISIMPAN KE CLOUD!`, 'success');
+
+        if (typeof loadRiwayat === 'function') loadRiwayat();
+        if (typeof loadDashboard === 'function') loadDashboard();
+        if (currentUser && currentUser.category === 'SERVICE' && currentUser.area === 'TSM') {
+          if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+        }
+
+        lihatDetail(noSurat);
+      } catch (err) {
+        hideLoading();
+        console.error(err);
+        showNotif('GAGAL MENYIMPAN PERUBAHAN KE CLOUD', 'danger');
+      }
+    }, 300);
+  });
+}
+window.simpanPerubahanDetailAdmin = simpanPerubahanDetailAdmin;
 
 async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   let req = null;
@@ -6617,12 +6795,24 @@ function bukaPdfModal(noSurat) {
   `;
 
   const pdfModal = document.getElementById('pdfModal');
-  if (pdfModal) pdfModal.style.display = 'flex';
+  if (pdfModal) {
+    pdfModal.classList.add('show');
+    pdfModal.style.setProperty('display', 'flex', 'important');
+    pdfModal.style.setProperty('visibility', 'visible', 'important');
+    pdfModal.style.setProperty('opacity', '1', 'important');
+    pdfModal.style.setProperty('pointer-events', 'auto', 'important');
+
+    const pdfContent = document.getElementById('pdfDocumentContent');
+    if (pdfContent) pdfContent.scrollTop = 0;
+  }
 }
 
 function tutupPdfModal() {
   const pdfModal = document.getElementById('pdfModal');
-  if (pdfModal) pdfModal.style.display = 'none';
+  if (pdfModal) {
+    pdfModal.style.setProperty('display', 'none', 'important');
+    pdfModal.classList.remove('show');
+  }
 }
 
 function cetakDokumenPdf() {
@@ -8762,7 +8952,7 @@ function simpanAkun() {
           }
 
           hideLoading();
-          showNotif('PROFIL AKUN BERHASIL DIPERBARUI', 'success');
+          showNotif('PROFIL AKUN BERHASIL DIPERBARUI & DISINKRONKAN KE ALL DEVICES!', 'success');
 
           const akunArea = document.getElementById('akunArea');
           if (akunArea) akunArea.value = `${currentUser.area} - ${AREA_MAP[currentUser.area] || currentUser.area}`;
