@@ -9064,6 +9064,10 @@ function prosesBukaAkun() {
     adminWrap.style.display = 'none';
   }
 
+  if (typeof tutupModalTambahToko === 'function') {
+    tutupModalTambahToko();
+  }
+
   const modal = document.getElementById('popupAkun');
   if (modal) modal.classList.add('show');
   if (typeof pushPopupHistoryState === 'function') pushPopupHistoryState();
@@ -9111,10 +9115,11 @@ function simpanAkun() {
                 username: currentUser.username,
                 password: currentUser.password,
                 full_name: currentUser.fullName,
-                store_code: currentUser.storeCode || '',
-                phone: currentUser.phone || '',
+                store_code: currentUser.storeCode || generateStoreCode(currentUser.fullName),
+                phone: currentUser.phone || '-',
                 category: currentUser.category,
-                area: currentUser.area
+                area: currentUser.area,
+                created_at: currentUser.createdAt || getFormattedDateDDMMYYYY()
               };
 
               const { error: upErr } = await supabase.from('users').upsert(userPayload);
@@ -9138,7 +9143,7 @@ function simpanAkun() {
           showNotif('PROFIL AKUN BERHASIL DIPERBARUI & DISINKRONKAN KE ALL DEVICES!', 'success');
 
           const akunArea = document.getElementById('akunArea');
-          if (akunArea) akunArea.value = `${currentUser.area} - ${AREA_MAP[currentUser.area] || currentUser.area}`;
+          if (akunArea) akunArea.value = `${currentUser.area} - ${formatUserAreaDisplay(currentUser.area)}`;
 
           const akunKategori = document.getElementById('akunKategori');
           if (akunKategori) akunKategori.value = currentUser.category;
@@ -9173,6 +9178,10 @@ window.simpanAkun = simpanAkun;
 function bukaModalTambahToko() {
   if (!currentUser) return;
   
+  if (typeof tutupAkun === 'function') {
+    tutupAkun();
+  }
+
   const selectAreaEl = document.getElementById('selectAreaTokoBaru');
   if (selectAreaEl) {
     selectAreaEl.innerHTML = '';
