@@ -515,7 +515,7 @@ function getAccessibleNotifications() {
 
     // 1. STRICT AREA FILTER: MUST MATCH USER'S AREA OR ALL (DM HANDLES ALL AREAS GLOBALLY)
     const targetArea = String(n.targetArea || 'ALL').toUpperCase();
-    const areaMatch = (targetArea === 'ALL' || targetArea === userArea || userArea === 'ALL' || userCat === 'DM');
+    const areaMatch = (targetArea === 'ALL' || userArea === 'ALL' || userCat === 'DM' || isAreaMatch(userArea, targetArea));
     if (!areaMatch) return false;
 
     // 2. STRICT ROLE MATCH PER LOGIN CATEGORY
@@ -557,9 +557,9 @@ function getAccessibleNotifications() {
         const reqTime = new Date(r.createdAt).getTime();
         if (reqTime <= clearedAt) return false;
       }
-      const isAreaMatch = (!r.area || r.area.toUpperCase() === userArea || userArea === 'ALL' || isSysAdmin);
+      const areaMatched = (!r.area || userArea === 'ALL' || isSysAdmin || isAreaMatch(userArea, r.area));
       const isWaitingService = (!r.serviceApprove && r.status === 'PENDING');
-      return isAreaMatch && isWaitingService;
+      return areaMatched && isWaitingService;
     });
 
     servicePendingReqs.forEach(r => {
@@ -583,9 +583,9 @@ function getAccessibleNotifications() {
         const reqTime = new Date(r.createdAt).getTime();
         if (reqTime <= clearedAt) return false;
       }
-      const isAreaMatch = (!r.area || r.area.toUpperCase() === userArea || userArea === 'ALL' || isSysAdmin);
+      const areaMatched = (!r.area || userArea === 'ALL' || isSysAdmin || isAreaMatch(userArea, r.area));
       const isApprovedByDm = (r.serviceApprove === true && r.status === 'APPROVE');
-      return isAreaMatch && isApprovedByDm;
+      return areaMatched && isApprovedByDm;
     });
 
     dmApprovedReqs.forEach(r => {
@@ -1100,6 +1100,37 @@ const AREA_MAP = {
   SBN: 'SUBANG (SBN)',
   TSM: 'TASIKMALAYA (TSM)'
 };
+
+function getUserAreaList(areaInput) {
+  if (!areaInput) return [];
+  if (Array.isArray(areaInput)) return areaInput.map(a => String(a).trim().toUpperCase()).filter(Boolean);
+  
+  const str = String(areaInput).trim().toUpperCase();
+  if (str === 'ALL' || str === 'SEMUA') return ['ALL'];
+
+  const parts = str.split(/[,&/+\s]+/).map(p => p.trim()).filter(Boolean);
+  return parts;
+}
+window.getUserAreaList = getUserAreaList;
+
+function isAreaMatch(userArea, targetArea) {
+  if (!userArea || !targetArea) return false;
+  const userAreas = getUserAreaList(userArea);
+  const targetAreas = getUserAreaList(targetArea);
+
+  if (userAreas.includes('ALL') || targetAreas.includes('ALL')) return true;
+
+  return userAreas.some(uArea => targetAreas.includes(uArea));
+}
+window.isAreaMatch = isAreaMatch;
+
+function formatUserAreaDisplay(areaInput) {
+  if (!areaInput) return '-';
+  const areas = getUserAreaList(areaInput);
+  if (areas.includes('ALL')) return 'ALL (SEMUA AREA)';
+  return areas.map(a => AREA_MAP[a] || a).join(', ');
+}
+window.formatUserAreaDisplay = formatUserAreaDisplay;
 
 const KODE_UNIT_MAP = {};
 
@@ -3897,7 +3928,7 @@ function getAccessibleRequests() {
     );
   }
 
-  return requests.filter(r => r.area === currentUser.area);
+  return requests.filter(r => isAreaMatch(currentUser.area, r.area));
 }
 
 function filterDashboardRecent(status) {
@@ -3911,7 +3942,7 @@ function loadDashboard() {
   const nameEl = document.getElementById('namaUser');
   const areaEl = document.getElementById('areaUser');
   if (nameEl) nameEl.textContent = currentUser.fullName;
-  if (areaEl) areaEl.textContent = `${currentUser.category} - ${AREA_MAP[currentUser.area] || currentUser.area}`;
+  if (areaEl) areaEl.textContent = `${currentUser.category} - ${formatUserAreaDisplay(currentUser.area)}`;
 
   const data = getAccessibleRequests();
 
@@ -4054,7 +4085,7 @@ function updateStoreDropdownOptions(selectedStoreName = '') {
     const allStores = getStoresFromDB();
     const areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
       ? allStores 
-      : allStores.filter(s => s && s.area === currentUser.area);
+      : allStores.filter(s => s && isAreaMatch(currentUser.area, s.area));
 
     if (areaStores.length > 0) {
       areaStores.forEach(s => {
@@ -4645,9 +4676,10 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       const safeToko = String(toko || '').trim().toUpperCase();
       const matchedStore = allStores.find(s => s && s.fullName && String(s.fullName).trim().toUpperCase() === safeToko);
       let storeCode = matchedStore ? (matchedStore.storeCode || generateStoreCode(matchedStore.fullName)) : generateStoreCode(safeToko);
+      const targetArea = (matchedStore && matchedStore.area) ? matchedStore.area : (getUserAreaList(currentUser.area)[0] || 'BDG');
 
       const seqNo = String(requests.length + 1).padStart(2, '0');
-      const noSurat = `PRMT/${currentUser.area}-${storeCode}/${codeYear}${codeMonth}${codeDay}${seqNo}`;
+      const noSurat = `PRMT/${targetArea}-${storeCode}/${codeYear}${codeMonth}${codeDay}${seqNo}`;
       
       const isDMUser = currentUser && currentUser.category === 'DM';
       const autoServiceApprove = isDMUser ? true : false;
@@ -4656,7 +4688,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       let autoServiceTTD = '';
       if (isDMUser) {
         const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-        autoServiceTTD = ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap['SERVICE_' + currentUser.area] || ttdMap['SERVICE'] || ttdMap['DM'] || '';
+        autoServiceTTD = ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap['SERVICE_' + targetArea] || ttdMap['SERVICE'] || ttdMap['DM'] || '';
       }
 
       const initialLog = [];
@@ -4672,7 +4704,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       const newRecord = {
         noSurat,
         tanggal: getFormattedDateDDMMYYYY(now),
-        area: currentUser.area,
+        area: targetArea,
         userId: currentUser.id,
         toko,
         jenis,
@@ -8255,6 +8287,8 @@ function bukaUserModal(userId = null) {
 
   const title = document.getElementById('userFormTitle');
 
+  let targetAreas = ['BDG'];
+
   if (userId) {
     const u = getUsersFromDB().find(x => x && x.id === userId);
     if (u) {
@@ -8264,7 +8298,7 @@ function bukaUserModal(userId = null) {
       document.getElementById('uFormStoreCode').value = u.storeCode || '';
       document.getElementById('uFormPhone').value = u.phone || '';
       document.getElementById('uFormCategory').value = u.category || 'TOKO';
-      document.getElementById('uFormArea').value = u.area || 'BDG';
+      targetAreas = typeof getUserAreaList === 'function' ? getUserAreaList(u.area) : [u.area || 'BDG'];
       if (title) title.textContent = `EDIT USER: ${u.username}`;
     }
   } else {
@@ -8274,9 +8308,17 @@ function bukaUserModal(userId = null) {
     document.getElementById('uFormStoreCode').value = '';
     document.getElementById('uFormPhone').value = '';
     document.getElementById('uFormCategory').value = 'TOKO';
-    document.getElementById('uFormArea').value = 'BDG';
+    targetAreas = ['BDG'];
     if (title) title.textContent = 'TAMBAH USER BARU';
   }
+
+  const areaCheckboxes = document.querySelectorAll('input[name="uFormAreaCheck"]');
+  areaCheckboxes.forEach(cb => {
+    cb.checked = targetAreas.includes(cb.value);
+  });
+
+  const hiddenAreaInput = document.getElementById('uFormArea');
+  if (hiddenAreaInput) hiddenAreaInput.value = targetAreas.join(', ');
 
   const modal = document.getElementById('popupUserForm');
   if (modal) modal.style.display = 'flex';
@@ -8299,7 +8341,11 @@ async function simpanUserData() {
   const storeCode = document.getElementById('uFormStoreCode').value.trim().toUpperCase();
   const phone = document.getElementById('uFormPhone').value.trim();
   const category = document.getElementById('uFormCategory').value;
-  const area = document.getElementById('uFormArea').value;
+  
+  const checkedAreas = Array.from(document.querySelectorAll('input[name="uFormAreaCheck"]:checked')).map(cb => cb.value);
+  const area = checkedAreas.length > 0 ? checkedAreas.join(', ') : 'BDG';
+  const hiddenAreaInput = document.getElementById('uFormArea');
+  if (hiddenAreaInput) hiddenAreaInput.value = area;
 
   if (!username || !password || !fullName) {
     showNotif('USERNAME, PASSWORD, DAN NAMA LENGKAP WAJIB DIISI!', 'warning');
@@ -9038,10 +9084,24 @@ window.simpanAkun = simpanAkun;
 
 function bukaModalTambahToko() {
   if (!currentUser) return;
-  const modalAreaText = document.getElementById('tokoModalAreaText');
-  if (modalAreaText) {
-    modalAreaText.textContent = `${currentUser.area} (${AREA_MAP[currentUser.area] || currentUser.area})`;
+  
+  const selectAreaEl = document.getElementById('selectAreaTokoBaru');
+  if (selectAreaEl) {
+    selectAreaEl.innerHTML = '';
+    const userAreas = typeof getUserAreaList === 'function' ? getUserAreaList(currentUser.area) : [currentUser.area || 'BDG'];
+    
+    if (userAreas.includes('ALL')) {
+      const allCodes = ['BDG', 'BDU', 'CRB', 'SKB', 'SBN', 'TSM'];
+      allCodes.forEach(code => {
+        selectAreaEl.innerHTML += `<option value="${code}">${code}</option>`;
+      });
+    } else {
+      userAreas.forEach(code => {
+        selectAreaEl.innerHTML += `<option value="${code}">${code}</option>`;
+      });
+    }
   }
+
   const inputEl = document.getElementById('inputNamaTokoBaru');
   if (inputEl) inputEl.value = '';
   loadDaftarTokoModal();
@@ -9059,6 +9119,11 @@ function editTokoCustom(id) {
   const allStores = getStoresFromDB();
   const store = allStores.find(s => s.id === id);
   if (!store) return;
+
+  const selectAreaEl = document.getElementById('selectAreaTokoBaru');
+  if (selectAreaEl && store.area) {
+    selectAreaEl.value = store.area;
+  }
 
   const inputEl = document.getElementById('inputNamaTokoBaru');
   const btnSimpan = document.getElementById('btnSimpanTokoBaru');
@@ -9106,10 +9171,12 @@ function loadDaftarTokoModal() {
   tbody.innerHTML = '';
 
   const allStores = getStoresFromDB();
-  const areaStores = (currentUser.category === 'DM') ? allStores : allStores.filter(s => s.area === currentUser.area);
+  const areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
+    ? allStores 
+    : allStores.filter(s => isAreaMatch(currentUser.area, s.area));
 
   if (areaStores.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:15px; color:var(--text-muted);">BELUM ADA TOKO TERDAFTAR DI AREA INI.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">BELUM ADA TOKO TERDAFTAR DI AREA ANDA.</td></tr>`;
     return;
   }
 
@@ -9117,8 +9184,10 @@ function loadDaftarTokoModal() {
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border-color)';
     const code = s.storeCode || generateStoreCode(s.fullName);
+    const areaBadge = s.area || 'BDG';
     tr.innerHTML = `
       <td style="padding: 8px; font-weight: 600;">${s.fullName}</td>
+      <td style="padding: 8px; text-align: center; font-weight: 700; color: #0284c7;">${areaBadge}</td>
       <td style="padding: 8px; text-align: center; color: var(--primary); font-weight: 700;">${code}</td>
       <td style="padding: 8px; text-align: center; white-space: nowrap;">
         <button type="button" class="btnIcon btnEdit" onclick="editTokoCustom('${s.id}')" title="EDIT TOKO" style="margin-right: 4px;"><span class="material-symbols-rounded">edit</span></button>
@@ -9132,6 +9201,8 @@ function loadDaftarTokoModal() {
 function simpanTokoBaru() {
   const inputEl = document.getElementById('inputNamaTokoBaru');
   const btnSimpan = document.getElementById('btnSimpanTokoBaru');
+  const selectAreaEl = document.getElementById('selectAreaTokoBaru');
+  const targetArea = selectAreaEl ? selectAreaEl.value : (getUserAreaList(currentUser.area)[0] || 'BDG');
   const namaToko = inputEl ? inputEl.value.trim().toUpperCase() : '';
 
   if (!namaToko) {
@@ -9140,9 +9211,9 @@ function simpanTokoBaru() {
   }
 
   const existingStores = getStoresFromDB();
-  const isDuplicate = existingStores.some(s => s.fullName.toUpperCase() === namaToko && s.area === currentUser.area && s.id !== editStoreId);
+  const isDuplicate = existingStores.some(s => s.fullName.toUpperCase() === namaToko && s.area === targetArea && s.id !== editStoreId);
   if (isDuplicate) {
-    showNotif(`TOKO '${namaToko}' SUDAH TERDAFTAR DI AREA ${currentUser.area}!`, 'warning');
+    showNotif(`TOKO '${namaToko}' SUDAH TERDAFTAR DI AREA ${targetArea}!`, 'warning');
     return;
   }
 
@@ -9162,6 +9233,7 @@ function simpanTokoBaru() {
           if (idx !== -1) {
             localStores[idx].fullName = namaToko;
             localStores[idx].storeCode = newCode;
+            localStores[idx].area = targetArea;
             appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
           }
         } catch (e) {}
@@ -9171,6 +9243,7 @@ function simpanTokoBaru() {
           if (idx !== -1) {
             cacheStores[idx].fullName = namaToko;
             cacheStores[idx].storeCode = newCode;
+            cacheStores[idx].area = targetArea;
           }
         }
 
@@ -9180,6 +9253,7 @@ function simpanTokoBaru() {
         if (userObj) {
           userObj.fullName = namaToko;
           userObj.storeCode = newCode;
+          userObj.area = targetArea;
           try { saveUsersToDB(users); } catch (e) {}
 
           if (typeof supabase !== 'undefined' && supabase) {
@@ -9192,7 +9266,7 @@ function simpanTokoBaru() {
                 store_code: userObj.storeCode,
                 phone: userObj.phone || '-',
                 category: userObj.category || 'TOKO',
-                area: userObj.area || currentUser.area,
+                area: targetArea,
                 created_at: userObj.createdAt || getFormattedDateDDMMYYYY()
               });
             } catch (e) {}
@@ -9205,7 +9279,7 @@ function simpanTokoBaru() {
             await supabase.from('toko_list').upsert({
               id: editStoreId,
               full_name: namaToko,
-              area: currentUser.area,
+              area: targetArea,
               store_code: newCode,
               created_by: currentUser.fullName
             });
@@ -9224,7 +9298,7 @@ function simpanTokoBaru() {
         }
 
         hideLoading();
-        showNotif(`TOKO BERHASIL DIPERBARUHI MENJADI '${namaToko}'!`, 'success');
+        showNotif(`TOKO BERHASIL DIPERBARUHI MENJADI '${namaToko}' (AREA ${targetArea})!`, 'success');
 
         editStoreId = null;
         if (inputEl) inputEl.value = '';
@@ -9247,7 +9321,7 @@ function simpanTokoBaru() {
   showLoading('MENYIMPAN TOKO BARU...');
   setTimeout(async () => {
     try {
-      const storeKey = `${namaToko}_${currentUser.area}`;
+      const storeKey = `${namaToko}_${targetArea}`;
       let deletedStoreKeys = JSON.parse(appStorage.getItem(DELETED_STORES_KEY) || '[]');
       if (deletedStoreKeys.includes(storeKey)) {
         deletedStoreKeys = deletedStoreKeys.filter(k => k !== storeKey);
@@ -9261,7 +9335,7 @@ function simpanTokoBaru() {
       const newStore = {
         id: newId,
         fullName: namaToko,
-        area: currentUser.area,
+        area: targetArea,
         storeCode: generatedCode,
         createdBy: currentUser.fullName
       };
@@ -9280,7 +9354,7 @@ function simpanTokoBaru() {
           storeCode: generatedCode,
           phone: '-',
           category: 'TOKO',
-          area: currentUser.area,
+          area: targetArea,
           createdAt: getFormattedDateDDMMYYYY()
         };
         users.push(newUserAcc);
