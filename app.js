@@ -4326,9 +4326,41 @@ function lookupTypeRow(el, isFromScanner = false) {
 
 function hapusRow(btn) {
   const row = btn.closest('.detailRow');
-  if (row) row.remove();
+  if (!row) return;
+
   const container = document.getElementById('detailContainer');
-  if (container && container.children.length === 0) tambahRow();
+  const allRows = container ? container.children : [];
+
+  const inputs = row.querySelectorAll('input');
+  const isUnfulfilled = row.classList.toggle('unfulfilled');
+  
+  if (isUnfulfilled) {
+    row.setAttribute('data-unfulfilled', 'true');
+    row.style.background = 'rgba(239, 68, 68, 0.12)';
+    row.style.border = '1.5px solid #ef4444';
+    inputs.forEach(inp => {
+      inp.style.textDecoration = 'line-through';
+      inp.style.textDecorationThickness = '3px';
+      inp.style.fontWeight = 'bold';
+      inp.style.color = '#ef4444';
+    });
+    btn.innerHTML = `<span class="material-symbols-rounded">undo</span>`;
+    btn.style.background = '#eab308';
+    btn.title = 'BATALKAN TANDA TIDAK DIPENUHI';
+  } else {
+    row.removeAttribute('data-unfulfilled');
+    row.style.background = '';
+    row.style.border = '';
+    inputs.forEach(inp => {
+      inp.style.textDecoration = 'none';
+      inp.style.textDecorationThickness = '';
+      inp.style.fontWeight = '';
+      inp.style.color = '';
+    });
+    btn.innerHTML = `<span class="material-symbols-rounded">remove</span>`;
+    btn.style.background = '#ef4444';
+    btn.title = 'HAPUS BARIS';
+  }
 }
 
 function kompresiFoto(file, maxDimension = 720, quality = 0.65) {
@@ -4568,7 +4600,8 @@ function simpanData() {
     if (!type || !seri || !barang || !alasan) valid = false;
     if (jenis === 'DUS' && !dus) valid = false;
 
-    items.push({ type, seri, dus, barang, alasan, qty });
+    const unfulfilled = r.classList.contains('unfulfilled') || r.hasAttribute('data-unfulfilled');
+    items.push({ type, seri, dus, barang, alasan, qty, unfulfilled });
   });
 
   if (!valid) {
@@ -5856,6 +5889,26 @@ function editPermintaan(noSurat) {
       if (row.querySelector('.namaBarang')) row.querySelector('.namaBarang').value = item.barang || '';
       if (row.querySelector('.qty')) row.querySelector('.qty').value = item.qty || 1;
       if (row.querySelector('.alasan')) row.querySelector('.alasan').value = item.alasan || '';
+
+      if (item.unfulfilled || item.batal || req.status === 'BATAL') {
+        row.classList.add('unfulfilled');
+        row.setAttribute('data-unfulfilled', 'true');
+        row.style.background = 'rgba(239, 68, 68, 0.12)';
+        row.style.border = '1.5px solid #ef4444';
+        const inputs = row.querySelectorAll('input');
+        inputs.forEach(inp => {
+          inp.style.textDecoration = 'line-through';
+          inp.style.textDecorationThickness = '3px';
+          inp.style.fontWeight = 'bold';
+          inp.style.color = '#ef4444';
+        });
+        const btnHapus = row.querySelector('.btnHapusRow');
+        if (btnHapus) {
+          btnHapus.innerHTML = `<span class="material-symbols-rounded">undo</span>`;
+          btnHapus.style.background = '#eab308';
+          btnHapus.title = 'BATALKAN TANDA TIDAK DIPENUHI';
+        }
+      }
     });
   }
 
@@ -5874,63 +5927,60 @@ window.editPermintaan = editPermintaan;
 
 function hapusData(noSurat) {
   if (!noSurat) return;
-  showConfirm(`HAPUS DATA PERMINTAAN #${noSurat}?`, () => {
+  showConfirm(`APAKAH ANDA YAKIN INGIN MENGHAPUS PERMINTAAN #${noSurat} INI?`, () => {
     try {
-      // 1. HAPUS DARI CACHE LOKAL SEKETIKA
-      const currentReqs = getRequestsFromDB();
-      const targetReq = currentReqs.find(r => r.noSurat === noSurat);
-      const updatedReqs = currentReqs.filter(r => r.noSurat !== noSurat);
-      
-      const delReqs = JSON.parse(appStorage.getItem(DELETED_REQUESTS_KEY) || '[]');
-      if (!delReqs.includes(noSurat)) delReqs.push(noSurat);
-      appStorage.setItem(DELETED_REQUESTS_KEY, JSON.stringify(delReqs));
+      showLoading('MENGUPDATE STATUS PERMINTAAN...');
+      setTimeout(async () => {
+        const currentReqs = getRequestsFromDB();
+        const idx = currentReqs.findIndex(r => r.noSurat === noSurat);
+        if (idx !== -1) {
+          currentReqs[idx].status = 'BATAL';
+          currentReqs[idx].unfulfilled = true;
+          if (Array.isArray(currentReqs[idx].items)) {
+            currentReqs[idx].items.forEach(i => i.unfulfilled = true);
+          }
+          if (!currentReqs[idx].log) currentReqs[idx].log = [];
+          currentReqs[idx].log.push({
+            action: 'TIDAK_DIPENUHI',
+            user: currentUser ? currentUser.fullName : 'USER',
+            notes: 'HAPUS PERMINTAAN',
+            time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+          });
 
-      saveRequestsToDB(updatedReqs);
+          saveRequestsToDB(currentReqs);
 
-      // HAPUS FOTO TERKAIT DARI SUPABASE STORAGE BUCKET
-      if (targetReq && Array.isArray(targetReq.photos) && targetReq.photos.length > 0) {
-        if (typeof deletePhotosFromSupabaseStorage === 'function') {
-          deletePhotosFromSupabaseStorage(targetReq.photos);
-        }
-      }
-
-      // 2. HAPUS DOKUMEN DARI SUPABASE, FIREBASE FIRESTORE & REALTIME DB ONLINE
-      const docId = String(noSurat).replace(/[\/\.]/g, '_');
-      if (typeof supabase !== 'undefined' && supabase) {
-        supabase.from('permintaan_toko').delete().eq('no_surat', noSurat).then(({ error }) => {
-          if (error) {
-            console.warn('[SUPABASE DELETE NOTICE]:', error.message);
-          } else {
-            console.log('⚡ [SUPABASE DELETE SUCCESS]:', noSurat);
+          // UPDATE STATUS DI SUPABASE (TANPA MENGHAPUS DATA DARI SUPABASE DATABASE)
+          if (typeof supabase !== 'undefined' && supabase) {
+            try {
+              await supabase.from('permintaan_toko').update({
+                status: 'BATAL',
+                items: currentReqs[idx].items
+              }).eq('no_surat', noSurat);
+            } catch(e) {
+              console.warn('[SUPABASE UNFULFILLED NOTICE]:', e);
+            }
           }
           if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-            syncSupabaseRequestsToLocalCache();
+            await syncSupabaseRequestsToLocalCache();
           }
-        });
-      }
-      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-        dbFirestore.collection('requests').doc(docId).delete().catch(err => console.warn('[FIRESTORE DELETE NOTICE]:', err));
-      }
-      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-        dbRealtime.ref(`requests/${docId}`).remove().catch(err => console.warn('[REALTIME DELETE NOTICE]:', err));
-      }
 
-      // 3. SINKRONKAN KE FIREBASE CLOUD
-      if (typeof pushCentralCloudDB === 'function') {
-        pushCentralCloudDB();
-      }
+          if (typeof pushCentralCloudDB === 'function') {
+            try { await pushCentralCloudDB(); } catch(e) {}
+          }
 
-      // 4. RE-RENDER TAMPILAN & TAMPILKAN NOTIFIKASI
-      hideLoading();
-      showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS!`, 'info');
-      
-      if (typeof loadRiwayat === 'function') loadRiwayat();
-      if (typeof loadDashboard === 'function') loadDashboard();
-      if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+          hideLoading();
+          showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS!`, 'warning');
+          if (typeof loadRiwayat === 'function') loadRiwayat();
+          if (typeof loadDashboard === 'function') loadDashboard();
+          if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+        } else {
+          hideLoading();
+        }
+      }, 300);
     } catch (err) {
       hideLoading();
       console.error('[HAPUS DATA ERROR]:', err);
-      showNotif('GAGAL MENGHAPUS DATA PERMINTAAN!', 'error');
+      showNotif('GAGAL MENGUPDATE STATUS PERMINTAAN!', 'error');
     }
   });
 }
@@ -5971,29 +6021,67 @@ function hapusBarisItemDetailAdmin(noSurat, itemIndex) {
   }
 
   if (itemIndex >= 0 && itemIndex < itemsList.length) {
-    const deletedItemName = itemsList[itemIndex].barang || itemsList[itemIndex].permintaan || itemsList[itemIndex].type || `Baris ${itemIndex + 1}`;
+    const targetItemName = itemsList[itemIndex].barang || itemsList[itemIndex].permintaan || itemsList[itemIndex].type || `Baris ${itemIndex + 1}`;
     
-    showConfirm(`APAKAH ANDA YAKIN INGIN MENGHAPUS BARIS ITEM '${deletedItemName}' INI?`, () => {
-      itemsList.splice(itemIndex, 1);
+    showConfirm(`TANDAI ITEM '${targetItemName}' SEBAGAI TIDAK DIPENUHI?`, () => {
+      itemsList[itemIndex].unfulfilled = true;
       requests[idx].items = itemsList;
 
       if (!requests[idx].log) requests[idx].log = [];
       requests[idx].log.push({
-        action: 'SERVICE_DELETE_ITEM_ROW',
+        action: 'TIDAK_DIPENUHI_ITEM',
         user: currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE',
-        notes: `Hapus baris item '${deletedItemName}'`,
+        notes: `Tandai tidak dipenuhi item '${targetItemName}'`,
         time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
       });
 
       saveRequestsToDB(requests);
       isItemModifiedMap[noSurat] = true;
 
-      showNotif(`BARIS ITEM BERHASIL DIHAPUS DARI DRAFT! KLIK ICON SIMPAN UNTUK MENYIMPAN KE CLOUD.`, 'info');
+      showNotif(`ITEM DITANDAI TIDAK DIPENUHI. KLIK 'SIMPAN PERUBAHAN KE CLOUD' UNTUK MENYIMPAN KE DATABASE.`, 'warning');
       lihatDetail(noSurat);
     });
   }
 }
 window.hapusBarisItemDetailAdmin = hapusBarisItemDetailAdmin;
+
+function undoBarisItemDetailAdmin(noSurat, itemIndex) {
+  if (!noSurat) return;
+
+  const requests = getRequestsFromDB();
+  const idx = requests.findIndex(r => r && (r.noSurat === noSurat || String(r.noSurat) === String(noSurat) || r.id === noSurat));
+  if (idx === -1) return;
+
+  let rawItems = requests[idx].items;
+  let itemsList = [];
+  if (Array.isArray(rawItems)) {
+    itemsList = [...rawItems];
+  } else if (typeof rawItems === 'string') {
+    try { itemsList = JSON.parse(rawItems || '[]'); } catch (e) { itemsList = []; }
+  }
+
+  if (itemIndex >= 0 && itemIndex < itemsList.length) {
+    const targetItemName = itemsList[itemIndex].barang || itemsList[itemIndex].permintaan || itemsList[itemIndex].type || `Baris ${itemIndex + 1}`;
+    
+    delete itemsList[itemIndex].unfulfilled;
+    requests[idx].items = itemsList;
+
+    if (!requests[idx].log) requests[idx].log = [];
+    requests[idx].log.push({
+      action: 'UNDO_TIDAK_DIPENUHI_ITEM',
+      user: currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE',
+      notes: `Undo status tidak dipenuhi item '${targetItemName}'`,
+      time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+    });
+
+    saveRequestsToDB(requests);
+    isItemModifiedMap[noSurat] = true;
+
+    showNotif(`BATALKAN STATUS TIDAK DIPENUHI PADA ITEM '${targetItemName}'. KLIK 'SIMPAN PERUBAHAN KE CLOUD'.`, 'info');
+    lihatDetail(noSurat);
+  }
+}
+window.undoBarisItemDetailAdmin = undoBarisItemDetailAdmin;
 
 function simpanPerubahanDetailAdmin(noSurat) {
   if (!noSurat) return;
@@ -6135,6 +6223,9 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   const canServiceRowDelete = isServiceUser && req.status !== 'DONE';
 
   let itemsHtml = itemsList.map((i, idx) => {
+    const isUnfulfilled = i.unfulfilled === true;
+    const strikeStyle = isUnfulfilled ? "text-decoration: line-through !important; text-decoration-thickness: 1.5px !important; color: #ef4444 !important; font-weight: 600 !important; opacity: 0.85;" : "";
+
     const typeVal = i.type || i.tipe || i.jenis || '-';
     const seriVal = i.seri || i.sn || i.serial || '-';
     const barangVal = i.barang || i.permintaan || i.namaBarang || '-';
@@ -6142,36 +6233,49 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     const alasanVal = i.alasan || i.keterangan || '-';
     const qtyVal = i.qty || i.jumlah || 1;
 
-    const actionTdHtml = canServiceRowDelete ? `
-      <td style="${tdStyle} text-align: center !important;">
-        <button type="button" class="btnIcon btnDelete" onclick="hapusBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="HAPUS BARIS ITEM INI" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #ef4444 !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
-          <span class="material-symbols-rounded" style="font-size: 15px !important;">delete</span>
-        </button>
-      </td>
-    ` : '';
+    let actionTdHtml = '';
+    if (canServiceRowDelete) {
+      if (isUnfulfilled) {
+        actionTdHtml = `
+          <td style="${tdStyle} text-align: center !important;">
+            <button type="button" class="btnIcon btnUndo" onclick="undoBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="BATALKAN (UNDO)" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #f59e0b !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
+              <span class="material-symbols-rounded" style="font-size: 15px !important;">undo</span>
+            </button>
+          </td>
+        `;
+      } else {
+        actionTdHtml = `
+          <td style="${tdStyle} text-align: center !important;">
+            <button type="button" class="btnIcon btnDelete" onclick="hapusBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="TANDAI TIDAK DIPENUHI" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #ef4444 !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
+              <span class="material-symbols-rounded" style="font-size: 15px !important;">cancel</span>
+            </button>
+          </td>
+        `;
+      }
+    }
 
     if (isDus) {
       return `
-        <tr>
-          <td style="${tdStyle} text-align: center !important;">${idx + 1}</td>
-          <td style="${tdStyle} text-align: left !important;">${typeVal}</td>
-          <td style="${tdStyle} text-align: left !important;">${seriVal}</td>
-          <td style="${tdStyle} text-align: left !important;">${barangVal}</td>
-          <td style="${tdStyle} text-align: left !important; color: #d97706 !important; font-weight: 600 !important;">${dusVal}</td>
-          <td style="${tdStyle} text-align: left !important;">${alasanVal}</td>
-          <td style="${tdStyle} text-align: center !important;">${qtyVal}</td>
+        <tr style="${isUnfulfilled ? 'background: rgba(239, 68, 68, 0.08) !important;' : ''}">
+          <td style="${tdStyle} text-align: center !important; ${strikeStyle}">${idx + 1}</td>
+          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${typeVal}</td>
+          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${seriVal}</td>
+          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${barangVal}</td>
+          <td style="${tdStyle} text-align: left !important; color: #d97706 !important; font-weight: 600 !important; ${strikeStyle}">${dusVal}</td>
+          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${alasanVal}</td>
+          <td style="${tdStyle} text-align: center !important; ${strikeStyle}">${qtyVal}</td>
           ${actionTdHtml}
         </tr>
       `;
     } else {
       return `
-        <tr>
-          <td style="${tdStyle} text-align: center !important;">${idx + 1}</td>
-          <td style="${tdStyle} text-align: left !important;">${typeVal}</td>
-          <td style="${tdStyle} text-align: left !important;">${seriVal}</td>
-          <td style="${tdStyle} text-align: left !important;">${barangVal}</td>
-          <td style="${tdStyle} text-align: left !important;">${alasanVal}</td>
-          <td style="${tdStyle} text-align: center !important;">${qtyVal}</td>
+        <tr style="${isUnfulfilled ? 'background: rgba(239, 68, 68, 0.08) !important;' : ''}">
+          <td style="${tdStyle} text-align: center !important; ${strikeStyle}">${idx + 1}</td>
+          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${typeVal}</td>
+          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${seriVal}</td>
+          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${barangVal}</td>
+          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${alasanVal}</td>
+          <td style="${tdStyle} text-align: center !important; ${strikeStyle}">${qtyVal}</td>
           ${actionTdHtml}
         </tr>
       `;
@@ -6277,7 +6381,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
       </button>
     `);
     actionButtons.push(`
-      <button type="button" class="btnIcon btnDelete btnIconOnly" title="HAPUS" onclick="tutupDetailBarangV2(); hapusData('${req.noSurat}');">
+      <button type="button" class="btnIcon btnDelete btnIconOnly" title="HAPUS PERMINTAAN" onclick="tutupDetailBarangV2(); hapusData('${req.noSurat}');">
         <span class="material-symbols-rounded">delete</span>
       </button>
     `);
@@ -6626,17 +6730,29 @@ function bukaPdfModal(noSurat) {
 
   const activeModel = getActivePdfModel();
 
-  let itemRowsHtml = req.items.map((i, idx) => `
-    <tr style="border-bottom:1px solid #cbd5e1;">
-      <td style="text-align:center; padding:6px 4px; border:1px solid #cbd5e1; font-size:11px;">${idx + 1}</td>
-      <td style="padding:6px 6px; border:1px solid #cbd5e1; font-size:11px; word-break:break-word;">${i.type}</td>
-      <td style="padding:6px 6px; border:1px solid #cbd5e1; font-size:11px; word-break:break-all;">${i.seri}</td>
-      ${req.jenis === 'DUS' ? `<td style="padding:6px 6px; border:1px solid #cbd5e1; color:#d97706; font-weight:600; font-size:11px; word-break:break-all;">${i.dus || '-'}</td>` : ''}
-      <td style="padding:6px 6px; border:1px solid #cbd5e1; font-size:11px; word-break:break-word;">${i.barang}</td>
-      <td style="padding:6px 6px; border:1px solid #cbd5e1; font-size:11px; word-break:break-word;">${i.alasan}</td>
-      <td style="text-align:center; padding:6px 4px; border:1px solid #cbd5e1; font-weight:bold; font-size:11px;">${i.qty}</td>
-    </tr>
-  `).join('');
+  const hasUnfulfilledItem = (Array.isArray(req.items) && req.items.some(i => i && (i.unfulfilled || i.batal || i.status === 'TIDAK BISA DIPENUHI'))) || (req.status === 'BATAL' || req.unfulfilled);
+
+  let itemRowsHtml = req.items.map((i, idx) => {
+    const isUnfulfilled = !!(i.unfulfilled || i.batal || i.status === 'TIDAK BISA DIPENUHI' || req.status === 'BATAL' || req.unfulfilled);
+    const rowTdStyle = isUnfulfilled 
+      ? 'padding:6px 6px; border:1px solid #cbd5e1; font-size:11px; text-decoration: line-through; text-decoration-thickness: 3px; font-weight: bold; color: #b91c1c; background-color: #fef2f2;' 
+      : 'padding:6px 6px; border:1px solid #cbd5e1; font-size:11px;';
+    const numTdStyle = isUnfulfilled 
+      ? 'text-align:center; padding:6px 4px; border:1px solid #cbd5e1; font-size:11px; text-decoration: line-through; text-decoration-thickness: 3px; font-weight: bold; color: #b91c1c; background-color: #fef2f2;' 
+      : 'text-align:center; padding:6px 4px; border:1px solid #cbd5e1; font-size:11px;';
+
+    return `
+      <tr style="border-bottom:1px solid #cbd5e1; ${isUnfulfilled ? 'background-color:#fef2f2;' : ''}">
+        <td style="${numTdStyle}">${idx + 1}</td>
+        <td style="${rowTdStyle} word-break:break-word;">${i.type}</td>
+        <td style="${rowTdStyle} word-break:break-all;">${i.seri}</td>
+        ${req.jenis === 'DUS' ? `<td style="${rowTdStyle} color:${isUnfulfilled ? '#b91c1c' : '#d97706'}; word-break:break-all;">${i.dus || '-'}</td>` : ''}
+        <td style="${rowTdStyle} word-break:break-word;">${i.barang}</td>
+        <td style="${rowTdStyle} word-break:break-word;">${i.alasan}</td>
+        <td style="${numTdStyle}">${i.qty}</td>
+      </tr>
+    `;
+  }).join('');
 
   const users = getUsersFromDB();
   const serviceUser = users.find(u => u.category === 'SERVICE' && u.area === req.area) || users.find(u => u.category === 'SERVICE');
@@ -6862,8 +6978,15 @@ function bukaPdfModal(noSurat) {
           </div>
         </div>
 
-        <div style="margin-top: 36px; text-align: right; font-size: 8px; font-style: italic; color: #64748b; opacity: 0.85; letter-spacing: 0.2px;">
-          ${timestampStr}
+        <div style="margin-top: 36px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #475569; letter-spacing: 0.2px;">
+          ${hasUnfulfilledItem ? `
+            <div style="font-weight: 800; color: #b91c1c; font-style: normal; display: flex; align-items: center; gap: 4px;">
+              <span style="text-decoration: line-through; text-decoration-thickness: 3px; font-weight: 900; color: #b91c1c; font-size: 11px;">---</span> = Tidak dipenuhi
+            </div>
+          ` : '<div></div>'}
+          <div style="font-style: italic; opacity: 0.85;">
+            ${timestampStr}
+          </div>
         </div>
       </div>
     </div>
@@ -8894,6 +9017,7 @@ function downloadMasterExcel() {
     data.forEach(r => {
       const logStr = (r.log || []).map(l => `${l.action} by ${l.user} (${l.time})`).join(' | ');
       r.items.forEach(it => {
+        const isUnfulfilled = !!(it.unfulfilled || it.batal || it.status === 'TIDAK BISA DIPENUHI' || r.status === 'BATAL' || r.unfulfilled);
         rows.push([
           r.noSurat,
           r.tanggal,
@@ -8903,10 +9027,10 @@ function downloadMasterExcel() {
           it.type,
           it.seri,
           it.dus || '',
-          it.barang,
+          isUnfulfilled ? `${it.barang} [TIDAK DIPENUHI]` : it.barang,
           it.alasan,
           it.qty,
-          r.status,
+          isUnfulfilled ? `${r.status} (TIDAK DIPENUHI)` : r.status,
           r.catatan || '',
           logStr
         ]);
