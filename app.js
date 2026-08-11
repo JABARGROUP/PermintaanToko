@@ -4093,7 +4093,7 @@ function updateStoreDropdownOptions(selectedStoreName = '') {
         tokoSelect.innerHTML += `<option value="${s.fullName}" ${isSelected}>${s.fullName} (${s.area || currentUser.area})</option>`;
       });
     } else {
-      tokoSelect.innerHTML = `<option value="Silahkan Input Nama Toko">INPUT TOKO..... (${currentUser.area})</option>`;
+      tokoSelect.innerHTML = `<option value="INPUT TOKO.....">INPUT TOKO..... (${currentUser.area})</option>`;
     }
   }
 
@@ -4329,37 +4329,14 @@ function hapusRow(btn) {
   if (!row) return;
 
   const container = document.getElementById('detailContainer');
-  const allRows = container ? container.children : [];
+  if (!container) return;
 
-  const inputs = row.querySelectorAll('input');
-  const isUnfulfilled = row.classList.toggle('unfulfilled');
-  
-  if (isUnfulfilled) {
-    row.setAttribute('data-unfulfilled', 'true');
-    row.style.background = 'rgba(239, 68, 68, 0.12)';
-    row.style.border = '1.5px solid #ef4444';
-    inputs.forEach(inp => {
-      inp.style.textDecoration = 'line-through';
-      inp.style.textDecorationThickness = '3px';
-      inp.style.fontWeight = 'bold';
-      inp.style.color = '#ef4444';
-    });
-    btn.innerHTML = `<span class="material-symbols-rounded">undo</span>`;
-    btn.style.background = '#eab308';
-    btn.title = 'BATALKAN TANDA TIDAK DIPENUHI';
+  const allRows = container.querySelectorAll('.detailRow');
+  if (allRows.length > 1) {
+    row.remove();
   } else {
-    row.removeAttribute('data-unfulfilled');
-    row.style.background = '';
-    row.style.border = '';
-    inputs.forEach(inp => {
-      inp.style.textDecoration = 'none';
-      inp.style.textDecorationThickness = '';
-      inp.style.fontWeight = '';
-      inp.style.color = '';
-    });
-    btn.innerHTML = `<span class="material-symbols-rounded">remove</span>`;
-    btn.style.background = '#ef4444';
-    btn.title = 'HAPUS BARIS';
+    row.remove();
+    tambahRow();
   }
 }
 
