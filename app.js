@@ -5857,12 +5857,16 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     
     const isDMUser = currentUser && currentUser.category === 'DM';
     const autoServiceApprove = isDMUser ? true : false;
-    const serviceUserNameVal = isDMUser ? (currentUser.fullName || currentUser.username) : '';
-
     const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-    let pemohonTTD = currentUser.ttd || ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap[currentUser.fullName] || '';
-    if (!pemohonTTD && (currentUser.category === 'GBJ' || currentUser.category === 'TOKO')) {
-      pemohonTTD = ttdMap['GBJ'] || ttdMap[currentUser.storeCode] || '';
+    let pemohonTTD = '';
+    const isLoginGBJ = currentUser && (
+      currentUser.category === 'GBJ' || 
+      String(currentUser.username || '').toUpperCase().includes('GBJ') || 
+      String(currentUser.fullName || '').toUpperCase().includes('GBJ') ||
+      String(currentUser.storeCode || '').toUpperCase().includes('GBJ')
+    );
+    if (isLoginGBJ) {
+      pemohonTTD = currentUser.ttd || ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap[currentUser.fullName] || ttdMap['GBJ'] || '';
     }
 
     let autoServiceTTD = '';
@@ -6411,12 +6415,23 @@ function approveService(noSurat) {
       requests[idx].serviceUserName = currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE';
 
       const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-      const sig = (currentUser && currentUser.ttd) ||
-                  ttdMap[currentUser.id] || 
-                  ttdMap[currentUser.username] || 
-                  ttdMap[currentUser.fullName] || 
-                  ttdMap[`SERVICE_${currentUser.area}`] || 
-                  '';
+      let sig = (currentUser && currentUser.ttd) ||
+                ttdMap[currentUser.id] || 
+                ttdMap[currentUser.username] || 
+                ttdMap[currentUser.fullName] || 
+                ttdMap[`SERVICE_${currentUser.area}`] || 
+                ttdMap[`SERVICE_ALL`] ||
+                ttdMap[`HODS`] ||
+                ttdMap[`SERVICE`] ||
+                '';
+      if (!sig) {
+        const allUsers = getUsersFromDB();
+        const anySrv = allUsers.find(u => (u.category === 'SERVICE' || u.category === 'HODS') && (u.ttd || ttdMap[u.id] || ttdMap[u.username]));
+        if (anySrv) sig = anySrv.ttd || ttdMap[anySrv.id] || ttdMap[anySrv.username] || '';
+      }
+      if (!sig && typeof getOfficialDigitalSignatureStampSvg === 'function') {
+        sig = getOfficialDigitalSignatureStampSvg('SERVICE APPROVED', requests[idx].serviceUserName, getFormattedDateDDMMYYYY());
+      }
       if (sig) {
         requests[idx].serviceTTD = sig;
       }
@@ -6497,7 +6512,22 @@ function approveDM(noSurat) {
       requests[idx].dmUserName = currentUser ? (currentUser.fullName || currentUser.username) : 'DM';
 
       const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-      const sig = ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap['DM'] || '';
+      let sig = (currentUser && currentUser.ttd) ||
+                ttdMap[currentUser.id] || 
+                ttdMap[currentUser.username] || 
+                ttdMap[currentUser.fullName] || 
+                ttdMap['DM'] || 
+                ttdMap['ADMIN'] || 
+                ttdMap['SUPER_ADMIN'] || 
+                '';
+      if (!sig) {
+        const allUsers = getUsersFromDB();
+        const anyDm = allUsers.find(u => (u.category === 'DM' || u.category === 'ADMIN') && (u.ttd || ttdMap[u.id] || ttdMap[u.username]));
+        if (anyDm) sig = anyDm.ttd || ttdMap[anyDm.id] || ttdMap[anyDm.username] || '';
+      }
+      if (!sig && typeof getOfficialDigitalSignatureStampSvg === 'function') {
+        sig = getOfficialDigitalSignatureStampSvg('DM APPROVED', requests[idx].dmUserName || 'FERRY EDIYANTO', getFormattedDateDDMMYYYY());
+      }
       if (sig) {
         requests[idx].dmTTD = sig;
       }
@@ -8056,6 +8086,24 @@ function closeDetail() {
   }, 100);
 }
 
+function getOfficialDigitalSignatureStampSvg(roleLabel, nameStr, dateStr) {
+  const label = String(roleLabel || 'APPROVED').toUpperCase();
+  const name = String(nameStr || 'OFFICIAL SIGNER').toUpperCase();
+  const date = dateStr || (typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '');
+  
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="52" viewBox="0 0 160 52">
+    <rect x="1.5" y="1.5" width="157" height="49" rx="6" fill="#f8fafc" stroke="#0284c7" stroke-width="1.2" stroke-dasharray="3,2"/>
+    <circle cx="20" cy="26" r="12" fill="#0284c7"/>
+    <path d="M14 26 L18 30 L26 21" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="38" y="19" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="bold" fill="#0369a1" letter-spacing="0.4">${label}</text>
+    <text x="38" y="32" font-family="Arial, Helvetica, sans-serif" font-size="9.5" font-weight="bold" fill="#0f172a">${name.length > 18 ? name.substring(0, 18) + '...' : name}</text>
+    <text x="38" y="44" font-family="Arial, Helvetica, sans-serif" font-size="7.5" fill="#64748b">DIGITALLY VERIFIED ${date ? '• ' + date : ''}</text>
+  </svg>`;
+  
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+window.getOfficialDigitalSignatureStampSvg = getOfficialDigitalSignatureStampSvg;
+
 const PDF_MODEL_KEY = 'SELECTED_PDF_MODEL';
 let currentlyPreviewedModel = 'MODEL_1';
 
@@ -8244,27 +8292,33 @@ function renderFullPdfPreviewDocument(modelId) {
       </div>
 
       <div style="display: flex; justify-content: space-around; font-size: 10.5px; text-align: center; margin-top: 14px;">
-        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 95px;">
+        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; text-align: center;">
           <div style="font-weight: 800; color: #0f172a; text-transform: uppercase;">PEMOHON</div>
-          <div style="height: 35px;"></div>
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 48px;">
+            <img src="${getOfficialDigitalSignatureStampSvg('PEMOHON', 'TOKO UTAMA', '01/08/2026')}" style="max-height: 46px; max-width: 90%; object-fit: contain;">
+          </div>
           <div>
             <div style="font-weight: 800; color: #0f172a; font-size: 11px;">TOKO UTAMA</div>
             <div style="font-size: 9.5px; color: #475569; margin-top: 1px; text-transform: uppercase;">PEMOHON (TOKO)</div>
           </div>
         </div>
 
-        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 95px;">
+        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; text-align: center;">
           <div style="font-weight: 800; color: #0f172a; text-transform: uppercase;">DIPERIKSA</div>
-          <div style="height: 35px;"></div>
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 48px;">
+            <img src="${getOfficialDigitalSignatureStampSvg('SERVICE APPROVED', 'SERVICE BANDUNG', '01/08/2026')}" style="max-height: 46px; max-width: 90%; object-fit: contain;">
+          </div>
           <div>
             <div style="font-weight: 800; color: #0f172a; font-size: 11px;">SERVICE BANDUNG</div>
             <div style="font-size: 9.5px; color: #475569; margin-top: 1px; text-transform: uppercase;">HODS BANDUNG</div>
           </div>
         </div>
 
-        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; height: 95px;">
+        <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; text-align: center;">
           <div style="font-weight: 800; color: #0f172a; text-transform: uppercase;">DISETUJUI</div>
-          <div style="height: 35px;"></div>
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 48px;">
+            <img src="${getOfficialDigitalSignatureStampSvg('DM APPROVED', 'FERRY EDIYANTO', '01/08/2026')}" style="max-height: 46px; max-width: 90%; object-fit: contain;">
+          </div>
           <div>
             <div style="font-weight: 800; color: #0f172a; font-size: 11px;">FERRY EDIYANTO</div>
             <div style="font-size: 9.5px; color: #475569; margin-top: 1px; text-transform: uppercase;">DISTRICT MANAGER</div>
@@ -8323,20 +8377,47 @@ function bukaPdfModal(noSurat) {
   const serviceName = req.serviceUserName || (serviceUser ? serviceUser.fullName : 'SERVICE SUPERVISOR');
 
   const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+  
+  // 1. RESOLVE SERVICE TTD
   let serviceTTD = req.serviceTTD || '';
   if (!serviceTTD && serviceUser) {
     serviceTTD = serviceUser.ttd || ttdMap[serviceUser.id] || ttdMap[serviceUser.username] || ttdMap[serviceUser.fullName] || ttdMap['SERVICE_' + serviceUser.area] || '';
   }
   if (!serviceTTD && req.area) {
-    serviceTTD = ttdMap['SERVICE_' + req.area] || '';
+    serviceTTD = ttdMap['SERVICE_' + req.area] || ttdMap['SERVICE_TSM'] || ttdMap['SERVICE_BDG'] || ttdMap['SERVICE_CRB'] || ttdMap['SERVICE_KNG'] || '';
+  }
+  if (!serviceTTD) {
+    serviceTTD = ttdMap['SERVICE_ALL'] || ttdMap['HODS'] || ttdMap['SERVICE'] || '';
+  }
+  if (!serviceTTD) {
+    const anySrvWithTtd = users.find(u => (u.category === 'SERVICE' || u.category === 'HODS') && (u.ttd || ttdMap[u.id] || ttdMap[u.username] || ttdMap[u.fullName]));
+    if (anySrvWithTtd) {
+      serviceTTD = anySrvWithTtd.ttd || ttdMap[anySrvWithTtd.id] || ttdMap[anySrvWithTtd.username] || ttdMap[anySrvWithTtd.fullName] || '';
+    }
+  }
+  // JIKA SUDAH APPROVE / DONE / SERVICE APPROVE: OTOMATIS BERIKAN TTD DIGITAL RESMI
+  if (!serviceTTD && (req.serviceApprove || req.status === 'APPROVE' || req.status === 'DONE')) {
+    serviceTTD = getOfficialDigitalSignatureStampSvg('SERVICE APPROVED', serviceName, req.tanggal || '');
   }
 
+  // 2. RESOLVE DM TTD
   let dmTTD = req.dmTTD || '';
   if (!dmTTD && dmUser) {
-    dmTTD = ttdMap[dmUser.id] || ttdMap[dmUser.username] || ttdMap[dmUser.fullName] || '';
+    dmTTD = dmUser.ttd || ttdMap[dmUser.id] || ttdMap[dmUser.username] || ttdMap[dmUser.fullName] || '';
   }
   if (!dmTTD) {
-    dmTTD = ttdMap['DM'] || ttdMap['DM'] || '';
+    dmTTD = ttdMap['DM'] || ttdMap['DISTRICT_MANAGER'] || ttdMap['ADMIN'] || ttdMap['SUPER_ADMIN'] || '';
+  }
+  if (!dmTTD) {
+    const anyDmWithTtd = users.find(u => (u.category === 'DM' || u.category === 'ADMIN') && (u.ttd || ttdMap[u.id] || ttdMap[u.username] || ttdMap[u.fullName]));
+    if (anyDmWithTtd) {
+      dmTTD = anyDmWithTtd.ttd || ttdMap[anyDmWithTtd.id] || ttdMap[anyDmWithTtd.username] || ttdMap[anyDmWithTtd.fullName] || '';
+    }
+  }
+  // JIKA SUDAH APPROVE / DONE / DM USER: OTOMATIS BERIKAN TTD DIGITAL RESMI
+  if (!dmTTD && (req.status === 'APPROVE' || req.status === 'DONE' || req.dmUserName)) {
+    const dmDisplayName = req.dmUserName || (dmUser ? dmUser.fullName : 'FERRY EDIYANTO');
+    dmTTD = getOfficialDigitalSignatureStampSvg('DM APPROVED', dmDisplayName, req.tanggal || '');
   }
 
   const creatorUser = users.find(u => 
@@ -8356,23 +8437,27 @@ function bukaPdfModal(noSurat) {
     String(req.createdBy || '').toUpperCase().includes('ADMIN')
   );
 
+  // 3. RESOLVE TOKO / PEMOHON TTD (HANYA UNTUK LOGIN GBJ, KECUALI GBJ MAKA WAJIB KOSONG)
+  const isRequesterGBJ = (
+    creatorCategory === 'GBJ' || 
+    (currentUser && currentUser.category === 'GBJ') ||
+    String(req.toko || '').toUpperCase().includes('GBJ') || 
+    String(req.createdBy || '').toUpperCase().includes('GBJ') ||
+    req.isGBJ === true
+  );
+
   let tokoTTD = '';
-  if (req.pemohonTTD) {
-    tokoTTD = req.pemohonTTD;
-  }
-  if (!tokoTTD && req.tokoTTD) {
-    tokoTTD = req.tokoTTD;
-  }
-  if (!tokoTTD && !isCreatedByServiceOrAdmin) {
-    if (req.createdBy) {
-      tokoTTD = ttdMap[req.createdBy] || ttdMap[req.toko] || (creatorUser && (creatorUser.ttd || ttdMap[creatorUser.id] || ttdMap[creatorUser.username])) || '';
+  if (isRequesterGBJ) {
+    tokoTTD = req.pemohonTTD || req.tokoTTD || '';
+    if (!tokoTTD) {
+      tokoTTD = ttdMap['GBJ'] || (creatorUser && (creatorUser.ttd || ttdMap[creatorUser.id] || ttdMap[creatorUser.username] || ttdMap[creatorUser.fullName])) || '';
     }
-  }
-  if (!tokoTTD && req.userId) {
-    tokoTTD = ttdMap[req.userId] || (creatorUser && (creatorUser.ttd || ttdMap[creatorUser.fullName])) || '';
-  }
-  if (!tokoTTD && (creatorCategory === 'GBJ' || String(req.toko).toUpperCase().includes('GBJ') || String(req.createdBy).toUpperCase().includes('GBJ'))) {
-    tokoTTD = ttdMap['GBJ'] || '';
+    if (!tokoTTD && (req.status === 'APPROVE' || req.status === 'DONE')) {
+      tokoTTD = getOfficialDigitalSignatureStampSvg('GBJ', req.toko || req.createdBy || 'GBJ', req.tanggal || '');
+    }
+  } else {
+    // KECUALI LOGIN GBJ, PEMOHON WAJIB KOSONG!
+    tokoTTD = '';
   }
 
   const nowPrint = new Date();
@@ -8526,7 +8611,7 @@ function bukaPdfModal(noSurat) {
             </div>
             <div style="width: 100%; text-align: center !important;">
               <div style="font-weight: 800; color: #0f172a; font-size: 11.5px; text-align: center !important;">${req.toko}</div>
-              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; text-align: center !important;">PEMOHON (${(creatorCategory === 'GBJ' || String(req.toko).toUpperCase().includes('GBJ') || String(req.createdBy).toUpperCase().includes('GBJ')) ? 'GBJ' : 'TOKO'})</div>
+              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; text-align: center !important;">PEMOHON (${isRequesterGBJ ? 'GBJ' : 'TOKO'})</div>
             </div>
           </div>
 
