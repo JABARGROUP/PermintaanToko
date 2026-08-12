@@ -687,6 +687,35 @@ function getAccessibleNotifications() {
         });
       }
     });
+
+    const tokoRejectedReqs = requests.filter(r => {
+      if (clearedAt && r.createdAt) {
+        const reqTime = new Date(r.createdAt).getTime();
+        if (reqTime <= clearedAt) return false;
+      }
+      const isMine = (
+        r.userId === currentUser.id ||
+        String(r.createdBy || '').toUpperCase() === userUname ||
+        String(r.createdBy || '').toUpperCase() === userFullName ||
+        String(r.toko || '').toUpperCase() === userFullName
+      );
+      return isMine && r.status === 'REJECT';
+    });
+
+    tokoRejectedReqs.forEach(r => {
+      const exists = filtered.some(n => n.noSurat === r.noSurat && String(n.message || '').includes('DITOLAK'));
+      if (!exists) {
+        filtered.unshift({
+          id: `NTF-TK-REJ-${r.noSurat}`,
+          targetRoles: ['TOKO', 'SALES'],
+          targetArea: r.area || userArea,
+          message: `PERMINTAAN #${r.noSurat} DITOLAK. CATATAN: ${r.catatan || '-'}`,
+          noSurat: r.noSurat,
+          time: r.tanggalInput || r.createdAt || getFormattedDateDDMMYYYY(),
+          readBy: []
+        });
+      }
+    });
   }
 
   return filtered;
@@ -1313,37 +1342,151 @@ function initPullToRefresh() {
 
 function getAdminReminderEnabled() {
   const val = appStorage.getItem(ADMIN_REMINDER_KEY);
+  if (val === null || val === undefined) {
+    try {
+      const loc = localStorage.getItem(ADMIN_REMINDER_KEY);
+      if (loc !== null && loc !== undefined) return loc !== 'false';
+    } catch(e) {}
+  }
   return val !== 'false';
 }
 
-function toggleAdminReminderFeature() {
+async function toggleAdminReminderFeature() {
   const current = getAdminReminderEnabled();
   const next = !current;
-  appStorage.setItem(ADMIN_REMINDER_KEY, next ? 'true' : 'false');
+  const valStr = next ? 'true' : 'false';
+  appStorage.setItem(ADMIN_REMINDER_KEY, valStr);
+  try { localStorage.setItem(ADMIN_REMINDER_KEY, valStr); } catch(e) {}
   updateAdminReminderUI();
-  pushCentralCloudDB();
-  showNotif(next ? 'REMINDER PENDING SERVICE & DM SEKARANG AKTIF (ON)!' : 'REMINDER PENDING SERVICE & DM NONAKTIF (OFF)!', 'info');
-  if (next) {
-    checkAndTriggerPendingReminders();
+
+  // 1. SUPABASE SYNC (LOOKUP & SYSTEM ROW)
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      const timeVal = getAdminReminderTime();
+      await supabase.from('lookup').upsert({
+        key: 'adminReminder',
+        value: valStr,
+        code: 'ADMIN_REMINDER',
+        type: valStr,
+        updated_at: new Date().toISOString()
+      });
+
+      const sysRow = {
+        id: '__SYSTEM_REMINDER_SETTINGS__',
+        no_surat: '__SYSTEM_REMINDER_SETTINGS__',
+        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+        toko: 'SYSTEM',
+        area: 'ALL',
+        jenis: 'SYSTEM',
+        catatan: JSON.stringify({ adminReminder: valStr, adminReminderTime: timeVal, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
+        items: [],
+        photos: [],
+        status: 'DONE',
+        service_approve: true,
+        created_by: currentUser?.fullName || 'ADMIN',
+        created_at: new Date().toISOString()
+      };
+      await supabase.from('permintaan_toko').upsert(sysRow);
+    } catch(err) {
+      console.warn('[SUPABASE REMINDER TOGGLE ERROR]:', err);
+    }
   }
+
+  // 2. FIRESTORE & REALTIME DB
+  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+    try {
+      await dbFirestore.collection('app_settings').doc('config').set({
+        adminReminder: valStr,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch(e) {}
+  }
+  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+    try {
+      await dbRealtime.ref('settings/adminReminder').set(valStr);
+    } catch(e) {}
+  }
+
+  if (typeof pushCentralCloudDB === 'function') {
+    try { pushCentralCloudDB(); } catch(e) {}
+  }
+
+  showNotif(next ? 'REMINDER PENDING SERVICE & DM DIAKTIFKAN (ON) DI SEMUA PERANGKAT!' : 'REMINDER PENDING SERVICE & DM DINONAKTIFKAN (OFF) DI SEMUA PERANGKAT!', 'info');
 }
 window.toggleAdminReminderFeature = toggleAdminReminderFeature;
 
 const ADMIN_REMINDER_TIME_KEY = 'STORE_ADMIN_REMINDER_TIME_KEY_V7';
 
 function getAdminReminderTime() {
-  return appStorage.getItem(ADMIN_REMINDER_TIME_KEY) || '09:00';
+  let val = appStorage.getItem(ADMIN_REMINDER_TIME_KEY);
+  if (!val) {
+    try {
+      val = localStorage.getItem(ADMIN_REMINDER_TIME_KEY);
+    } catch(e) {}
+  }
+  return val || '09:00';
 }
 
-function simpanAdminReminderTime() {
+async function simpanAdminReminderTime() {
   const input = document.getElementById('adminReminderTimeInput');
   if (!input) return;
-  const val = input.value.trim();
-  if (val) {
-    appStorage.setItem(ADMIN_REMINDER_TIME_KEY, val);
-    pushCentralCloudDB();
-    showNotif(`JADWAL JAM WA REMINDER DISIMPAN: ${val}!`, 'info');
+  const val = input.value.trim() || '09:00';
+  appStorage.setItem(ADMIN_REMINDER_TIME_KEY, val);
+  try { localStorage.setItem(ADMIN_REMINDER_TIME_KEY, val); } catch(e) {}
+
+  // 1. SUPABASE SYNC (LOOKUP & SYSTEM ROW)
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      const isEnabledStr = getAdminReminderEnabled() ? 'true' : 'false';
+      await supabase.from('lookup').upsert({
+        key: 'adminReminderTime',
+        value: val,
+        code: 'ADMIN_REMINDER_TIME',
+        type: val,
+        updated_at: new Date().toISOString()
+      });
+
+      const sysRow = {
+        id: '__SYSTEM_REMINDER_SETTINGS__',
+        no_surat: '__SYSTEM_REMINDER_SETTINGS__',
+        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+        toko: 'SYSTEM',
+        area: 'ALL',
+        jenis: 'SYSTEM',
+        catatan: JSON.stringify({ adminReminder: isEnabledStr, adminReminderTime: val, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
+        items: [],
+        photos: [],
+        status: 'DONE',
+        service_approve: true,
+        created_by: currentUser?.fullName || 'ADMIN',
+        created_at: new Date().toISOString()
+      };
+      await supabase.from('permintaan_toko').upsert(sysRow);
+    } catch(err) {
+      console.warn('[SUPABASE REMINDER TIME ERROR]:', err);
+    }
   }
+
+  // 2. FIRESTORE & REALTIME DB
+  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+    try {
+      await dbFirestore.collection('app_settings').doc('config').set({
+        adminReminderTime: val,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch(e) {}
+  }
+  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+    try {
+      await dbRealtime.ref('settings/adminReminderTime').set(val);
+    } catch(e) {}
+  }
+
+  if (typeof pushCentralCloudDB === 'function') {
+    try { pushCentralCloudDB(); } catch(e) {}
+  }
+
+  showNotif(`JADWAL JAM WA REMINDER BERHASIL DISIMPAN: ${val}!`, 'success');
 }
 window.simpanAdminReminderTime = simpanAdminReminderTime;
 
@@ -1356,25 +1499,41 @@ function loadAdminReminderTimeInput() {
 window.loadAdminReminderTimeInput = loadAdminReminderTimeInput;
 
 function updateAdminReminderUI() {
-  const statusText = document.getElementById('reminderFeatureStatusText');
   const isEnabled = getAdminReminderEnabled();
-  if (statusText) {
+  
+  const statusTexts = document.querySelectorAll('#reminderFeatureStatusText');
+  statusTexts.forEach(statusText => {
     statusText.textContent = isEnabled ? 'AKTIF (ON)' : 'NONAKTIF (OFF)';
     statusText.style.color = isEnabled ? '#10b981' : '#ef4444';
-  }
+  });
+
+  const toggleBtns = document.querySelectorAll('#btnToggleReminderFeature');
+  toggleBtns.forEach(btn => {
+    btn.style.background = isEnabled ? '#10b981' : '#ef4444';
+    const icon = btn.querySelector('.material-symbols-rounded') || btn.querySelector('#reminderToggleBtnIcon');
+    if (icon) {
+      icon.textContent = isEnabled ? 'toggle_on' : 'toggle_off';
+    }
+    const textEl = btn.querySelector('#reminderToggleBtnText');
+    if (textEl) {
+      textEl.textContent = isEnabled ? 'ON (KLIK UTK OFF)' : 'OFF (KLIK UTK ON)';
+    }
+  });
+
   loadAdminReminderTimeInput();
   const container = document.getElementById('adminReminderControlContainer');
   if (container) {
-    container.style.display = (currentUser && currentUser.category === 'ADMIN') ? 'flex' : 'none';
+    container.style.display = (currentUser && (currentUser.category === 'ADMIN' || currentUser.username === 'ADMIN')) ? 'block' : 'none';
   }
 }
+window.updateAdminReminderUI = updateAdminReminderUI;
 
 const LAST_REMINDER_SENT_KEY = 'STORE_LAST_REMINDER_SENT_KEY_V1';
 
 function checkAndTriggerPendingReminders(forceNow = false) {
-  if (!getAdminReminderEnabled()) return;
+  if (!getAdminReminderEnabled() && !forceNow) return;
 
-  const scheduledTimeStr = getAdminReminderTime(); // e.g. "09:00" or "09:00, 14:00"
+  const scheduledTimeStr = getAdminReminderTime(); // e.g. "09:00" or "08:30, 14:00"
   const scheduledTimes = scheduledTimeStr.split(',').map(t => t.trim()).filter(Boolean);
   if (scheduledTimes.length === 0) scheduledTimes.push('09:00');
 
@@ -1400,20 +1559,32 @@ function checkAndTriggerPendingReminders(forceNow = false) {
   }
 
   const requests = getRequestsFromDB();
-  if (!requests.length) return;
+  if (!requests.length) {
+    if (forceNow) showNotif('TIDAK ADA DATA PERMINTAAN DI DATABASE.', 'info');
+    return;
+  }
 
   const notifs = getSystemNotifications();
   const allUsers = getUsersFromDB();
 
+  // PENDING SERVICE: status PENDING & BELUM DI-APPROVE SERVICE
   const pendingServiceReqs = requests.filter(r => r && r.status === 'PENDING' && !r.serviceApprove);
+  // PENDING DM: status PENDING & SUDAH DI-APPROVE SERVICE (MENUNGGU DM)
   const pendingDMReqs = requests.filter(r => r && r.status === 'PENDING' && r.serviceApprove);
 
+  if (pendingServiceReqs.length === 0 && pendingDMReqs.length === 0) {
+    if (forceNow) showNotif('TIDAK ADA PERMINTAAN STATUS PENDING SAAT INI.', 'info');
+    return;
+  }
+
   let hasNewReminder = false;
+  let srvWaSentCount = 0;
+  let dmWaSentCount = 0;
 
   // 1. COMBINED REMINDER FOR SERVICE USERS (1 CHAT PER USER FOR MULTIPLE REQUESTS WITH REGISTERED FULL NAME)
   if (pendingServiceReqs.length > 0) {
     pendingServiceReqs.forEach(r => {
-      const message = `REMINDER PENDING SERVICE [JAM ${scheduledTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE SERVICE!`;
+      const message = `REMINDER PENDING SERVICE [JAM ${matchedTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE SERVICE!`;
       const duplicate = notifs.some(n => n.noSurat === r.noSurat && String(n.message).includes('REMINDER PENDING') && String(n.message).includes('SERVICE'));
       if (!duplicate || forceNow) {
         tambahNotifikasiSistem(['SERVICE'], r.area, message, r.noSurat);
@@ -1423,21 +1594,23 @@ function checkAndTriggerPendingReminders(forceNow = false) {
 
     const serviceUsers = allUsers.filter(u => u && (u.category === 'SERVICE' || u.category === 'HODS') && u.phone && u.phone !== '-');
     serviceUsers.forEach(srv => {
-      const userPendingReqs = pendingServiceReqs.filter(r => r.area === srv.area || srv.area === 'ALL');
+      const userPendingReqs = pendingServiceReqs.filter(r => r.area === srv.area || srv.area === 'ALL' || !srv.area);
       if (userPendingReqs.length > 0) {
         const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
         const itemsListStr = userPendingReqs.map((r, idx) => {
           const directLink = typeof getAppDirectLink === 'function' ? getAppDirectLink(r.noSurat) : '';
-          return `📌 #${r.noSurat} - TOKO ${r.toko} (${r.area})\n🔗 Link Detail: ${directLink}`;
+          return `📌 *#${r.noSurat}* - TOKO *${r.toko}* (${r.area || '-'})\n   📅 Tgl: ${r.tanggal || '-'}\n   🔗 Link: ${directLink}`;
         }).join('\n\n');
         
         const combinedMessage = 
-          `Yth. Bapak/Ibu ${srvName},\n\n` +
-          `PEMBERITAHUAN REMINDER PENDING SERVICE (${userPendingReqs.length} PERMINTAAN):\n\n` +
+          `Yth. Bapak/Ibu *${srvName}*,\n\n` +
+          `🔔 *PEMBERITAHUAN REMINDER PENDING SERVICE*\n` +
+          `Terdapat *${userPendingReqs.length} pengajuan permintaan barang* yang sedang menunggu approval Service:\n\n` +
           `${itemsListStr}\n\n` +
-          `Silakan klik link di atas untuk langsung membuka detail data. Terima kasih.`;
+          `Silakan klik tautan di atas untuk membuka dan memproses dokumen. Terima kasih.`;
 
-        kirimNotifikasiWA(srv.phone, combinedMessage);
+        const sent = kirimNotifikasiWA(srv.phone, combinedMessage);
+        if (sent) srvWaSentCount++;
       }
     });
   }
@@ -1445,7 +1618,7 @@ function checkAndTriggerPendingReminders(forceNow = false) {
   // 2. COMBINED REMINDER FOR DM USERS (1 CHAT PER USER FOR MULTIPLE REQUESTS WITH REGISTERED FULL NAME)
   if (pendingDMReqs.length > 0) {
     pendingDMReqs.forEach(r => {
-      const message = `REMINDER PENDING DM [JAM ${scheduledTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE DM!`;
+      const message = `REMINDER PENDING DM [JAM ${matchedTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE DM!`;
       const duplicate = notifs.some(n => n.noSurat === r.noSurat && String(n.message).includes('REMINDER PENDING') && String(n.message).includes('DM'));
       if (!duplicate || forceNow) {
         tambahNotifikasiSistem(['DM'], 'ALL', message, r.noSurat);
@@ -1455,21 +1628,23 @@ function checkAndTriggerPendingReminders(forceNow = false) {
 
     const dmUsers = allUsers.filter(u => u && u.category === 'DM' && u.phone && u.phone !== '-');
     dmUsers.forEach(dm => {
-      const userPendingReqs = pendingDMReqs.filter(r => r.area === dm.area || dm.area === 'ALL');
+      const userPendingReqs = pendingDMReqs.filter(r => r.area === dm.area || dm.area === 'ALL' || !dm.area);
       if (userPendingReqs.length > 0) {
         const dmName = dm.fullName || dm.username || 'Bapak/Ibu DM';
         const itemsListStr = userPendingReqs.map((r, idx) => {
           const directLink = typeof getAppDirectLink === 'function' ? getAppDirectLink(r.noSurat) : '';
-          return `📌 #${r.noSurat} - TOKO ${r.toko} (${r.area})\n🔗 Link Detail: ${directLink}`;
+          return `📌 *#${r.noSurat}* - TOKO *${r.toko}* (${r.area || '-'})\n   📅 Tgl: ${r.tanggal || '-'}\n   🔗 Link: ${directLink}`;
         }).join('\n\n');
         
         const combinedMessage = 
-          `Yth. Bapak/Ibu ${dmName},\n\n` +
-          `PEMBERITAHUAN REMINDER PENDING DM (${userPendingReqs.length} PERMINTAAN):\n\n` +
+          `Yth. Bapak/Ibu *${dmName}*,\n\n` +
+          `🔔 *PEMBERITAHUAN REMINDER PENDING DM*\n` +
+          `Terdapat *${userPendingReqs.length} pengajuan permintaan barang* yang telah disetujui Service dan menanti Approval DM:\n\n` +
           `${itemsListStr}\n\n` +
-          `Silakan klik link di atas untuk langsung membuka detail data. Terima kasih.`;
+          `Silakan klik tautan di atas untuk membuka dan memberikan persetujuan dokumen. Terima kasih.`;
 
-        kirimNotifikasiWA(dm.phone, combinedMessage);
+        const sent = kirimNotifikasiWA(dm.phone, combinedMessage);
+        if (sent) dmWaSentCount++;
       }
     });
   }
@@ -1479,7 +1654,8 @@ function checkAndTriggerPendingReminders(forceNow = false) {
   }
 
   if (forceNow) {
-    showNotif(`REMINDER WHATSAPP PENDING SERVICE & DM BERHASIL DIKIRIM SEKARANG! (JADWAL JAM: ${scheduledTime})`, 'info');
+    const totalPending = pendingServiceReqs.length + pendingDMReqs.length;
+    showNotif(`✅ REMINDER PENDING DIKIRIM (${totalPending} Dokumen: ${pendingServiceReqs.length} Service, ${pendingDMReqs.length} DM)!`, 'success');
   }
 }
 
@@ -1499,7 +1675,7 @@ function startAdminReminderTimeChecker() {
     if (typeof checkAndTriggerPendingReminders === 'function') {
       checkAndTriggerPendingReminders(false);
     }
-  }, 60000);
+  }, 30000);
 }
 window.startAdminReminderTimeChecker = startAdminReminderTimeChecker;
 
@@ -1612,6 +1788,18 @@ function initFirebaseDB() {
                 if (typeof loadSavedDesignMode === 'function') loadSavedDesignMode();
               }
               if (cfg.fonteToken) appStorage.setItem(FONTE_TOKEN_KEY, cfg.fonteToken);
+              if (cfg.adminReminder !== undefined) {
+                const rVal = String(cfg.adminReminder);
+                appStorage.setItem(ADMIN_REMINDER_KEY, rVal);
+                try { localStorage.setItem(ADMIN_REMINDER_KEY, rVal); } catch(e) {}
+                if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
+              }
+              if (cfg.adminReminderTime) {
+                const tVal = String(cfg.adminReminderTime);
+                appStorage.setItem(ADMIN_REMINDER_TIME_KEY, tVal);
+                try { localStorage.setItem(ADMIN_REMINDER_TIME_KEY, tVal); } catch(e) {}
+                if (typeof loadAdminReminderTimeInput === 'function') loadAdminReminderTimeInput();
+              }
               if (cfg.featurePhotos !== undefined) {
                 const curVal = appStorage.getItem(FEATURE_PHOTOS_KEY);
                 const newVal = String(cfg.featurePhotos);
@@ -1688,6 +1876,25 @@ function initFirebaseDB() {
               appStorage.setItem(FONTE_TOKEN_KEY, strVal);
               try { localStorage.setItem(FONTE_TOKEN_KEY, strVal); } catch(e) {}
               if (typeof loadFonteToken === 'function') loadFonteToken();
+            }
+          });
+          // Listener real-time admin reminder
+          dbRealtime.ref('settings/adminReminder').on('value', (snap) => {
+            const val = snap.val();
+            if (val !== null && val !== undefined) {
+              const strVal = String(val);
+              appStorage.setItem(ADMIN_REMINDER_KEY, strVal);
+              try { localStorage.setItem(ADMIN_REMINDER_KEY, strVal); } catch(e) {}
+              if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
+            }
+          });
+          dbRealtime.ref('settings/adminReminderTime').on('value', (snap) => {
+            const val = snap.val();
+            if (val !== null && val !== undefined) {
+              const strVal = String(val);
+              appStorage.setItem(ADMIN_REMINDER_TIME_KEY, strVal);
+              try { localStorage.setItem(ADMIN_REMINDER_TIME_KEY, strVal); } catch(e) {}
+              if (typeof loadAdminReminderTimeInput === 'function') loadAdminReminderTimeInput();
             }
           });
         } catch (e) {
@@ -1964,6 +2171,30 @@ function handleRealtimePermintaanToko(payload) {
         }
       } catch(e) {
         console.warn('[REALTIME FONTE TOKEN ERROR]:', e);
+      }
+      return;
+    }
+
+    if (rawNoSurat === '__SYSTEM_REMINDER_SETTINGS__') {
+      try {
+        if (payload.new && payload.new.catatan) {
+          try {
+            const parsed = JSON.parse(payload.new.catatan);
+            if (parsed.adminReminder !== undefined) {
+              const rVal = String(parsed.adminReminder);
+              appStorage.setItem(ADMIN_REMINDER_KEY, rVal);
+              try { localStorage.setItem(ADMIN_REMINDER_KEY, rVal); } catch(e) {}
+            }
+            if (parsed.adminReminderTime !== undefined) {
+              const tVal = String(parsed.adminReminderTime);
+              appStorage.setItem(ADMIN_REMINDER_TIME_KEY, tVal);
+              try { localStorage.setItem(ADMIN_REMINDER_TIME_KEY, tVal); } catch(e) {}
+            }
+            if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
+          } catch(e) {}
+        }
+      } catch(e) {
+        console.warn('[REALTIME REMINDER SETTINGS ERROR]:', e);
       }
       return;
     }
@@ -2491,6 +2722,18 @@ async function syncSupabaseLookupToLocalCache() {
             if (typeof loadFonteToken === 'function') loadFonteToken();
           }
         }
+        if (item.key === 'adminReminder' || item.code === 'ADMIN_REMINDER') {
+          const rVal = item.value ? (typeof item.value === 'object' ? String(item.value.enabled || item.value.adminReminder || 'true') : String(item.value)) : (item.type || 'true');
+          appStorage.setItem(ADMIN_REMINDER_KEY, rVal);
+          try { localStorage.setItem(ADMIN_REMINDER_KEY, rVal); } catch(e) {}
+          if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
+        }
+        if (item.key === 'adminReminderTime' || item.code === 'ADMIN_REMINDER_TIME') {
+          const tVal = item.value ? (typeof item.value === 'object' ? String(item.value.time || item.value.adminReminderTime || '09:00') : String(item.value)) : (item.type || '09:00');
+          appStorage.setItem(ADMIN_REMINDER_TIME_KEY, tVal);
+          try { localStorage.setItem(ADMIN_REMINDER_TIME_KEY, tVal); } catch(e) {}
+          if (typeof loadAdminReminderTimeInput === 'function') loadAdminReminderTimeInput();
+        }
       });
     }
 
@@ -2528,6 +2771,27 @@ async function syncSupabaseLookupToLocalCache() {
           try { localStorage.setItem(FONTE_TOKEN_KEY, valStr); } catch(e) {}
           if (typeof loadFonteToken === 'function') loadFonteToken();
         }
+      }
+    } catch(e) {}
+
+    // Explicitly sync __SYSTEM_REMINDER_SETTINGS__ from permintaan_toko
+    try {
+      const { data: sysReminder } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_REMINDER_SETTINGS__').maybeSingle();
+      if (sysReminder && sysReminder.catatan) {
+        try {
+          const parsed = JSON.parse(sysReminder.catatan);
+          if (parsed.adminReminder !== undefined) {
+            const rVal = String(parsed.adminReminder);
+            appStorage.setItem(ADMIN_REMINDER_KEY, rVal);
+            try { localStorage.setItem(ADMIN_REMINDER_KEY, rVal); } catch(e) {}
+          }
+          if (parsed.adminReminderTime !== undefined) {
+            const tVal = String(parsed.adminReminderTime);
+            appStorage.setItem(ADMIN_REMINDER_TIME_KEY, tVal);
+            try { localStorage.setItem(ADMIN_REMINDER_TIME_KEY, tVal); } catch(e) {}
+          }
+          if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
+        } catch(e) {}
       }
     } catch(e) {}
   } catch (err) {
@@ -2698,6 +2962,43 @@ async function pushCentralCloudDB() {
             });
           } catch(e) {}
         }
+
+        const isReminderEnabled = getAdminReminderEnabled();
+        const reminderTimeVal = getAdminReminderTime();
+        const reminderEnabledVal = isReminderEnabled ? 'true' : 'false';
+        const systemReminderRow = {
+          id: '__SYSTEM_REMINDER_SETTINGS__',
+          no_surat: '__SYSTEM_REMINDER_SETTINGS__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify({ adminReminder: reminderEnabledVal, adminReminderTime: reminderTimeVal, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        await supabase.from('permintaan_toko').upsert(systemReminderRow);
+
+        try {
+          await supabase.from('lookup').upsert({
+            key: 'adminReminder',
+            value: reminderEnabledVal,
+            code: 'ADMIN_REMINDER',
+            type: reminderEnabledVal,
+            updated_at: new Date().toISOString()
+          });
+          await supabase.from('lookup').upsert({
+            key: 'adminReminderTime',
+            value: reminderTimeVal,
+            code: 'ADMIN_REMINDER_TIME',
+            type: reminderTimeVal,
+            updated_at: new Date().toISOString()
+          });
+        } catch(e) {}
       } catch (sbErr) {
         console.warn('[SUPABASE PUSH NOTICE]:', sbErr);
       }
@@ -4610,6 +4911,7 @@ function pindahHalaman(pageId, pushHistory = true) {
     loadUsersManagement();
     updateActivePdfModelBadge();
     if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
+    if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
   }
 }
 
@@ -6533,33 +6835,55 @@ function kirimReject() {
     const creator = users.find(u => u && (u.id === requests[idx].userId || u.fullName === requests[idx].createdBy));
 
     if (roleType === 'SERVICE') {
-      tambahNotifikasiSistem(['TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DITOLAK SERVICE. CATATAN: ${alasan}`, noSurat);
-      if (creator && creator.phone) {
+      tambahNotifikasiSistem(['TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} DITOLAK SERVICE. ALASAN: ${alasan}`, noSurat);
+      if (creator && creator.phone && creator.phone !== '-') {
+        const creatorName = creator.fullName || creator.username || 'Bapak/Ibu Pembuat Permintaan';
         kirimNotifikasiWA(creator.phone,
-          `Yth. Bapak/Ibu,\n\n` +
-          `Pemberitahuan Sistem Permintaan Barang:\n` +
-          `Pengajuan permintaan barang berikut DITOLAK oleh Tim Service:\n` +
-          `• Nomor Dokumen : #${noSurat}\n` +
-          `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-          `• Catatan / Alasan : ${alasan}\n` +
+          `Yth. Bapak/Ibu *${creatorName}*,\n\n` +
+          `❌ *PEMBERITAHUAN PENOLAKAN PERMINTAAN*\n` +
+          `Pengajuan permintaan barang Anda telah *DITOLAK* oleh Tim Service:\n` +
+          `• Nomor Dokumen : *#${noSurat}*\n` +
+          `• Toko / Pemohon : *${requests[idx].toko}* (${requests[idx].area || '-'})\n` +
+          `• Catatan / Alasan : *${alasan}*\n` +
           `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
           `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
         );
       }
     } else if (roleType === 'DM') {
-      tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} DITOLAK DM. CATATAN: ${alasan}`, noSurat);
-      if (creator && creator.phone) {
+      // 1. IN-APP NOTIFIKASI UNTUK SERVICE, TOKO & SALES
+      tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} DITOLAK DM. ALASAN: ${alasan}`, noSurat);
+
+      // 2. WHATSAPP KE PEMBUAT (USER / TOKO)
+      if (creator && creator.phone && creator.phone !== '-') {
+        const creatorName = creator.fullName || creator.username || 'Bapak/Ibu Pembuat Permintaan';
         kirimNotifikasiWA(creator.phone,
-          `Yth. Bapak/Ibu,\n\n` +
-          `Pemberitahuan Sistem Permintaan Barang:\n` +
-          `Pengajuan permintaan barang berikut DITOLAK oleh DM Pusat:\n` +
-          `• Nomor Dokumen : #${noSurat}\n` +
-          `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-          `• Catatan / Alasan : ${alasan}\n` +
+          `Yth. Bapak/Ibu *${creatorName}*,\n\n` +
+          `❌ *PEMBERITAHUAN PENOLAKAN PERMINTAAN OLEH DM*\n` +
+          `Pengajuan permintaan barang berikut telah *DITOLAK oleh DM Pusat*:\n` +
+          `• Nomor Dokumen : *#${noSurat}*\n` +
+          `• Toko / Pemohon : *${requests[idx].toko}* (${requests[idx].area || '-'})\n` +
+          `• Catatan / Alasan Penolakan : *${alasan}*\n` +
           `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
           `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
         );
       }
+
+      // 3. WHATSAPP KE TIM SERVICE (SEMUA USER SERVICE DI AREA TERSEBUT & ALL)
+      const serviceUsers = users.filter(u => u && (u.category === 'SERVICE' || u.category === 'HODS') && (u.area === requests[idx].area || u.area === 'ALL' || !u.area) && u.phone && u.phone !== '-');
+      serviceUsers.forEach(srv => {
+        const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
+        kirimNotifikasiWA(srv.phone,
+          `Yth. Bapak/Ibu *${srvName}*,\n\n` +
+          `⚠️ *PEMBERITAHUAN PENOLAKAN DM UNTUK TIM SERVICE*\n` +
+          `Pengajuan permintaan barang yang telah di-approve Service berikut telah *DITOLAK oleh DM Pusat*:\n` +
+          `• Nomor Dokumen : *#${noSurat}*\n` +
+          `• Toko / Pemohon : *${requests[idx].toko}* (${requests[idx].area || '-'})\n` +
+          `• Pembuat Permintaan : *${requests[idx].createdBy || '-'}*\n` +
+          `• Catatan / Alasan Penolakan : *${alasan}*\n` +
+          `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
+          `Silakan buka sistem aplikasi untuk melihat rincian catatan penolakan. Terima kasih.`
+        );
+      });
     }
   }
 }

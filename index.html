@@ -462,26 +462,36 @@
       </div>
 
       <!-- ADMIN CONTROL TOGGLES (REMINDER PENDING SERVICE & DM) -->
-      <div id="adminReminderControlContainer" class="box" style="border-left: 4px solid #7c3aed; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <div>
-          <h3 style="color: #7c3aed; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-            <span class="material-symbols-rounded">notifications_active</span> REMINDER OTOMATIS PENDING SERVICE & DM
-          </h3>
-          <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
-            FONTE WA HANYA DIKIRIM KE SERVICE & DM PADA JAM TERJADWAL YANG DIATUR DI BAWAH INI.
-          </p>
-        </div>
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 0;">JAM WA:</label>
-            <input type="time" id="adminReminderTimeInput" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border-color);" onchange="simpanAdminReminderTime()">
+      <div id="adminReminderControlContainer" class="box" style="border-left: 4px solid #7c3aed; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+          <div>
+            <h3 style="color: #7c3aed; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span class="material-symbols-rounded">notifications_active</span> PENGATURAN REMINDER OTOMATIS PENDING (SERVICE & DM)
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+              PENGINGAT WA OTOMATIS: DOKUMEN MENUNGGU APPROVAL SERVICE & DOKUMEN MENUNGGU APPROVAL DM AKAN DIKIRIMKAN SECARA TERKONSOLIDASI SESUAI JADWAL JAM YANG DITENTUKAN.
+            </p>
           </div>
-          <span id="reminderFeatureStatusText" style="font-size: 13px; font-weight: 800; color: #10b981;">AKTIF (ON)</span>
-          <button type="button" class="btnDownload" style="background: #7c3aed; height: 38px; padding: 0 14px;" onclick="toggleAdminReminderFeature()">
-            <span class="material-symbols-rounded">toggle_on</span> ON / OFF
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span id="reminderFeatureStatusText" style="font-size: 13px; font-weight: 800; color: #10b981;">AKTIF (ON)</span>
+            <button type="button" id="btnToggleReminderFeature" class="btnDownload" style="background: #10b981; height: 38px; padding: 0 16px; font-weight: 700;" onclick="toggleAdminReminderFeature()">
+              <span id="reminderToggleBtnIcon" class="material-symbols-rounded">toggle_on</span> <span id="reminderToggleBtnText">ON / OFF</span>
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: rgba(124, 58, 237, 0.04); padding: 12px; border-radius: 8px; border: 1px solid rgba(124, 58, 237, 0.15);">
+          <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px;">
+            <label style="font-size: 12px; font-weight: 800; color: var(--text-main); margin-bottom: 0; white-space: nowrap;">
+              <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; color: #7c3aed;">schedule</span> JADWAL JAM:
+            </label>
+            <input type="text" id="adminReminderTimeInput" placeholder="CONTOH: 09:00 ATAU 08:30, 13:00" style="flex: 1; padding: 10px 12px; font-size: 13px; font-weight: 600; border-radius: 6px; border: 1px solid var(--border-color);">
+          </div>
+          <button type="button" class="btnDownload" style="background: #7c3aed; height: 42px; padding: 0 16px; font-weight: 700;" onclick="simpanAdminReminderTime()">
+            <span class="material-symbols-rounded">save</span> SIMPAN JADWAL
           </button>
-          <button type="button" class="btnDownload" style="background: #0284c7; height: 38px; padding: 0 14px; font-weight: 800;" onclick="tesKirimAdminReminder()" title="TES KIRIM REMINDER WA SEKARANG">
-            <span class="material-symbols-rounded">send</span> TES REMINDER
+          <button type="button" class="btnDownload" style="background: #0284c7; height: 42px; padding: 0 16px; font-weight: 800;" onclick="tesKirimAdminReminder()" title="KIRIMKAN REMINDER PENDING SEKARANG JUGA">
+            <span class="material-symbols-rounded">send</span> TES REMINDER SEKARANG
           </button>
         </div>
       </div>
