@@ -93,6 +93,36 @@
       <!-- Admin Conversation Room List -->
       <div id="chatList" style="display:none; flex:1; overflow-y:auto; padding:10px;"></div>
 
+      <!-- Admin User Picker for Starting New Chat -->
+      <div id="chatUserPicker" style="display:none; flex:1; overflow-y:auto; padding:10px; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="font-weight:700; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+            <span class="material-symbols-rounded" style="color:var(--primary); font-size:18px;">contacts</span> PILIH TOKO / USER
+          </div>
+          <button type="button" onclick="tutupUserPickerChat()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px; line-height:1; font-weight:bold;">&times;</button>
+        </div>
+        <input type="text" id="cariUserChatInput" placeholder="Cari nama toko / user / area..." style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg, #fff); color:var(--text-main); margin-bottom:8px; font-size:12px;" oninput="filterListUserChat(this.value)">
+        <div id="listUserChatContainer" style="flex:1; overflow-y:auto;"></div>
+      </div>
+
+      <!-- Broadcast Dialog Modal -->
+      <div id="chatBroadcastModal" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.65); z-index:100; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:var(--card-bg, #ffffff); border-radius:12px; padding:16px; width:100%; max-width:320px; box-shadow:0 10px 25px rgba(0,0,0,0.3); border:1px solid var(--border-color);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-weight:700; font-size:13px; color:#d97706; display:flex; align-items:center; gap:6px;">
+              <span class="material-symbols-rounded" style="font-size:18px;">campaign</span> SIARKAN KE SEMUA TOKO
+            </div>
+            <button type="button" onclick="tutupBroadcastChatModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px; font-weight:bold;">&times;</button>
+          </div>
+          <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px;">Pesan ini akan dikirimkan secara serentak ke seluruh Toko & Sales.</p>
+          <textarea id="pesanBroadcastChatInput" rows="3" placeholder="Tulis pesan siaran di sini..." style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg, #fff); color:var(--text-main); font-size:12px; resize:none; margin-bottom:12px; box-sizing:border-box;"></textarea>
+          <div style="display:flex; gap:8px; justify-content:flex-end;">
+            <button type="button" onclick="tutupBroadcastChatModal()" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-main); font-size:12px; cursor:pointer;">BATAL</button>
+            <button type="button" onclick="kirimBroadcastChatKeSemuaUser()" style="padding:6px 14px; border-radius:6px; border:none; background:#d97706; color:#fff; font-weight:700; font-size:12px; cursor:pointer;">KIRIM SIARAN</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Chat Message Body -->
       <div id="chatBody" class="chatBody"></div>
 
@@ -255,6 +285,19 @@
             </button>
           </div>
         </div>
+
+        <!-- Kolom Pencarian Toko Cepat -->
+        <div id="wrapperCariToko" style="margin-bottom: 6px; position: relative;">
+          <div style="position: relative; display: flex; align-items: center;">
+            <span class="material-symbols-rounded" style="position: absolute; left: 10px; font-size: 18px; color: var(--text-muted); pointer-events: none;">search</span>
+            <input type="text" id="cariTokoInput" placeholder="CARI TOKO (KETIK BEBERAPA HURUF / DIGIT)..." style="width: 100%; padding: 8px 32px 8px 34px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 12px; text-transform: uppercase;" oninput="filterDropdownToko(this.value)">
+            <button type="button" id="btnHapusCariToko" onclick="resetCariToko()" title="Hapus Pencarian" style="position: absolute; right: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; padding: 2px; align-items: center;">
+              <span class="material-symbols-rounded" style="font-size: 18px;">cancel</span>
+            </button>
+          </div>
+          <div id="infoHasilCariToko" style="display: none; font-size: 11px; color: var(--primary); margin-top: 3px; font-weight: 600;"></div>
+        </div>
+
         <select id="toko"></select>
 
         <label>JENIS PERMINTAAN</label>
@@ -795,7 +838,21 @@
           </div>
 
           <!-- LABEL DAFTAR TOKO (DIAM) -->
-          <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; color: var(--primary);">DAFTAR TOKO TERDAFTAR DI AREA ANDA:</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="font-size: 11px; font-weight: bold; color: var(--primary);">DAFTAR TOKO TERDAFTAR DI AREA ANDA:</div>
+          </div>
+
+          <!-- KOLOM PENCARIAN DAFTAR TOKO MODAL -->
+          <div style="margin-bottom: 8px; position: relative;">
+            <div style="position: relative; display: flex; align-items: center;">
+              <span class="material-symbols-rounded" style="position: absolute; left: 10px; font-size: 17px; color: var(--text-muted); pointer-events: none;">search</span>
+              <input type="text" id="cariTokoModalInput" placeholder="CARI TOKO DI TABEL (NAMA / KODE / AREA)..." style="width: 100%; padding: 7px 30px 7px 32px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 11.5px; text-transform: uppercase;" oninput="filterDaftarTokoModal(this.value)">
+              <button type="button" id="btnHapusCariTokoModal" onclick="resetCariTokoModal()" title="Hapus Pencarian" style="position: absolute; right: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; padding: 2px; align-items: center;">
+                <span class="material-symbols-rounded" style="font-size: 16px;">cancel</span>
+              </button>
+            </div>
+            <div id="infoHasilCariTokoModal" style="display: none; font-size: 10.5px; color: var(--primary); margin-top: 2px; font-weight: 600;"></div>
+          </div>
         </div>
 
         <!-- HANYA BAGIAN TABEL DI BAWAH INI YANG MEMILIKI FITUR SCROLLING -->

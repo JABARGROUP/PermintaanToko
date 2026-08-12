@@ -505,6 +505,7 @@ section#masterDbPage.page.active,
   border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+  position: relative;
   overflow: hidden;
   animation: none !important;
   transition: none !important;

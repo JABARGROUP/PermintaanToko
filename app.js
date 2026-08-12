@@ -5317,31 +5317,69 @@ function getBadgeStatus(r) {
   return st || '-';
 }
 
-function updateStoreDropdownOptions(selectedStoreName = '') {
+function updateStoreDropdownOptions(selectedStoreName = '', filterKeyword = '') {
   const tokoSelect = document.getElementById('toko');
+  const wrapperCariToko = document.getElementById('wrapperCariToko');
+  const cariInput = document.getElementById('cariTokoInput');
+  const btnHapus = document.getElementById('btnHapusCariToko');
+  const infoHasil = document.getElementById('infoHasilCariToko');
+
   if (!tokoSelect || !currentUser) return;
+
+  // Sembunyikan kolom pencarian jika user adalah TOKO atau GBJ
+  if (wrapperCariToko) {
+    wrapperCariToko.style.display = (currentUser.category === 'TOKO' || currentUser.category === 'GBJ') ? 'none' : 'block';
+  }
 
   const currentVal = selectedStoreName || tokoSelect.value;
   tokoSelect.innerHTML = '';
 
   if (currentUser.category === 'TOKO') {
     tokoSelect.innerHTML = `<option value="${currentUser.fullName}">${currentUser.fullName} (${currentUser.area})</option>`;
+    if (infoHasil) infoHasil.style.display = 'none';
+    if (btnHapus) btnHapus.style.display = 'none';
+    return;
   } else if (currentUser.category === 'GBJ') {
     tokoSelect.innerHTML = `<option value="${currentUser.fullName || 'GBJ'}">${currentUser.fullName || 'GBJ'} (${currentUser.area})</option>`;
-  } else {
-    const allStores = getStoresFromDB();
-    const areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
-      ? allStores 
-      : allStores.filter(s => s && isAreaMatch(currentUser.area, s.area));
+    if (infoHasil) infoHasil.style.display = 'none';
+    if (btnHapus) btnHapus.style.display = 'none';
+    return;
+  }
 
-    if (areaStores.length > 0) {
-      areaStores.forEach(s => {
-        const isSelected = (currentVal && String(s.fullName).toUpperCase() === String(currentVal).toUpperCase()) ? 'selected' : '';
-        tokoSelect.innerHTML += `<option value="${s.fullName}" ${isSelected}>${s.fullName} (${s.area || currentUser.area})</option>`;
-      });
-    } else {
-      tokoSelect.innerHTML = `<option value="INPUT TOKO.....">INPUT TOKO..... (${currentUser.area})</option>`;
+  const allStores = getStoresFromDB();
+  let areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
+    ? allStores 
+    : allStores.filter(s => s && isAreaMatch(currentUser.area, s.area));
+
+  const kw = String(filterKeyword || '').trim().toUpperCase();
+  if (btnHapus) {
+    btnHapus.style.display = kw ? 'inline-flex' : 'none';
+  }
+
+  if (kw) {
+    areaStores = areaStores.filter(s => {
+      if (!s) return false;
+      const fn = String(s.fullName || '').toUpperCase();
+      const code = String(s.storeCode || '').toUpperCase();
+      const area = String(s.area || '').toUpperCase();
+      return fn.includes(kw) || code.includes(kw) || area.includes(kw);
+    });
+
+    if (infoHasil) {
+      infoHasil.style.display = 'block';
+      infoHasil.textContent = `DITEMUKAN ${areaStores.length} TOKO COCOK`;
     }
+  } else {
+    if (infoHasil) infoHasil.style.display = 'none';
+  }
+
+  if (areaStores.length > 0) {
+    areaStores.forEach(s => {
+      const isSelected = (currentVal && String(s.fullName).toUpperCase() === String(currentVal).toUpperCase()) ? 'selected' : '';
+      tokoSelect.innerHTML += `<option value="${s.fullName}" ${isSelected}>${s.fullName} (${s.area || currentUser.area})</option>`;
+    });
+  } else {
+    tokoSelect.innerHTML = `<option value="">-- TOKO TIDAK DITEMUKAN --</option>`;
   }
 
   if (currentVal && Array.from(tokoSelect.options).some(o => o.value.toUpperCase() === currentVal.toUpperCase())) {
@@ -5350,11 +5388,26 @@ function updateStoreDropdownOptions(selectedStoreName = '') {
 }
 window.updateStoreDropdownOptions = updateStoreDropdownOptions;
 
+function filterDropdownToko(keyword) {
+  updateStoreDropdownOptions('', keyword);
+}
+window.filterDropdownToko = filterDropdownToko;
+
+function resetCariToko() {
+  const cariInput = document.getElementById('cariTokoInput');
+  if (cariInput) cariInput.value = '';
+  updateStoreDropdownOptions('', '');
+}
+window.resetCariToko = resetCariToko;
+
 function loadForm() {
   const tglEl = document.getElementById('tanggal');
   if (tglEl && !tglEl.value) {
     tglEl.value = getFormattedDateDDMMYYYY();
   }
+
+  const cariInput = document.getElementById('cariTokoInput');
+  if (cariInput) cariInput.value = '';
 
   updateStoreDropdownOptions();
 
@@ -9429,9 +9482,54 @@ function isServiceTSMUser() {
   const cat = String(currentUser.category || '').trim().toUpperCase();
   const area = String(currentUser.area || '').trim().toUpperCase();
   const uname = String(currentUser.username || '').trim().toUpperCase();
+  const fname = String(currentUser.fullName || '').trim().toUpperCase();
 
-  return (cat === 'SERVICE' && (area === 'TSM' || area === 'ALL')) || cat === 'ADMIN' || uname === 'ADMIN';
+  return (
+    cat === 'SERVICE' || 
+    cat === 'ADMIN' || 
+    uname.includes('SERVICE') || 
+    uname.includes('ADMIN') || 
+    uname.includes('TSM') || 
+    fname.includes('SERVICE') || 
+    area === 'TSM' || 
+    area === 'ALL'
+  );
 }
+
+function rebuildRoomsFromChats(allChats) {
+  if (!Array.isArray(allChats) || allChats.length === 0) return [];
+
+  const roomMap = new Map();
+
+  allChats.forEach(c => {
+    if (!c) return;
+    const userTarget = String(c.user || c.senderUsername || 'USER').trim().toUpperCase();
+    const roomKey = String(c.room || ('ROOM_' + userTarget)).trim().toUpperCase();
+    const senderDisplay = c.senderName || c.senderUsername || userTarget;
+
+    if (!roomMap.has(roomKey)) {
+      roomMap.set(roomKey, {
+        room: roomKey,
+        user: userTarget,
+        userArea: c.userArea || 'TSM',
+        userName: senderDisplay,
+        last: (c.pengirim === 'SERVICE' ? `SERVICE TSM: ${c.pesan}` : c.pesan),
+        lastTime: c.tanggal || '',
+        unreadAdmin: c.pengirim === 'USER' ? 1 : 0,
+        unreadUser: 0
+      });
+    } else {
+      const existing = roomMap.get(roomKey);
+      existing.last = (c.pengirim === 'SERVICE' ? `SERVICE TSM: ${c.pesan}` : c.pesan);
+      if (c.tanggal) existing.lastTime = c.tanggal;
+      if (c.userArea) existing.userArea = c.userArea;
+      if (c.senderName) existing.userName = c.senderName;
+    }
+  });
+
+  return Array.from(roomMap.values());
+}
+window.rebuildRoomsFromChats = rebuildRoomsFromChats;
 
 async function bukaBantuan() {
   if (!currentUser) return;
@@ -9458,8 +9556,8 @@ async function bukaBantuan() {
   }
 
   // SINKRONKAN CHAT & ROOM TERBARU DARI CLOUD DB PADA SAAT MENU CHAT DIBUKA
-  if (typeof syncAllDataToCache === 'function') {
-    await syncAllDataToCache().catch(() => {});
+  if (typeof fetchChatFromSupabase === 'function') {
+    try { await fetchChatFromSupabase(); } catch(e) {}
   }
 
   const chatList = document.getElementById('chatList');
@@ -9510,50 +9608,305 @@ function tutupBantuan() {
 function loadDaftarChatAdmin() {
   const chatList = document.getElementById('chatList');
   if (!chatList) return;
-  const rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
+
+  const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+  let rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
+
+  // Selalu bangun dan padukan daftar room secara otomatis dari seluruh riwayat pesan
+  const dynamicRooms = rebuildRoomsFromChats(allChats);
+  if (dynamicRooms.length > 0) {
+    dynamicRooms.forEach(dr => {
+      const idx = rooms.findIndex(r => String(r.room).toUpperCase() === String(dr.room).toUpperCase() || String(r.user).toUpperCase() === String(dr.user).toUpperCase());
+      if (idx === -1) {
+        rooms.push(dr);
+      } else {
+        rooms[idx].last = dr.last;
+        rooms[idx].lastTime = dr.lastTime;
+        if (dr.userName) rooms[idx].userName = dr.userName;
+        if (dr.userArea) rooms[idx].userArea = dr.userArea;
+      }
+    });
+    appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
+    try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms)); } catch(e) {}
+  }
+
   chatList.innerHTML = '';
+
+  // 1. Action Toolbar: Mulai Chat Baru & Siarkan Pesan
+  const actionToolbar = document.createElement('div');
+  actionToolbar.style.cssText = 'display:flex; flex-direction:column; gap:6px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border-color);';
+  actionToolbar.innerHTML = `
+    <button type="button" onclick="bukaModalPilihUserChat()" style="width:100%; padding:9px 12px; background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; border:none; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 5px rgba(2,132,199,0.25);">
+      <span class="material-symbols-rounded" style="font-size:17px;">add_comment</span> + MULAI CHAT KE TOKO / USER
+    </button>
+    <button type="button" onclick="bukaModalBroadcastChat()" style="width:100%; padding:7px 12px; background:rgba(245,158,11,0.12); color:#d97706; border:1px dashed #d97706; border-radius:8px; font-weight:700; font-size:11.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+      <span class="material-symbols-rounded" style="font-size:17px;">campaign</span> SIARKAN KE SEMUA TOKO
+    </button>
+  `;
+  chatList.appendChild(actionToolbar);
 
   const isSysAdmin = currentUser && (
     String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
     String(currentUser.username || '').toUpperCase() === 'ADMIN'
   );
 
+  const roomsContainer = document.createElement('div');
+  roomsContainer.id = 'adminRoomsContainer';
+
   if (!rooms || rooms.length === 0) {
-    chatList.innerHTML = `
-      <div style="padding:30px 16px; text-align:center; color:var(--text-muted); font-size:12.5px;">
-        <span class="material-symbols-rounded" style="font-size:36px; color:var(--primary); margin-bottom:6px; display:block;">chat_bubble_outline</span>
-        BELUM ADA CHAT MASUK DARI TOKO / SALES.
+    roomsContainer.innerHTML = `
+      <div style="padding:24px 16px; text-align:center; color:var(--text-muted); font-size:12px;">
+        <span class="material-symbols-rounded" style="font-size:32px; color:var(--primary); margin-bottom:4px; display:block;">chat_bubble_outline</span>
+        BELUM ADA PERCAKAPAN TOKO / SALES.<br>KLIK <b>'+ MULAI CHAT KE TOKO'</b> DI ATAS UNTUK MEMULAI.
       </div>
     `;
+    chatList.appendChild(roomsContainer);
     return;
   }
 
   rooms.forEach(r => {
     const item = document.createElement('div');
-    item.style.cssText = 'padding:12px 14px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.2s; display:flex; justify-content:space-between; align-items:center;';
+    item.style.cssText = 'padding:10px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.2s; display:flex; justify-content:space-between; align-items:center; border-radius:6px; margin-bottom:4px;';
+    item.onmouseover = () => item.style.background = 'rgba(59,130,246,0.06)';
+    item.onmouseout = () => item.style.background = 'transparent';
+
     const unreadBadgeHtml = r.unreadAdmin > 0 ? `<span style="background:#ef4444; color:#fff; border-radius:10px; padding:2px 8px; font-size:10px; font-weight:bold;">${r.unreadAdmin} UNREAD</span>` : '';
     
     const deleteRoomBtnHtml = isSysAdmin ? `
-      <button type="button" class="btnIcon btnDelete" onclick="event.stopPropagation(); hapusChatRoom('${r.room}', '${r.user}')" title="HAPUS CHAT USER INI" style="padding:6px; background:rgba(239,68,68,0.1); color:#ef4444; border-radius:6px; border:none; cursor:pointer;">
-        <span class="material-symbols-rounded" style="font-size:18px;">delete</span>
+      <button type="button" class="btnIcon btnDelete" onclick="event.stopPropagation(); hapusChatRoom('${r.room}', '${r.user}')" title="HAPUS CHAT USER INI" style="padding:5px; background:rgba(239,68,68,0.1); color:#ef4444; border-radius:6px; border:none; cursor:pointer; display:flex; align-items:center;">
+        <span class="material-symbols-rounded" style="font-size:17px;">delete</span>
       </button>
     ` : '';
 
     item.innerHTML = `
-      <div style="flex:1; min-width:0; margin-right:8px;" onclick="bukaRoomAdmin('${r.room}', '${r.user}')">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <div style="font-size:13px; font-weight:700; color:var(--text-main);">
-            ${r.user} <span style="font-size:11px; font-weight:bold; color:var(--primary); background:rgba(59,130,246,0.15); padding:2px 6px; border-radius:4px;">(${r.userArea || 'TSM'})</span>
+      <div style="flex:1; min-width:0; margin-right:8px;" onclick="bukaRoomAdmin('${r.room}', '${r.user}', '${r.userName || r.user}', '${r.userArea || 'TSM'}')">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+          <div style="font-size:12.5px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            ${r.userName || r.user} <span style="font-size:10.5px; font-weight:bold; color:var(--primary); background:rgba(59,130,246,0.15); padding:1px 5px; border-radius:4px;">(${r.userArea || 'TSM'})</span>
           </div>
           ${unreadBadgeHtml}
         </div>
-        <div style="color:var(--text-muted); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${r.last || '-'}</div>
+        <div style="color:var(--text-muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${r.last || '-'}</div>
       </div>
       ${deleteRoomBtnHtml}
     `;
-    chatList.appendChild(item);
+    roomsContainer.appendChild(item);
+  });
+
+  chatList.appendChild(roomsContainer);
+}
+
+function bukaModalPilihUserChat() {
+  const chatList = document.getElementById('chatList');
+  const chatUserPicker = document.getElementById('chatUserPicker');
+  const searchInput = document.getElementById('cariUserChatInput');
+
+  if (chatList) chatList.style.display = 'none';
+  if (chatUserPicker) chatUserPicker.style.display = 'flex';
+  if (searchInput) {
+    searchInput.value = '';
+    setTimeout(() => searchInput.focus(), 100);
+  }
+
+  filterListUserChat('');
+}
+window.bukaModalPilihUserChat = bukaModalPilihUserChat;
+
+function tutupUserPickerChat() {
+  const chatList = document.getElementById('chatList');
+  const chatUserPicker = document.getElementById('chatUserPicker');
+
+  if (chatUserPicker) chatUserPicker.style.display = 'none';
+  if (chatList) chatList.style.display = 'block';
+}
+window.tutupUserPickerChat = tutupUserPickerChat;
+
+function filterListUserChat(query) {
+  const container = document.getElementById('listUserChatContainer');
+  if (!container) return;
+
+  const q = String(query || '').trim().toUpperCase();
+  const users = getUsersFromDB();
+  const myUname = String(currentUser ? currentUser.username : '').toUpperCase();
+
+  const filtered = users.filter(u => {
+    if (!u || !u.username) return false;
+    if (String(u.username).toUpperCase() === myUname) return false;
+    if (!q) return true;
+
+    const uname = String(u.username || '').toUpperCase();
+    const fname = String(u.fullName || '').toUpperCase();
+    const area = String(u.area || '').toUpperCase();
+    const cat = String(u.category || '').toUpperCase();
+    const phone = String(u.phone || '').toUpperCase();
+
+    return uname.includes(q) || fname.includes(q) || area.includes(q) || cat.includes(q) || phone.includes(q);
+  });
+
+  container.innerHTML = '';
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="padding:20px; text-align:center; color:var(--text-muted); font-size:12px;">
+        Tidak ada user / toko yang cocok.
+      </div>
+    `;
+    return;
+  }
+
+  filtered.forEach(u => {
+    const card = document.createElement('div');
+    card.style.cssText = 'padding:9px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-radius:6px; margin-bottom:4px; transition:background 0.2s;';
+    card.onmouseover = () => card.style.background = 'rgba(59,130,246,0.08)';
+    card.onmouseout = () => card.style.background = 'transparent';
+    card.onclick = () => {
+      pilihUserUntukChat(u.username, u.fullName, u.area);
+    };
+
+    const initial = (u.fullName || u.username || 'U').charAt(0).toUpperCase();
+
+    card.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+        <div style="width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:13px; flex-shrink:0;">
+          ${initial}
+        </div>
+        <div style="min-width:0;">
+          <div style="font-weight:700; font-size:12.5px; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            ${u.fullName || u.username}
+          </div>
+          <div style="font-size:11px; color:var(--text-muted);">
+            @${u.username} &bull; ${u.phone || '-'}
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right; flex-shrink:0;">
+        <span style="font-size:10px; font-weight:700; color:var(--primary); background:rgba(59,130,246,0.15); padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:2px;">
+          ${u.area || 'TSM'}
+        </span>
+        <div style="font-size:9.5px; color:var(--text-muted); font-weight:600;">
+          ${u.category || 'USER'}
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
   });
 }
+window.filterListUserChat = filterListUserChat;
+
+function pilihUserUntukChat(username, fullName, area) {
+  const roomKey = 'ROOM_' + String(username).toUpperCase();
+  tutupUserPickerChat();
+  bukaRoomAdmin(roomKey, username, fullName, area);
+}
+window.pilihUserUntukChat = pilihUserUntukChat;
+
+function bukaModalBroadcastChat() {
+  const modal = document.getElementById('chatBroadcastModal');
+  const input = document.getElementById('pesanBroadcastChatInput');
+  if (modal) modal.style.display = 'flex';
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 100);
+  }
+}
+window.bukaModalBroadcastChat = bukaModalBroadcastChat;
+
+function tutupBroadcastChatModal() {
+  const modal = document.getElementById('chatBroadcastModal');
+  if (modal) modal.style.display = 'none';
+}
+window.tutupBroadcastChatModal = tutupBroadcastChatModal;
+
+async function kirimBroadcastChatKeSemuaUser() {
+  const input = document.getElementById('pesanBroadcastChatInput');
+  if (!input) return;
+  const pesan = input.value.trim().toUpperCase();
+  if (!pesan) {
+    showNotif('TULIS PESAN SIARAN TERLEBIH DAHULU!', 'warning');
+    return;
+  }
+
+  showConfirm(`SIARKAN PESAN INI KE SEMUA TOKO & USER?`, async () => {
+    showLoading('MENYIARKAN PESAN...');
+    try {
+      const allUsers = getUsersFromDB();
+      const myUname = String(currentUser ? currentUser.username : '').toUpperCase();
+      const targetUsers = allUsers.filter(u => u && u.username && String(u.username).toUpperCase() !== myUname);
+
+      if (targetUsers.length === 0) {
+        hideLoading();
+        showNotif('TIDAK ADA USER / TOKO TERDAFTAR!', 'warning');
+        return;
+      }
+
+      const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+      const rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
+      const now = new Date();
+      const timeStr = getFormattedDateDDMMYYYY(now) + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+      targetUsers.forEach(u => {
+        const uTarget = String(u.username).toUpperCase();
+        const rTarget = 'ROOM_' + uTarget;
+        const newChatId = `CHAT-${Date.now()}-${Math.floor(Math.random()*10000)}`;
+
+        allChats.push({
+          id: newChatId,
+          room: rTarget,
+          user: uTarget,
+          userArea: u.area || 'TSM',
+          pengirim: 'SERVICE',
+          senderId: currentUser?.id || 'SERVICE',
+          senderUsername: currentUser?.username || 'SERVICE_TSM',
+          senderName: `SERVICE TSM (${currentUser?.fullName || 'SUPPORT'})`,
+          pesan: pesan,
+          tanggal: timeStr
+        });
+
+        const rIdx = rooms.findIndex(x => String(x.room).toUpperCase() === rTarget || String(x.user).toUpperCase() === uTarget);
+        if (rIdx !== -1) {
+          rooms[rIdx].last = `SERVICE TSM: ${pesan}`;
+          rooms[rIdx].unreadUser = (rooms[rIdx].unreadUser || 0) + 1;
+          rooms[rIdx].lastTime = timeStr;
+          if (u.fullName) rooms[rIdx].userName = u.fullName;
+          if (u.area) rooms[rIdx].userArea = u.area;
+        } else {
+          rooms.push({
+            room: rTarget,
+            user: uTarget,
+            userName: u.fullName || uTarget,
+            userArea: u.area || 'TSM',
+            last: `SERVICE TSM: ${pesan}`,
+            unreadAdmin: 0,
+            unreadUser: 1,
+            lastTime: timeStr
+          });
+        }
+      });
+
+      appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
+      appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
+      try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats)); } catch(e) {}
+      try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms)); } catch(e) {}
+
+      if (typeof pushChatToSupabase === 'function') {
+        pushChatToSupabase(allChats, null);
+      }
+      if (typeof pushCentralCloudDB === 'function') {
+        pushCentralCloudDB();
+      }
+
+      hideLoading();
+      tutupBroadcastChatModal();
+      showNotif(`PESAN BERHASIL DISIARKAN KE ${targetUsers.length} TOKO & USER!`, 'success');
+      loadDaftarChatAdmin();
+    } catch(err) {
+      hideLoading();
+      console.error('[BROADCAST CHAT ERROR]:', err);
+      showNotif('GAGAL MENYIARKAN PESAN: ' + (err.message || err), 'warning');
+    }
+  });
+}
+window.kirimBroadcastChatKeSemuaUser = kirimBroadcastChatKeSemuaUser;
 
 function hapusChatRoom(roomTarget, userTarget) {
   const isSysAdmin = currentUser && (
@@ -9587,26 +9940,14 @@ function hapusChatRoom(roomTarget, userTarget) {
         appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
         appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
 
-        if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-          try {
-            await dbFirestore.collection('app_settings').doc('config').set({
-              chatMessages: allChats,
-              chatRooms: rooms
-            }, { merge: true });
-          } catch(e) {}
-        }
-        if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-          try {
-            await dbRealtime.ref('chat_messages').set(allChats);
-            await dbRealtime.ref('chat_rooms').set(rooms);
-          } catch(e) {}
+        // 2. SYNC UPDATED CHATS TO SUPABASE VIA ALL CHAT TARGETS
+        if (typeof pushChatToSupabase === 'function') {
+          pushChatToSupabase(allChats, null);
         }
         if (typeof supabase !== 'undefined' && supabase) {
-          try { await supabase.from('chat').delete().eq('room', roomTarget); } catch(e) {}
           try { await supabase.from('chat_messages').delete().eq('room', roomTarget); } catch(e) {}
+          try { await supabase.from('chat').delete().eq('room', roomTarget); } catch(e) {}
         }
-
-        if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
 
         hideLoading();
         showNotif(`CHAT ROOM DENGAN '${userTarget || roomTarget}' BERHASIL DIHAPUS!`, 'success');
@@ -9626,7 +9967,7 @@ function hapusChatRoom(roomTarget, userTarget) {
 }
 window.hapusChatRoom = hapusChatRoom;
 
-function bukaRoomAdmin(room, user) {
+function bukaRoomAdmin(room, user, fullName, area) {
   currentRoom = room;
   currentChatUser = user;
 
@@ -9642,28 +9983,43 @@ function bukaRoomAdmin(room, user) {
   }
 
   const chatList = document.getElementById('chatList');
+  const chatUserPicker = document.getElementById('chatUserPicker');
   const chatBody = document.getElementById('chatBody');
   const chatFooter = document.getElementById('chatFooter');
   const btnBack = document.getElementById('btnBackAdmin');
   const headerTitle = document.getElementById('chatHeaderTitle');
 
   if (chatList) chatList.style.display = 'none';
+  if (chatUserPicker) chatUserPicker.style.display = 'none';
   if (chatBody) chatBody.style.display = 'block';
   if (chatFooter) chatFooter.style.display = 'flex';
   if (btnBack) btnBack.style.display = 'inline-block';
-  if (headerTitle) headerTitle.innerText = 'CHAT WITH ' + user;
+
+  const displayTitle = fullName ? `${fullName} (${area || 'TSM'})` : user;
+  if (headerTitle) headerTitle.innerText = 'CHAT: ' + displayTitle;
   loadChatAdmin(room);
 }
+window.bukaRoomAdmin = bukaRoomAdmin;
 
 function loadChatAdmin(room) {
   const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
   const roomUpper = String(room || '').toUpperCase();
   const userUpper = String(currentChatUser || '').toUpperCase();
 
-  const roomChats = allChats.filter(c => 
-    String(c.room || '').toUpperCase() === roomUpper || 
-    String(c.user || '').toUpperCase() === userUpper
-  );
+  const roomChats = allChats.filter(c => {
+    if (!c) return false;
+    const cRoom = String(c.room || '').toUpperCase();
+    const cUser = String(c.user || '').toUpperCase();
+    const cSender = String(c.senderUsername || '').toUpperCase();
+
+    return (
+      cRoom === roomUpper || 
+      cUser === userUpper || 
+      cSender === userUpper ||
+      (userUpper && cRoom === ('ROOM_' + userUpper)) ||
+      (userUpper && cRoom.includes(userUpper))
+    );
+  });
 
   const body = document.getElementById('chatBody');
   if (!body) return;
@@ -9853,72 +10209,25 @@ function kirimPesanChat() {
   if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
 }
 
-function hapusChatRoom(roomTarget, userTarget) {
-  const roomUpper = String(roomTarget || '').toUpperCase();
-  const userUpper = String(userTarget || '').toUpperCase();
-
-  showConfirm(`HAPUS RIWAYAT CHAT ROOM DENGAN USER '${userTarget || roomTarget}'?`, () => {
-    showLoading('MENGHAPUS CHAT ROOM...');
-    setTimeout(async () => {
-      try {
-        // 1. DELETE FROM LOCAL STORAGE
-        let allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-        let rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
-
-        allChats = allChats.filter(c => 
-          String(c.room || '').toUpperCase() !== roomUpper && 
-          String(c.user || '').toUpperCase() !== userUpper &&
-          String(c.senderUsername || '').toUpperCase() !== userUpper
-        );
-        rooms = rooms.filter(r => 
-          String(r.room || '').toUpperCase() !== roomUpper && 
-          String(r.user || '').toUpperCase() !== userUpper
-        );
-
-        appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
-        appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
-
-        // 2. SYNC UPDATED CHATS TO SUPABASE VIA ALL CHAT TARGETS
-        if (typeof pushChatToSupabase === 'function') {
-          pushChatToSupabase(allChats, null);
-        }
-        if (typeof supabase !== 'undefined' && supabase) {
-          try { await supabase.from('chat_messages').delete().eq('room', roomTarget); } catch(e) {}
-          try { await supabase.from('chat').delete().eq('room', roomTarget); } catch(e) {}
-        }
-
-        hideLoading();
-        showNotif(`CHAT ROOM DENGAN '${userTarget || roomTarget}' BERHASIL DIHAPUS!`, 'success');
-
-        if (isAdminChat) {
-          kembaliKeDaftarAdmin();
-        } else {
-          loadChatUser();
-        }
-      } catch(err) {
-        hideLoading();
-        console.error('[HAPUS CHAT ROOM ERROR]:', err);
-        showNotif('GAGAL MENGHAPUS CHAT ROOM: ' + (err.message || err), 'error');
-      }
-    }, 300);
-  });
-}
-window.hapusChatRoom = hapusChatRoom;
-
 function kembaliKeDaftarAdmin() {
+  currentRoom = '';
+  currentChatUser = '';
   const chatList = document.getElementById('chatList');
+  const chatUserPicker = document.getElementById('chatUserPicker');
   const chatBody = document.getElementById('chatBody');
   const chatFooter = document.getElementById('chatFooter');
   const btnBack = document.getElementById('btnBackAdmin');
   const headerTitle = document.getElementById('chatHeaderTitle');
 
+  if (chatUserPicker) chatUserPicker.style.display = 'none';
   if (chatBody) chatBody.style.display = 'none';
   if (chatFooter) chatFooter.style.display = 'none';
-  if (chatList) chatList.style.display = 'block';
   if (btnBack) btnBack.style.display = 'none';
-  if (headerTitle) headerTitle.innerText = 'DAFTAR PESAN MASUK';
+  if (chatList) chatList.style.display = 'block';
+  if (headerTitle) headerTitle.innerText = 'CHAT MASUK - SERVICE TSM';
   loadDaftarChatAdmin();
 }
+window.kembaliKeDaftarAdmin = kembaliKeDaftarAdmin;
 
 function cekUnreadNotif() {
   if (!currentUser) return;
@@ -11231,7 +11540,10 @@ function bukaModalTambahToko() {
 
   const inputEl = document.getElementById('inputNamaTokoBaru');
   if (inputEl) inputEl.value = '';
-  loadDaftarTokoModal();
+  const cariModalInput = document.getElementById('cariTokoModalInput');
+  if (cariModalInput) cariModalInput.value = '';
+
+  loadDaftarTokoModal('');
   const popup = document.getElementById('popupTambahToko');
   if (popup) {
     popup.style.setProperty('display', 'flex', 'important');
@@ -11272,6 +11584,8 @@ function tutupModalTambahToko() {
   editStoreId = null;
   const inputEl = document.getElementById('inputNamaTokoBaru');
   const btnSimpan = document.getElementById('btnSimpanTokoBaru');
+  const cariModalInput = document.getElementById('cariTokoModalInput');
+  if (cariModalInput) cariModalInput.value = '';
   if (inputEl) inputEl.value = '';
   if (btnSimpan) {
     btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle;">save</span> SIMPAN`;
@@ -11292,18 +11606,42 @@ function tutupModalTambahToko() {
 window.bukaModalTambahToko = bukaModalTambahToko;
 window.tutupModalTambahToko = tutupModalTambahToko;
 
-function loadDaftarTokoModal() {
+function loadDaftarTokoModal(filterKeyword = '') {
   const tbody = document.getElementById('daftarTokoTableBody');
+  const btnHapus = document.getElementById('btnHapusCariTokoModal');
+  const infoHasil = document.getElementById('infoHasilCariTokoModal');
   if (!tbody) return;
   tbody.innerHTML = '';
 
   const allStores = getStoresFromDB();
-  const areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
+  let areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
     ? allStores 
     : allStores.filter(s => isAreaMatch(currentUser.area, s.area));
 
+  const kw = String(filterKeyword || '').trim().toUpperCase();
+  if (btnHapus) {
+    btnHapus.style.display = kw ? 'inline-flex' : 'none';
+  }
+
+  if (kw) {
+    areaStores = areaStores.filter(s => {
+      if (!s) return false;
+      const fn = String(s.fullName || '').toUpperCase();
+      const code = String(s.storeCode || '').toUpperCase();
+      const area = String(s.area || '').toUpperCase();
+      return fn.includes(kw) || code.includes(kw) || area.includes(kw);
+    });
+
+    if (infoHasil) {
+      infoHasil.style.display = 'block';
+      infoHasil.textContent = `DITEMUKAN ${areaStores.length} TOKO COCOK`;
+    }
+  } else {
+    if (infoHasil) infoHasil.style.display = 'none';
+  }
+
   if (areaStores.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">BELUM ADA TOKO TERDAFTAR DI AREA ANDA.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">${kw ? 'TIDAK ADA TOKO YANG COCOK DENGAN PENCARIAN.' : 'BELUM ADA TOKO TERDAFTAR DI AREA ANDA.'}</td></tr>`;
     return;
   }
 
@@ -11324,6 +11662,19 @@ function loadDaftarTokoModal() {
     tbody.appendChild(tr);
   });
 }
+window.loadDaftarTokoModal = loadDaftarTokoModal;
+
+function filterDaftarTokoModal(keyword) {
+  loadDaftarTokoModal(keyword);
+}
+window.filterDaftarTokoModal = filterDaftarTokoModal;
+
+function resetCariTokoModal() {
+  const cariInput = document.getElementById('cariTokoModalInput');
+  if (cariInput) cariInput.value = '';
+  loadDaftarTokoModal('');
+}
+window.resetCariTokoModal = resetCariTokoModal;
 
 function simpanTokoBaru() {
   const inputEl = document.getElementById('inputNamaTokoBaru');
