@@ -379,7 +379,7 @@ function simpanAdminSecretKey() {
   const input = document.getElementById('adminSecretKeySettingInput');
   const value = input ? input.value.trim() : '';
   saveAdminSecretKey(value);
-  showNotif(value ? 'SECRET KEY SUPABASE BERHASIL DISIMPAN!' : 'SECRET KEY SUPABASE DIHAPUS!', 'info');
+  showNotif(value ? 'KUNCI KEAMANAN BERHASIL DISIMPAN!' : 'KUNCI KEAMANAN DIHAPUS!', 'info');
 }
 
 function getSystemNotifications() {
@@ -1041,7 +1041,7 @@ function hapusSemuaNotifikasiSystem() {
       hideLoading();
       updateNotifBellCounter();
       if (typeof loadNotificationList === 'function') loadNotificationList();
-      showNotif('SELURUH NOTIFIKASI BERHASIL DIHAPUS DARI SISTEM & SINKRON KE SEMUA USER!', 'success');
+      showNotif('SELURUH NOTIFIKASI BERHASIL DIHAPUS!', 'success');
     } catch (err) {
       hideLoading();
       console.error('[HAPUS NOTIFIKASI ERROR]:', err);
@@ -1592,7 +1592,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
 
   const requests = getRequestsFromDB();
   if (!requests.length) {
-    if (forceNow) showNotif('ℹ️ Tidak ada data permintaan di database.', 'info');
+    if (forceNow) showNotif('ℹ️ Tidak ada data permintaan.', 'info');
     return { success: false, message: 'Tidak ada data permintaan.', type: 'info' };
   }
 
@@ -2040,7 +2040,7 @@ function simpanFirebaseConfigUser() {
 
   if (!val) {
     appStorage.removeItem(FIREBASE_USER_CONFIG_KEY);
-    showNotif('KONFIGURASI FIREBASE DI-RESET KE DEFAULT!', 'info');
+    showNotif('PENGATURAN BERHASIL DI-RESET KE DEFAULT!', 'info');
     if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
     initFirebaseDB();
     return;
@@ -2049,15 +2049,15 @@ function simpanFirebaseConfigUser() {
   try {
     const parsed = JSON.parse(val);
     if (!parsed.projectId) {
-      showNotif('INVALID CONFIG! PROJECT ID TIDAK DITEMUKAN.', 'warning');
+      showNotif('PENGATURAN TIDAK VALID! ID TIDAK DITEMUKAN.', 'warning');
       return;
     }
     appStorage.setItem(FIREBASE_USER_CONFIG_KEY, JSON.stringify(parsed));
-    showNotif('BERHASIL MENYIMPAN & MENSINKRONKAN KE SEMUA PERANGKAT!', 'success');
+    showNotif('PENGATURAN BERHASIL DISIMPAN!', 'success');
     if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
     initFirebaseDB();
   } catch (e) {
-    showNotif('FORMAT JSON KONFIGURASI FIREBASE TIDAK VALID!', 'error');
+    showNotif('FORMAT PENGATURAN TIDAK VALID!', 'error');
   }
 }
 
@@ -3776,7 +3776,7 @@ async function simpanFonteToken() {
     try { pushCentralCloudDB(); } catch(e) {}
   }
 
-  showNotif(token ? 'TOKEN WA FONTE BERHASIL DISIMPAN KE SUPABASE & SEMUA PERANGKAT!' : 'TOKEN WA DIKOSONGKAN!', 'success');
+  showNotif(token ? 'TOKEN WA BERHASIL DISIMPAN!' : 'TOKEN WA DIKOSONGKAN!', 'success');
 }
 
 function loadFonteToken() {
@@ -4053,13 +4053,13 @@ async function bersihkanFotoSupabase(mode = 'SELESAI') {
   );
 
   if (!isSysAdmin) {
-    showNotif('HANYA ADMIN UTAMA YANG MEMILIKI HAK AKSES BERSIHKAN FOTO SUPABASE!', 'warning');
+    showNotif('HANYA ADMIN UTAMA YANG MEMILIKI HAK AKSES BERSIHKAN FOTO!', 'warning');
     return;
   }
 
   const modeText = mode === 'SEMUA' ? 'SEMUA FOTO DOKUMEN' : 'FOTO DOKUMEN STATUS SELESAI & REJECT';
-  showConfirm(`APAKAH ANDA YAKIN INGIN MENGHAPUS ${modeText} DARI SUPABASE CLOUD?\n\n(Tindakan ini akan mengosongkan data foto untuk menghemat kuota penyimpanan database. Rincian data permintaan tidak akan terhapus).`, async () => {
-    showLoading('MEMPROSES PEMBERSIHAN FOTO DI SUPABASE CLOUD...');
+  showConfirm(`APAKAH ANDA YAKIN INGIN MENGHAPUS ${modeText}?\n\n(Tindakan ini akan mengosongkan data foto untuk menghemat ruang memori. Rincian data permintaan tidak akan terhapus).`, async () => {
+    showLoading('MEMPROSES PEMBERSIHAN FOTO...');
     try {
       const sb = (typeof supabase !== 'undefined' && supabase) ? supabase : null;
       let countUpdated = 0;
@@ -4112,13 +4112,13 @@ async function bersihkanFotoSupabase(mode = 'SELESAI') {
       }
 
       hideLoading();
-      showNotif(`BERHASIL MENGHAPUS FOTO DARI SUPABASE CLOUD & STORAGE! (${countUpdated} DOKUMEN DIBERSIHKAN)`, 'info');
+      showNotif(`BERHASIL MENGHAPUS FOTO! (${countUpdated} DOKUMEN DIBERSIHKAN)`, 'info');
       loadRiwayat();
       loadDashboard();
     } catch(err) {
       hideLoading();
       console.error('[SUPABASE DELETE PHOTOS ERROR]:', err);
-      showNotif(`GAGAL MENGHAPUS FOTO DI SUPABASE: ${err.message || err}`, 'warning');
+      showNotif(`GAGAL MENGHAPUS FOTO: ${err.message || err}`, 'warning');
     }
   });
 }
@@ -4135,8 +4135,8 @@ async function hapusSemuaFotoBiasa() {
     return;
   }
 
-  showConfirm('APAKAH ANDA YAKIN INGIN MENGHAPUS SEMUA FOTO DARI APLIKASI DAN BUCKET STORAGE SUPABASE?', async () => {
-    showLoading('MENGHAPUS SEMUA FOTO DARI SUPABASE CLOUD & BUCKET...');
+  showConfirm('APAKAH ANDA YAKIN INGIN MENGHAPUS SEMUA FOTO DARI APLIKASI?', async () => {
+    showLoading('MENGHAPUS SEMUA FOTO...');
     try {
       let totalStorageFilesDeleted = 0;
       const candidateBuckets = ['photos', 'permintaan_photos', 'foto-permintaan', 'request-photos', 'documents'];
@@ -4179,7 +4179,7 @@ async function hapusSemuaFotoBiasa() {
       }
 
       hideLoading();
-      showNotif(`SEMUA FOTO BERHASIL DIHAPUS DARI BUCKET STORAGE SUPABASE & DATABASE! (${totalStorageFilesDeleted} BERKAS FOTO DIBERSIHKAN)`, 'info');
+      showNotif(`SEMUA FOTO BERHASIL DIHAPUS! (${totalStorageFilesDeleted} BERKAS FOTO DIBERSIHKAN)`, 'info');
       if (typeof loadRiwayat === 'function') loadRiwayat();
       if (typeof loadDashboard === 'function') loadDashboard();
     } catch (err) {
@@ -4282,7 +4282,7 @@ function toggleTheme() {
       supabase.from('permintaan_toko').upsert(themePayload).then(({ error }) => {
         if (!error) {
           console.log('⚡ [SUPABASE GLOBAL THEME SYNC SUCCESS]: Tema disebar ke semua perangkat!', t.id);
-          showNotif(`TEMA '${t.name.toUpperCase()}' BERHASIL DISINKRONKAN KE SEMUA PERANGKAT!`, 'info');
+          showNotif(`TEMA '${t.name.toUpperCase()}' BERHASIL DITERAPKAN!`, 'info');
         }
       }).catch(e => console.warn('[SUPABASE GLOBAL THEME EXCEPTION]:', e));
     }
@@ -4662,7 +4662,7 @@ async function bukaMainApp() {
     // ----------------------------------------------------
     // KONDISI B: DATA LOKAL KOSONG (MISAL PERANGKAT BARU)
     // ----------------------------------------------------
-    showLoading('MEMUAT DATA PERTAMA KALI DARI SUPABASE CLOUD...');
+    showLoading('MEMUAT DATA APLIKASI...');
     try {
       await syncAllDataToCache();
     } catch (e) {}
@@ -4695,8 +4695,8 @@ async function bukaMainApp() {
 window.bukaMainApp = bukaMainApp;
 
 async function eksekusiHapusPenyimpananLokal() {
-  showConfirm('BERSIHKAN PENYIMPANAN LOKAL BROWSER & AMBIL DATA TERBARU DARI SUPABASE?', async () => {
-    showLoading('BERSIHKAN PENYIMPANAN LOKAL & MEMUAT DATA SUPABASE...');
+  showConfirm('PERBARUI SEMUA DATA DENGAN DATA TERBARU DARI SERVER?', async () => {
+    showLoading('MEMUAT DATA TERBARU...');
     try {
       await clearLocalStorageKeepThemeAndTTD();
 
@@ -4705,7 +4705,7 @@ async function eksekusiHapusPenyimpananLokal() {
       }
 
       hideLoading();
-      showNotif('PENYIMPANAN LOKAL BERHASIL DIBERSIHKAN & DATA SUPABASE DITERAPKAN!', 'success');
+      showNotif('DATA BERHASIL DIPERBARUI & DITERAPKAN!', 'success');
 
       if (currentUser) {
         if (typeof loadRiwayat === 'function') loadRiwayat();
@@ -4715,7 +4715,7 @@ async function eksekusiHapusPenyimpananLokal() {
       }
     } catch(err) {
       hideLoading();
-      showNotif('GAGAL BERSIHKAN PENYIMPANAN: ' + (err.message || err), 'warning');
+      showNotif('GAGAL MEMPERBARUI DATA: ' + (err.message || err), 'warning');
     }
   });
 }
@@ -7249,7 +7249,7 @@ function hapusBarisItemDetailAdmin(noSurat, itemIndex) {
       saveRequestsToDB(requests);
       isItemModifiedMap[noSurat] = true;
 
-      showNotif(`ITEM DITANDAI TIDAK DIPENUHI. KLIK 'SIMPAN PERUBAHAN KE CLOUD' UNTUK MENYIMPAN KE DATABASE.`, 'warning');
+      showNotif(`ITEM DITANDAI TIDAK DIPENUHI. KLIK 'SIMPAN PERUBAHAN' UNTUK MENYIMPAN.`, 'warning');
       lihatDetail(noSurat);
     });
   }
@@ -7288,7 +7288,7 @@ function undoBarisItemDetailAdmin(noSurat, itemIndex) {
     saveRequestsToDB(requests);
     isItemModifiedMap[noSurat] = true;
 
-    showNotif(`BATALKAN STATUS TIDAK DIPENUHI PADA ITEM '${targetItemName}'. KLIK 'SIMPAN PERUBAHAN KE CLOUD'.`, 'info');
+    showNotif(`BATALKAN STATUS TIDAK DIPENUHI PADA ITEM '${targetItemName}'. KLIK 'SIMPAN PERUBAHAN'.`, 'info');
     lihatDetail(noSurat);
   }
 }
@@ -7304,8 +7304,8 @@ function simpanPerubahanDetailAdmin(noSurat) {
     return;
   }
 
-  showConfirm(`APAKAH ANDA YAKIN INGIN MENYIMPAN PERUBAHAN ITEM PERMINTAAN #${noSurat} KE CLOUD?`, () => {
-    showLoading('MENYIMPAN PERUBAHAN ITEM KE CLOUD...');
+  showConfirm(`APAKAH ANDA YAKIN INGIN MENYIMPAN PERUBAHAN ITEM PERMINTAAN #${noSurat}?`, () => {
+    showLoading('MENYIMPAN PERUBAHAN ITEM...');
     setTimeout(async () => {
       try {
         const requests = getRequestsFromDB();
@@ -7342,7 +7342,7 @@ function simpanPerubahanDetailAdmin(noSurat) {
         }
 
         hideLoading();
-        showNotif(`PERUBAHAN ITEM PERMINTAAN #${noSurat} BERHASIL DISIMPAN KE CLOUD!`, 'success');
+        showNotif(`PERUBAHAN ITEM PERMINTAAN #${noSurat} BERHASIL DISIMPAN!`, 'success');
 
         if (typeof loadRiwayat === 'function') loadRiwayat();
         if (typeof loadDashboard === 'function') loadDashboard();
@@ -7354,7 +7354,7 @@ function simpanPerubahanDetailAdmin(noSurat) {
       } catch (err) {
         hideLoading();
         console.error(err);
-        showNotif('GAGAL MENYIMPAN PERUBAHAN KE CLOUD', 'danger');
+        showNotif('GAGAL MENYIMPAN PERUBAHAN', 'danger');
       }
     }, 300);
   });
@@ -7613,7 +7613,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
     if (canServiceRowActions) {
       actionButtons.push(`
-        <button type="button" class="btnIcon btnSave btnIconOnly" title="SIMPAN PERUBAHAN KE CLOUD" onclick="simpanPerubahanDetailAdmin('${req.noSurat}');" style="background: #059669 !important; color: #ffffff !important;">
+        <button type="button" class="btnIcon btnSave btnIconOnly" title="SIMPAN PERUBAHAN" onclick="simpanPerubahanDetailAdmin('${req.noSurat}');" style="background: #059669 !important; color: #ffffff !important;">
           <span class="material-symbols-rounded">save</span>
         </button>
       `);
@@ -9817,7 +9817,7 @@ function hapusSemuaChatAdmin() {
         }
 
         hideLoading();
-        showNotif('SELURUH PESAN CHAT & ROOM BERHASIL DIHAPUS DARI SISTEM & SINKRON KE SEMUA USER!', 'success');
+        showNotif('SELURUH PESAN CHAT & ROOM BERHASIL DIHAPUS!', 'success');
 
         if (typeof refreshActiveChatUI === 'function') {
           refreshActiveChatUI();
@@ -10962,7 +10962,7 @@ function simpanAkun() {
           }
 
           hideLoading();
-          showNotif('PROFIL AKUN BERHASIL DIPERBARUI & DISINKRONKAN KE ALL DEVICES!', 'success');
+          showNotif('PROFIL AKUN BERHASIL DIPERBARUI!', 'success');
 
           const akunArea = document.getElementById('akunArea');
           if (akunArea) akunArea.value = `${currentUser.area} - ${formatUserAreaDisplay(currentUser.area)}`;
@@ -10990,7 +10990,7 @@ function simpanAkun() {
       } catch (err) {
         hideLoading();
         console.error(err);
-        showNotif('GAGAL MENYIMPAN PERUBAHAN AKUN KE CLOUD', 'danger');
+        showNotif('GAGAL MENYIMPAN PERUBAHAN AKUN', 'danger');
       }
     }, 200);
   });
