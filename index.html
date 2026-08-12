@@ -387,13 +387,16 @@
           <span class="material-symbols-rounded">chat</span> PENGATURAN AUTOMATION WHATSAPP (FONTE / FONNTE API)
         </h3>
         <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-          NOTIFIKASI WHATSAPP AKAN OTOMATIS DIKIRIMKAN KE SERVICE, DM, DAN TOKO/SALES UNTUK SETIAP PERUBAHAN STATUS PERMINTAAN.
+          TOKEN DISIMPAN LANGSUNG DI SUPABASE CLOUD & DISINKRONKAN KE SELURUH PERANGKAT. NOTIFIKASI WA AKAN OTOMATIS TERKIRIM KE SERVICE, DM, DAN TOKO UNTUK SETIAP UPDATE STATUS.
         </p>
 
         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-          <input type="text" id="fonteTokenInput" placeholder="MASUKKAN TOKEN FONTE" style="flex: 1; min-width: 280px; padding: 12px;">
+          <input type="text" id="fonteTokenInput" placeholder="MASUKKAN TOKEN FONTE (CONTOH: 7dK9...)" style="flex: 1; min-width: 280px; padding: 12px;">
           <button type="button" class="btnDownload" style="background: #16a34a; height: 44px;" onclick="simpanFonteToken()">
             <span class="material-symbols-rounded">save</span> SIMPAN TOKEN WA
+          </button>
+          <button type="button" class="btnDownload" style="background: #0284c7; height: 44px; font-weight: 700;" onclick="tesKoneksiFonteToken()" title="CEK APAKAH TOKEN VALID & TERHUBUNG KE WA">
+            <span class="material-symbols-rounded">verified</span> TES KONEKSI WA
           </button>
         </div>
       </div>

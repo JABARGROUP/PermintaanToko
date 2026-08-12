@@ -1680,6 +1680,16 @@ function initFirebaseDB() {
               if (typeof loadSavedTheme === 'function') loadSavedTheme();
             }
           });
+          // Listener real-time token Fonte WhatsApp
+          dbRealtime.ref('settings/fonteToken').on('value', (snap) => {
+            const val = snap.val();
+            if (val !== null && val !== undefined) {
+              const strVal = String(val);
+              appStorage.setItem(FONTE_TOKEN_KEY, strVal);
+              try { localStorage.setItem(FONTE_TOKEN_KEY, strVal); } catch(e) {}
+              if (typeof loadFonteToken === 'function') loadFonteToken();
+            }
+          });
         } catch (e) {
           dbRealtime = null;
         }
@@ -1933,6 +1943,28 @@ function handleRealtimePermintaanToko(payload) {
           try { localStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(unitMap)); } catch(e) {}
         }
       } catch(e) {}
+      return;
+    }
+
+    if (rawNoSurat === '__SYSTEM_FONTE_TOKEN__') {
+      try {
+        let valStr = '';
+        if (payload.new && payload.new.catatan) {
+          try {
+            const parsed = JSON.parse(payload.new.catatan);
+            if (parsed.fonteToken !== undefined) valStr = String(parsed.fonteToken);
+          } catch(e) {
+            valStr = String(payload.new.catatan);
+          }
+        }
+        if (valStr) {
+          appStorage.setItem(FONTE_TOKEN_KEY, valStr);
+          try { localStorage.setItem(FONTE_TOKEN_KEY, valStr); } catch(e) {}
+          if (typeof loadFonteToken === 'function') loadFonteToken();
+        }
+      } catch(e) {
+        console.warn('[REALTIME FONTE TOKEN ERROR]:', e);
+      }
       return;
     }
 
@@ -2451,6 +2483,14 @@ async function syncSupabaseLookupToLocalCache() {
             if (typeof updateBodyClasses === 'function') updateBodyClasses(cloudTheme);
           }
         }
+        if (item.key === 'fonteToken' || item.code === 'FONTE_TOKEN' || item.key === 'FONTE_TOKEN') {
+          const val = item.value ? (typeof item.value === 'object' ? String(item.value.token || item.value.fonteToken || '') : String(item.value)) : (item.type || '');
+          if (val) {
+            appStorage.setItem(FONTE_TOKEN_KEY, val);
+            try { localStorage.setItem(FONTE_TOKEN_KEY, val); } catch(e) {}
+            if (typeof loadFonteToken === 'function') loadFonteToken();
+          }
+        }
       });
     }
 
@@ -2469,6 +2509,25 @@ async function syncSupabaseLookupToLocalCache() {
         appStorage.setItem(FEATURE_PHOTOS_KEY, valStr);
         try { localStorage.setItem(FEATURE_PHOTOS_KEY, valStr); } catch(e) {}
         if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
+      }
+    } catch(e) {}
+
+    // Explicitly sync __SYSTEM_FONTE_TOKEN__ from permintaan_toko
+    try {
+      const { data: sysFonte } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_FONTE_TOKEN__').maybeSingle();
+      if (sysFonte && sysFonte.catatan) {
+        let valStr = '';
+        try {
+          const parsed = JSON.parse(sysFonte.catatan);
+          if (parsed.fonteToken !== undefined) valStr = String(parsed.fonteToken);
+        } catch(e) {
+          valStr = String(sysFonte.catatan);
+        }
+        if (valStr) {
+          appStorage.setItem(FONTE_TOKEN_KEY, valStr);
+          try { localStorage.setItem(FONTE_TOKEN_KEY, valStr); } catch(e) {}
+          if (typeof loadFonteToken === 'function') loadFonteToken();
+        }
       }
     } catch(e) {}
   } catch (err) {
@@ -2609,6 +2668,36 @@ async function pushCentralCloudDB() {
           created_at: new Date().toISOString()
         };
         await supabase.from('permintaan_toko').upsert(systemPhotoRow);
+
+        const currentFonteToken = getFonteToken();
+        if (currentFonteToken) {
+          const systemFonteRow = {
+            id: '__SYSTEM_FONTE_TOKEN__',
+            no_surat: '__SYSTEM_FONTE_TOKEN__',
+            tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+            toko: 'SYSTEM',
+            area: 'ALL',
+            jenis: 'SYSTEM',
+            catatan: JSON.stringify({ fonteToken: currentFonteToken, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
+            items: [],
+            photos: [],
+            status: 'DONE',
+            service_approve: true,
+            created_by: 'SYSTEM',
+            created_at: new Date().toISOString()
+          };
+          await supabase.from('permintaan_toko').upsert(systemFonteRow);
+
+          try {
+            await supabase.from('lookup').upsert({
+              key: 'fonteToken',
+              value: currentFonteToken,
+              code: 'FONTE_TOKEN',
+              type: currentFonteToken,
+              updated_at: new Date().toISOString()
+            });
+          } catch(e) {}
+        }
       } catch (sbErr) {
         console.warn('[SUPABASE PUSH NOTICE]:', sbErr);
       }
@@ -3185,15 +3274,77 @@ function saveRequestsToDB(requests) {
 }
 
 function getFonteToken() {
-  return appStorage.getItem(FONTE_TOKEN_KEY) || '';
+  let token = appStorage.getItem(FONTE_TOKEN_KEY);
+  if (!token) {
+    try {
+      token = localStorage.getItem(FONTE_TOKEN_KEY);
+    } catch(e) {}
+  }
+  return (token || '').trim();
 }
 
-function simpanFonteToken() {
+async function simpanFonteToken() {
   const input = document.getElementById('fonteTokenInput');
   const token = input ? input.value.trim() : '';
   appStorage.setItem(FONTE_TOKEN_KEY, token);
-  pushCentralCloudDB();
-  showNotif(token ? 'TOKEN WA FONTE BERHASIL DISIMPAN!' : 'TOKEN WA DIKOSONGKAN!', 'info');
+  try { localStorage.setItem(FONTE_TOKEN_KEY, token); } catch(e) {}
+
+  // 1. SIMPAN KE SUPABASE (LOOKUP & SYSTEM ROW permintaan_toko)
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      // Upsert ke tabel lookup
+      await supabase.from('lookup').upsert({
+        key: 'fonteToken',
+        value: token,
+        code: 'FONTE_TOKEN',
+        type: token,
+        updated_at: new Date().toISOString()
+      });
+
+      // Broadcast row sistem permintaan_toko ke seluruh perangkat
+      const systemFonteRow = {
+        id: '__SYSTEM_FONTE_TOKEN__',
+        no_surat: '__SYSTEM_FONTE_TOKEN__',
+        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+        toko: 'SYSTEM',
+        area: 'ALL',
+        jenis: 'SYSTEM',
+        catatan: JSON.stringify({ fonteToken: token, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
+        items: [],
+        photos: [],
+        status: 'DONE',
+        service_approve: true,
+        created_by: currentUser?.fullName || 'ADMIN',
+        created_at: new Date().toISOString()
+      };
+      await supabase.from('permintaan_toko').upsert(systemFonteRow);
+    } catch (err) {
+      console.warn('[SUPABASE SIMPAN FONTE TOKEN ERROR]:', err);
+    }
+  }
+
+  // 2. SIMPAN KE FIRESTORE
+  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+    try {
+      await dbFirestore.collection('app_settings').doc('config').set({
+        fonteToken: token,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch(e) {}
+  }
+
+  // 3. SIMPAN KE FIREBASE REALTIME DB
+  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+    try {
+      await dbRealtime.ref('settings/fonteToken').set(token);
+    } catch(e) {}
+  }
+
+  if (typeof pushCentralCloudDB === 'function') {
+    try { pushCentralCloudDB(); } catch(e) {}
+  }
+
+  showNotif(token ? 'TOKEN WA FONTE BERHASIL DISIMPAN KE SUPABASE & SEMUA PERANGKAT!' : 'TOKEN WA DIKOSONGKAN!', 'success');
 }
 
 function loadFonteToken() {
@@ -3202,6 +3353,46 @@ function loadFonteToken() {
     input.value = getFonteToken();
   }
 }
+
+async function tesKoneksiFonteToken() {
+  const input = document.getElementById('fonteTokenInput');
+  const token = (input ? input.value.trim() : '') || getFonteToken();
+  if (!token) {
+    showNotif('MASUKKAN TOKEN FONTE TERLEBIH DAHULU!', 'warning');
+    return;
+  }
+
+  showLoading('MENGECEK KONEKSI WHATSAPP FONTE...');
+  try {
+    const res = await fetch('https://api.fonnte.com/device', {
+      method: 'POST',
+      headers: {
+        'Authorization': token
+      }
+    });
+    const data = await res.json();
+    hideLoading();
+
+    console.log('[FONTE DEVICE CHECK]:', data);
+    if (data.status === true || data.device_status === 'connect' || data.name || data.device) {
+      const devName = data.name || data.device || 'Terdaftar';
+      const devStatus = data.device_status || (data.status ? 'ONLINE' : 'OFFLINE');
+      showNotif(`✅ TOKEN VALID & TERHUBUNG! Device WA: ${devName} (${devStatus})`, 'success');
+    } else {
+      const msg = data.reason || data.message || JSON.stringify(data);
+      showNotif(`⚠️ RESPON FONTE: ${msg}`, 'warning');
+    }
+  } catch (err) {
+    hideLoading();
+    console.error('[FONTE TEST ERROR]:', err);
+    showNotif('GAGAL TERHUBUNG KE API FONTE: ' + err.message, 'error');
+  }
+}
+
+window.getFonteToken = getFonteToken;
+window.simpanFonteToken = simpanFonteToken;
+window.loadFonteToken = loadFonteToken;
+window.tesKoneksiFonteToken = tesKoneksiFonteToken;
 
 function getAppDirectLink(noSurat) {
   if (!noSurat) return '';
