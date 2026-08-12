@@ -4157,12 +4157,12 @@ div.rowHighlightOrange {
   display: none;
   align-items: center !important;
   justify-content: center !important;
-  padding: 10px 1mm !important;
+  padding: 10px 1mm 45px 1mm !important;
 }
 
 #popupDetail .popupBoxDetail,
 .popupOverlay #popupDetail .popupBoxDetail,
-.popupBoxDetail {
+.popupBoxDetail,
 #popupDetail .popupBox {
   width: 95% !important;
   max-width: 950px !important;
@@ -4176,6 +4176,7 @@ div.rowHighlightOrange {
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
+  transform: translateY(-20px) !important;
 }
 
 #popupDetail .popupHeader {
@@ -5398,4 +5399,95 @@ body:has(#masterDbPage.active) {
   position: sticky !important;
   top: 0 !important;
   z-index: 100 !important;
+}
+
+/* ==========================================================================
+   POPUP NOTIFIKASI & DETAIL CENTERING (SLIGHTLY UPWARD / PERSIS DI TENGAH2)
+   ========================================================================== */
+#popupNotif,
+#popupNotifList,
+#popupDetail,
+#popupDetailBarangV2,
+#confirmOverlay,
+#rejectOverlay,
+#popupUserForm,
+#popupAkun,
+#popupTTD {
+  display: none;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 10px 10px 45px 10px !important;
+  box-sizing: border-box !important;
+  z-index: 999999 !important;
+}
+
+#popupNotif.show,
+#popupNotifList.show,
+#popupDetail.show,
+#popupDetailBarangV2.show,
+#confirmOverlay.show,
+#rejectOverlay.show,
+#popupUserForm.show,
+#popupAkun.show,
+#popupTTD.show {
+  display: flex !important;
+}
+
+#popupNotif .popupNotifCard,
+#popupNotifList .popupNotifCard,
+#popupDetail .popupBoxDetail,
+#popupDetail .popupBox,
+#popupDetailBarangV2 .popupBoxDetailV2,
+#confirmOverlay .confirmBox,
+#confirmOverlay .confirmBoxCard,
+#rejectOverlay .rejectBoxPopup,
+#popupUserForm .popupBox,
+#popupAkun .akunBox,
+#popupTTD .ttdBox {
+  margin: auto !important;
+  transform: translateY(-20px) !important;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* ==========================================================================
+   FORCE 1 SINGLE HORIZONTAL ROW (NOWRAP) FOR POPUP DETAIL REQUEST TABLES
+   ========================================================================== */
+#popupDetail table,
+#popupDetail table th,
+#popupDetail table td,
+#popupDetailBarangV2 table,
+#popupDetailBarangV2 table th,
+#popupDetailBarangV2 table td,
+.detailTableV2,
+.detailTableV2 th,
+.detailTableV2 td,
+.detailTable2,
+.detailTable2 th,
+.detailTable2 td {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  text-overflow: clip !important;
+  line-height: normal !important;
+}
+
+#popupDetail .tableWrap,
+#popupDetailBarangV2 .tableWrap,
+.tableCardV2.tableWrap {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+}
+
+#popupDetail table,
+#popupDetailBarangV2 table,
+.detailTableV2 {
+  width: max-content !important;
+  min-width: 100% !important;
+  table-layout: auto !important;
 }

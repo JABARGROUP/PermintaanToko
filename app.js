@@ -1530,74 +1530,126 @@ window.updateAdminReminderUI = updateAdminReminderUI;
 
 const LAST_REMINDER_SENT_KEY = 'STORE_LAST_REMINDER_SENT_KEY_V1';
 
-function checkAndTriggerPendingReminders(forceNow = false) {
-  if (!getAdminReminderEnabled() && !forceNow) return;
+async function checkAndTriggerPendingReminders(forceNow = false) {
+  const isEnabled = getAdminReminderEnabled();
+  if (!isEnabled && !forceNow) {
+    return { success: false, message: 'Fitur Reminder sedang NONAKTIF (OFF).', type: 'warning' };
+  }
+
+  const token = getFonteToken();
+  if (!token) {
+    if (forceNow) {
+      showNotif('⚠️ TOKEN FONTE BELUM DIISI! Silakan isi Token Fonnte di menu Pengaturan WA dan klik SIMPAN TOKEN WA.', 'warning');
+      return { success: false, message: 'Token Fonte belum diset.', type: 'warning' };
+    }
+    return { success: false, message: 'Token Fonte belum diset.' };
+  }
 
   const scheduledTimeStr = getAdminReminderTime(); // e.g. "09:00" or "08:30, 14:00"
-  const scheduledTimes = scheduledTimeStr.split(',').map(t => t.trim()).filter(Boolean);
+  const scheduledTimes = scheduledTimeStr.split(/[,;\s]+/).map(t => t.trim()).filter(Boolean);
   if (scheduledTimes.length === 0) scheduledTimes.push('09:00');
 
   const now = new Date();
-  const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const currentHours = now.getHours();
+  const currentMinutes = now.getMinutes();
+  const currentTotalMins = currentHours * 60 + currentMinutes;
+  const currentHHMM = `${String(currentHours).padStart(2, '0')}:${String(currentMinutes).padStart(2, '0')}`;
   const todayDateStr = typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : now.toISOString().split('T')[0];
 
-  let matchedTime = scheduledTimes[0] || '09:00';
+  let matchedTimeSlot = null;
 
-  // UNLESS forceNow IS TRUE (e.g. clicking "TES REMINDER"), ONLY TRIGGER AT THE CONFIGURED ADMIN TIMES
   if (!forceNow) {
-    const isTimeToTrigger = scheduledTimes.includes(currentHHMM);
-    if (!isTimeToTrigger) return;
+    // Cari slot jadwal hari ini yang sudah mencapai/melewati waktunya dan belum pernah dikirim hari ini
+    for (const timeStr of scheduledTimes) {
+      const parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        const slotH = parseInt(parts[0], 10);
+        const slotM = parseInt(parts[1], 10);
+        const slotTotalMins = slotH * 60 + slotM;
 
-    matchedTime = currentHHMM;
+        if (currentTotalMins >= slotTotalMins) {
+          const sentTag = `${todayDateStr}_${timeStr}`;
+          const lastSentTag = appStorage.getItem(LAST_REMINDER_SENT_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_REMINDER_SENT_KEY) : '');
+          const sentTagsList = lastSentTag ? lastSentTag.split('|') : [];
+          if (!sentTagsList.includes(sentTag)) {
+            matchedTimeSlot = timeStr;
+            sentTagsList.push(sentTag);
+            const newTagStr = sentTagsList.slice(-20).join('|');
+            appStorage.setItem(LAST_REMINDER_SENT_KEY, newTagStr);
+            try { localStorage.setItem(LAST_REMINDER_SENT_KEY, newTagStr); } catch(e) {}
+            break;
+          }
+        }
+      }
+    }
 
-    // PREVENT MULTIPLE DISPATCHES IN THE SAME MINUTE / TIME SLOT
-    const lastSentTag = appStorage.getItem(LAST_REMINDER_SENT_KEY);
-    const currentSentTag = `${todayDateStr}_${matchedTime}`;
-    if (lastSentTag === currentSentTag) return;
-
-    appStorage.setItem(LAST_REMINDER_SENT_KEY, currentSentTag);
+    if (!matchedTimeSlot) {
+      return { success: true, message: 'Belum masuk jadwal reminder atau sudah terkirim hari ini.', skipped: true };
+    }
+  } else {
+    matchedTimeSlot = currentHHMM;
   }
 
   const requests = getRequestsFromDB();
   if (!requests.length) {
-    if (forceNow) showNotif('TIDAK ADA DATA PERMINTAAN DI DATABASE.', 'info');
-    return;
+    if (forceNow) showNotif('ℹ️ Tidak ada data permintaan di database.', 'info');
+    return { success: false, message: 'Tidak ada data permintaan.', type: 'info' };
+  }
+
+  const isPending = (r) => {
+    if (!r || !r.noSurat || String(r.noSurat).startsWith('__SYSTEM_')) return false;
+    const st = String(r.status || '').trim().toUpperCase();
+    return st === 'PENDING';
+  };
+  const isSrvApproved = (r) => {
+    return r.serviceApprove === true || r.serviceApprove === 'true' || r.service_approve === true || r.service_approve === 'true';
+  };
+
+  const pendingServiceReqs = requests.filter(r => isPending(r) && !isSrvApproved(r));
+  const pendingDMReqs = requests.filter(r => isPending(r) && isSrvApproved(r));
+
+  if (pendingServiceReqs.length === 0 && pendingDMReqs.length === 0) {
+    if (forceNow) showNotif('ℹ️ Tidak ada dokumen dengan status PENDING saat ini (Semua pengajuan telah diproses).', 'info');
+    return { success: true, message: 'Tidak ada dokumen status PENDING.', type: 'info' };
   }
 
   const notifs = getSystemNotifications();
   const allUsers = getUsersFromDB();
 
-  // PENDING SERVICE: status PENDING & BELUM DI-APPROVE SERVICE
-  const pendingServiceReqs = requests.filter(r => r && r.status === 'PENDING' && !r.serviceApprove);
-  // PENDING DM: status PENDING & SUDAH DI-APPROVE SERVICE (MENUNGGU DM)
-  const pendingDMReqs = requests.filter(r => r && r.status === 'PENDING' && r.serviceApprove);
-
-  if (pendingServiceReqs.length === 0 && pendingDMReqs.length === 0) {
-    if (forceNow) showNotif('TIDAK ADA PERMINTAAN STATUS PENDING SAAT INI.', 'info');
-    return;
-  }
-
-  let hasNewReminder = false;
-  let srvWaSentCount = 0;
-  let dmWaSentCount = 0;
+  let srvSentCount = 0;
+  let dmSentCount = 0;
+  const waErrors = [];
 
   // 1. COMBINED REMINDER FOR SERVICE USERS (1 CHAT PER USER FOR MULTIPLE REQUESTS WITH REGISTERED FULL NAME)
   if (pendingServiceReqs.length > 0) {
     pendingServiceReqs.forEach(r => {
-      const message = `REMINDER PENDING SERVICE [JAM ${matchedTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE SERVICE!`;
+      const message = `REMINDER PENDING SERVICE [JAM ${matchedTimeSlot}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE SERVICE!`;
       const duplicate = notifs.some(n => n.noSurat === r.noSurat && String(n.message).includes('REMINDER PENDING') && String(n.message).includes('SERVICE'));
       if (!duplicate || forceNow) {
         tambahNotifikasiSistem(['SERVICE'], r.area, message, r.noSurat);
-        hasNewReminder = true;
       }
     });
 
-    const serviceUsers = allUsers.filter(u => u && (u.category === 'SERVICE' || u.category === 'HODS') && u.phone && u.phone !== '-');
-    serviceUsers.forEach(srv => {
-      const userPendingReqs = pendingServiceReqs.filter(r => r.area === srv.area || srv.area === 'ALL' || !srv.area);
+    const serviceUsers = allUsers.filter(u => {
+      if (!u) return false;
+      const cat = String(u.category || u.role || '').trim().toUpperCase();
+      return (cat === 'SERVICE' || cat === 'HODS') && u.phone && u.phone !== '-' && String(u.phone).trim() !== '';
+    });
+
+    if (serviceUsers.length === 0 && forceNow) {
+      waErrors.push(`Ada ${pendingServiceReqs.length} dokumen menunggu Service, tapi belum ada User role SERVICE dengan nomor WA di Manajemen User!`);
+    }
+
+    for (const srv of serviceUsers) {
+      const srvArea = String(srv.area || 'ALL').trim().toUpperCase();
+      const userPendingReqs = pendingServiceReqs.filter(r => {
+        const rArea = String(r.area || '').trim().toUpperCase();
+        return srvArea === 'ALL' || srvArea === 'SEMUA' || !srvArea || srvArea === '-' || rArea === srvArea || !rArea;
+      });
+
       if (userPendingReqs.length > 0) {
         const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
-        const itemsListStr = userPendingReqs.map((r, idx) => {
+        const itemsListStr = userPendingReqs.map((r) => {
           const directLink = typeof getAppDirectLink === 'function' ? getAppDirectLink(r.noSurat) : '';
           return `📌 *#${r.noSurat}* - TOKO *${r.toko}* (${r.area || '-'})\n   📅 Tgl: ${r.tanggal || '-'}\n   🔗 Link: ${directLink}`;
         }).join('\n\n');
@@ -1609,29 +1661,46 @@ function checkAndTriggerPendingReminders(forceNow = false) {
           `${itemsListStr}\n\n` +
           `Silakan klik tautan di atas untuk membuka dan memproses dokumen. Terima kasih.`;
 
-        const sent = kirimNotifikasiWA(srv.phone, combinedMessage);
-        if (sent) srvWaSentCount++;
+        const res = await kirimNotifikasiWA(srv.phone, combinedMessage, forceNow);
+        if (res && res.success) {
+          srvSentCount += res.sentCount || 1;
+        } else if (res && res.error) {
+          waErrors.push(`Service (${srv.username}): ${res.error}`);
+        }
       }
-    });
+    }
   }
 
   // 2. COMBINED REMINDER FOR DM USERS (1 CHAT PER USER FOR MULTIPLE REQUESTS WITH REGISTERED FULL NAME)
   if (pendingDMReqs.length > 0) {
     pendingDMReqs.forEach(r => {
-      const message = `REMINDER PENDING DM [JAM ${matchedTime}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE DM!`;
+      const message = `REMINDER PENDING DM [JAM ${matchedTimeSlot}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE DM!`;
       const duplicate = notifs.some(n => n.noSurat === r.noSurat && String(n.message).includes('REMINDER PENDING') && String(n.message).includes('DM'));
       if (!duplicate || forceNow) {
         tambahNotifikasiSistem(['DM'], 'ALL', message, r.noSurat);
-        hasNewReminder = true;
       }
     });
 
-    const dmUsers = allUsers.filter(u => u && u.category === 'DM' && u.phone && u.phone !== '-');
-    dmUsers.forEach(dm => {
-      const userPendingReqs = pendingDMReqs.filter(r => r.area === dm.area || dm.area === 'ALL' || !dm.area);
+    const dmUsers = allUsers.filter(u => {
+      if (!u) return false;
+      const cat = String(u.category || u.role || '').trim().toUpperCase();
+      return cat === 'DM' && u.phone && u.phone !== '-' && String(u.phone).trim() !== '';
+    });
+
+    if (dmUsers.length === 0 && forceNow) {
+      waErrors.push(`Ada ${pendingDMReqs.length} dokumen menunggu DM, tapi belum ada User role DM dengan nomor WA di Manajemen User!`);
+    }
+
+    for (const dm of dmUsers) {
+      const dmArea = String(dm.area || 'ALL').trim().toUpperCase();
+      const userPendingReqs = pendingDMReqs.filter(r => {
+        const rArea = String(r.area || '').trim().toUpperCase();
+        return dmArea === 'ALL' || dmArea === 'SEMUA' || !dmArea || dmArea === '-' || rArea === dmArea || !rArea;
+      });
+
       if (userPendingReqs.length > 0) {
         const dmName = dm.fullName || dm.username || 'Bapak/Ibu DM';
-        const itemsListStr = userPendingReqs.map((r, idx) => {
+        const itemsListStr = userPendingReqs.map((r) => {
           const directLink = typeof getAppDirectLink === 'function' ? getAppDirectLink(r.noSurat) : '';
           return `📌 *#${r.noSurat}* - TOKO *${r.toko}* (${r.area || '-'})\n   📅 Tgl: ${r.tanggal || '-'}\n   🔗 Link: ${directLink}`;
         }).join('\n\n');
@@ -1643,24 +1712,45 @@ function checkAndTriggerPendingReminders(forceNow = false) {
           `${itemsListStr}\n\n` +
           `Silakan klik tautan di atas untuk membuka dan memberikan persetujuan dokumen. Terima kasih.`;
 
-        const sent = kirimNotifikasiWA(dm.phone, combinedMessage);
-        if (sent) dmWaSentCount++;
+        const res = await kirimNotifikasiWA(dm.phone, combinedMessage, forceNow);
+        if (res && res.success) {
+          dmSentCount += res.sentCount || 1;
+        } else if (res && res.error) {
+          waErrors.push(`DM (${dm.username}): ${res.error}`);
+        }
       }
-    });
+    }
   }
 
-  if (hasNewReminder && typeof updateNotifBellCounter === 'function') {
+  if (typeof updateNotifBellCounter === 'function') {
     updateNotifBellCounter();
   }
 
   if (forceNow) {
-    const totalPending = pendingServiceReqs.length + pendingDMReqs.length;
-    showNotif(`✅ REMINDER PENDING DIKIRIM (${totalPending} Dokumen: ${pendingServiceReqs.length} Service, ${pendingDMReqs.length} DM)!`, 'success');
+    if (srvSentCount > 0 || dmSentCount > 0) {
+      const msg = `✅ REMINDER WA BERHASIL TERKIRIM!\n• Service: ${srvSentCount} pesan (${pendingServiceReqs.length} pending)\n• DM: ${dmSentCount} pesan (${pendingDMReqs.length} pending)` + (waErrors.length ? `\n\n(Catatan: ${waErrors.join(', ')})` : '');
+      showNotif(msg, 'success');
+      return { success: true, message: msg, type: 'success' };
+    } else {
+      const errMsg = waErrors.length ? waErrors.join('\n') : 'Tidak ada pesan WA yang terkirim. Pastikan nomor WhatsApp user Service & DM sudah terisi di menu Manajemen User.';
+      showNotif(`⚠️ ${errMsg}`, 'warning');
+      return { success: false, message: errMsg, type: 'warning' };
+    }
   }
+
+  return { success: true, srvSentCount, dmSentCount };
 }
 
-function tesKirimAdminReminder() {
-  checkAndTriggerPendingReminders(true);
+async function tesKirimAdminReminder() {
+  showLoading('MENJALANKAN TES REMINDER WHATSAPP PENDING...');
+  try {
+    await checkAndTriggerPendingReminders(true);
+  } catch (err) {
+    console.error('[TES REMINDER ERROR]:', err);
+    showNotif('ERROR TES REMINDER: ' + err.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 window.tesKirimAdminReminder = tesKirimAdminReminder;
 
@@ -1676,8 +1766,20 @@ function startAdminReminderTimeChecker() {
       checkAndTriggerPendingReminders(false);
     }
   }, 30000);
+
+  setTimeout(() => {
+    if (typeof checkAndTriggerPendingReminders === 'function') {
+      checkAndTriggerPendingReminders(false);
+    }
+  }, 3000);
 }
 window.startAdminReminderTimeChecker = startAdminReminderTimeChecker;
+
+if (typeof window !== 'undefined') {
+  try {
+    startAdminReminderTimeChecker();
+  } catch(e) {}
+}
 
 let cloudSyncInterval = null;
 
@@ -2199,6 +2301,24 @@ function handleRealtimePermintaanToko(payload) {
       return;
     }
 
+    if (rawNoSurat === '__SYSTEM_CHAT_MESSAGES__') {
+      try {
+        if (payload.new && payload.new.catatan) {
+          const parsedChats = JSON.parse(payload.new.catatan);
+          if (Array.isArray(parsedChats)) {
+            appStorage.setItem(CHAT_DB_KEY, JSON.stringify(parsedChats));
+            try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(parsedChats)); } catch(e) {}
+            if (typeof refreshActiveChatUI === 'function') refreshActiveChatUI();
+            if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+            if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+          }
+        }
+      } catch(e) {
+        console.warn('[REALTIME CHAT MSG ERROR]:', e);
+      }
+      return;
+    }
+
     const requests = getRequestsFromDB();
 
     if (eventType === 'INSERT') {
@@ -2618,6 +2738,17 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
         if (parsedNotifs.length > 0) {
           appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(parsedNotifs));
           try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(parsedNotifs)); } catch(e) {}
+        }
+      }
+    } catch(e) {}
+
+    try {
+      const { data: chatRow } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_CHAT_MESSAGES__').single();
+      if (chatRow && chatRow.catatan) {
+        const parsedChats = JSON.parse(chatRow.catatan);
+        if (Array.isArray(parsedChats) && parsedChats.length > 0) {
+          appStorage.setItem(CHAT_DB_KEY, JSON.stringify(parsedChats));
+          try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(parsedChats)); } catch(e) {}
         }
       }
     } catch(e) {}
@@ -3793,47 +3924,68 @@ function formatCleanPhoneList(targetPhone) {
 }
 window.formatCleanPhoneList = formatCleanPhoneList;
 
-function kirimNotifikasiWA(targetPhone, message) {
-  if (!targetPhone || targetPhone === '-' || String(targetPhone).trim() === '') return false;
+async function kirimNotifikasiWA(targetPhone, message, forceSend = false) {
+  if (!targetPhone || targetPhone === '-' || String(targetPhone).trim() === '') {
+    return { success: false, error: 'Nomor telepon target kosong.' };
+  }
 
   const token = getFonteToken();
-  if (!token) return false;
+  if (!token) {
+    console.warn('[FONTE WA WARNING]: Token Fonnte belum diset!');
+    return { success: false, error: 'Token Fonnte belum diset.' };
+  }
 
   const phoneList = formatCleanPhoneList(targetPhone);
-  if (!phoneList || phoneList.length === 0) return false;
+  if (!phoneList || phoneList.length === 0) {
+    return { success: false, error: 'Format nomor telepon tidak valid.' };
+  }
 
-  let anySent = false;
+  let successCount = 0;
+  let lastError = null;
 
-  phoneList.forEach(cleanPhone => {
+  for (const cleanPhone of phoneList) {
     const msgHash = `${cleanPhone}_${String(message).trim()}`;
     const now = Date.now();
-    if (sentWaCache[msgHash] && (now - sentWaCache[msgHash]) < 60000) {
+    if (!forceSend && sentWaCache[msgHash] && (now - sentWaCache[msgHash]) < 60000) {
       console.log('[WA SKIPPED - DUPLICATE PREVENTED]:', cleanPhone);
-      return;
+      continue;
     }
     sentWaCache[msgHash] = now;
 
-    const formData = new FormData();
-    formData.append('target', cleanPhone);
-    formData.append('message', message);
-    formData.append('countryCode', '62');
+    try {
+      const formData = new FormData();
+      formData.append('target', cleanPhone);
+      formData.append('message', message);
+      formData.append('countryCode', '62');
 
-    fetch('https://api.fonnte.com/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': token
-      },
-      body: formData
-    }).then(res => res.json()).then(data => {
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': token.trim()
+        },
+        body: formData
+      });
+
+      const data = await response.json();
       console.log('[FONTE WA API RESPONSE]:', cleanPhone, data);
-    }).catch(err => {
-      console.error('[FONTE WA API ERROR]:', cleanPhone, err);
-    });
+      if (data && (data.status === true || data.status === 'true' || data.id)) {
+        successCount++;
+      } else {
+        const reason = data ? (data.reason || data.message || JSON.stringify(data)) : 'Unknown error';
+        lastError = reason;
+        console.warn('[FONTE WA SEND REJECTED]:', cleanPhone, reason);
+      }
+    } catch (err) {
+      console.error('[FONTE WA API NETWORK ERROR]:', cleanPhone, err);
+      lastError = err.message;
+    }
+  }
 
-    anySent = true;
-  });
-
-  return anySent;
+  if (successCount > 0) {
+    return { success: true, sentCount: successCount };
+  } else {
+    return { success: false, error: lastError || 'Gagal mengirim pesan WA.' };
+  }
 }
 window.kirimNotifikasiWA = kirimNotifikasiWA;
 
@@ -7240,13 +7392,13 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     try { itemsList = JSON.parse(rawItems || '[]'); } catch (e) { itemsList = []; }
   }
 
-  const thBase = "background: var(--primary) !important; color: #ffffff !important; padding: 8px 10px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.3px !important; box-shadow: none !important; text-shadow: none !important;";
+  const thBase = "background: var(--primary) !important; color: #ffffff !important; padding: 8px 12px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.3px !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important; box-shadow: none !important; text-shadow: none !important;";
   const thStyleAutofit = `${thBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
-  const thStyleLeft = `${thBase} text-align: left !important;`;
+  const thStyleLeft = `${thBase} text-align: left !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
 
-  const tdBase = "padding: 8px 10px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important;";
+  const tdBase = "padding: 8px 12px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;";
   const tdStyleAutofit = `${tdBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
-  const tdStyleLeft = `${tdBase} text-align: left !important;`;
+  const tdStyleLeft = `${tdBase} text-align: left !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
 
   const role = currentUser ? (currentUser.category || '').toUpperCase() : '';
   const isAdminUser = currentUser && (role === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
@@ -8929,6 +9081,34 @@ function startActiveChatRefresh() {
     activeChatRefreshInterval = null;
   }
   refreshActiveChatUI();
+
+  // Fast background realtime sync (every 1.5 seconds) while the help chat popup is open
+  activeChatRefreshInterval = setInterval(async () => {
+    const popupBantuan = document.getElementById('popupBantuan');
+    if (!popupBantuan || (!popupBantuan.classList.contains('show') && popupBantuan.style.display !== 'block')) {
+      stopActiveChatRefresh();
+      return;
+    }
+
+    if (typeof supabase !== 'undefined' && supabase) {
+      try {
+        const { data: chatRow } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_CHAT_MESSAGES__').single();
+        if (chatRow && chatRow.catatan) {
+          const supaChats = JSON.parse(chatRow.catatan);
+          if (Array.isArray(supaChats)) {
+            const localChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+            if (JSON.stringify(supaChats) !== JSON.stringify(localChats)) {
+              appStorage.setItem(CHAT_DB_KEY, JSON.stringify(supaChats));
+              try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(supaChats)); } catch(e) {}
+              refreshActiveChatUI();
+            }
+          }
+        }
+      } catch(e) {}
+    } else {
+      refreshActiveChatUI();
+    }
+  }, 1500);
 }
 
 function stopActiveChatRefresh() {
