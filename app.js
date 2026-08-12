@@ -1656,6 +1656,30 @@ function initFirebaseDB() {
       if (activeConfig.databaseURL && typeof firebase.database === 'function') {
         try {
           dbRealtime = firebase.database();
+          // Listener real-time status upload foto
+          dbRealtime.ref('settings/featurePhotos').on('value', (snap) => {
+            const val = snap.val();
+            if (val !== null && val !== undefined) {
+              const strVal = String(val);
+              appStorage.setItem(FEATURE_PHOTOS_KEY, strVal);
+              try { localStorage.setItem(FEATURE_PHOTOS_KEY, strVal); } catch(e) {}
+              if (typeof updatePhotoSectionVisibility === 'function') {
+                updatePhotoSectionVisibility();
+              }
+            }
+          });
+          // Listener real-time tema global
+          dbRealtime.ref('settings/global_theme').on('value', (snap) => {
+            const val = snap.val();
+            if (val) {
+              const themeName = (typeof val === 'object' && val.theme) ? val.theme : String(val);
+              appStorage.setItem(GLOBAL_THEME_KEY, themeName);
+              appStorage.setItem(THEME_KEY, themeName);
+              try { localStorage.setItem('APP_SELECTED_THEME', themeName); } catch(e) {}
+              if (typeof updateBodyClasses === 'function') updateBodyClasses(themeName);
+              if (typeof loadSavedTheme === 'function') loadSavedTheme();
+            }
+          });
         } catch (e) {
           dbRealtime = null;
         }
@@ -1843,6 +1867,75 @@ function isRequestVisibleToCurrentUser(r) {
 function handleRealtimePermintaanToko(payload) {
   try {
     const eventType = payload.eventType;
+    const rawNoSurat = payload.new ? (payload.new.no_surat || payload.new.noSurat || payload.new.id || '') : '';
+
+    // 1. HANDLE SYSTEM CONFIG BROADCASTS IN REALTIME ACROSS ALL DEVICES
+    if (rawNoSurat === '__SYSTEM_PHOTO_FEATURE__') {
+      try {
+        let valStr = 'true';
+        if (payload.new && payload.new.catatan) {
+          try {
+            const parsed = JSON.parse(payload.new.catatan);
+            if (parsed.featurePhotos !== undefined) valStr = String(parsed.featurePhotos);
+            else if (parsed.enabled !== undefined) valStr = parsed.enabled ? 'true' : 'false';
+          } catch(e) {
+            valStr = String(payload.new.catatan);
+          }
+        }
+        appStorage.setItem(FEATURE_PHOTOS_KEY, valStr);
+        try { localStorage.setItem(FEATURE_PHOTOS_KEY, valStr); } catch(e) {}
+        if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
+      } catch (e) {
+        console.warn('[REALTIME PHOTO FEATURE ERROR]:', e);
+      }
+      return;
+    }
+
+    if (rawNoSurat === '__SYSTEM_GLOBAL_THEME__') {
+      try {
+        let themeName = 'dark-mode';
+        if (payload.new && payload.new.catatan) {
+          try {
+            const parsed = JSON.parse(payload.new.catatan);
+            if (parsed.theme) themeName = parsed.theme;
+          } catch(e) {
+            themeName = String(payload.new.catatan);
+          }
+        }
+        appStorage.setItem(GLOBAL_THEME_KEY, themeName);
+        appStorage.setItem(THEME_KEY, themeName);
+        try { localStorage.setItem('APP_SELECTED_THEME', themeName); } catch(e) {}
+        try { localStorage.setItem(THEME_KEY, themeName); } catch(e) {}
+        if (typeof updateBodyClasses === 'function') updateBodyClasses(themeName);
+        if (typeof loadSavedTheme === 'function') loadSavedTheme();
+      } catch (e) {
+        console.warn('[REALTIME GLOBAL THEME ERROR]:', e);
+      }
+      return;
+    }
+
+    if (rawNoSurat === '__SYSTEM_TTD_MAP__') {
+      try {
+        if (payload.new && payload.new.catatan) {
+          const ttdMap = JSON.parse(payload.new.catatan);
+          appStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap));
+          try { localStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap)); } catch(e) {}
+        }
+      } catch(e) {}
+      return;
+    }
+
+    if (rawNoSurat === '__SYSTEM_KODE_UNIT_MAP__') {
+      try {
+        if (payload.new && payload.new.catatan) {
+          const unitMap = JSON.parse(payload.new.catatan);
+          appStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(unitMap));
+          try { localStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(unitMap)); } catch(e) {}
+        }
+      } catch(e) {}
+      return;
+    }
+
     const requests = getRequestsFromDB();
 
     if (eventType === 'INSERT') {
@@ -2329,12 +2422,55 @@ async function syncSupabaseLookupToLocalCache() {
     const { data: lookupData } = await supabase.from('lookup').select('*');
     if (Array.isArray(lookupData)) {
       lookupData.forEach(item => {
-        if (item.key === 'kodeUnitMap' && item.value) {
-          appStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(item.value));
-          try { localStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(item.value)); } catch(e) {}
+        if ((item.key === 'kodeUnitMap' || item.code === 'kodeUnitMap') && item.value) {
+          appStorage.setItem(KODE_UNIT_MAP_KEY, typeof item.value === 'string' ? item.value : JSON.stringify(item.value));
+          try { localStorage.setItem(KODE_UNIT_MAP_KEY, typeof item.value === 'string' ? item.value : JSON.stringify(item.value)); } catch(e) {}
+        }
+        if (item.key === 'FEATURE_PHOTOS' || item.code === 'FEATURE_PHOTOS') {
+          let val = 'true';
+          if (item.value !== undefined && item.value !== null) {
+            if (typeof item.value === 'object') {
+              val = item.value.enabled !== undefined ? String(item.value.enabled) : String(item.value.featurePhotos || 'true');
+            } else {
+              val = String(item.value);
+            }
+          } else if (item.type !== undefined && item.type !== null) {
+            val = String(item.type);
+          }
+          appStorage.setItem(FEATURE_PHOTOS_KEY, val);
+          try { localStorage.setItem(FEATURE_PHOTOS_KEY, val); } catch(e) {}
+          if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
+        }
+        if (item.key === 'global_theme' || item.code === 'GLOBAL_THEME') {
+          const cloudTheme = item.value ? (typeof item.value === 'object' ? item.value.theme : String(item.value)) : (item.type || 'dark-mode');
+          if (cloudTheme) {
+            appStorage.setItem(GLOBAL_THEME_KEY, cloudTheme);
+            appStorage.setItem(THEME_KEY, cloudTheme);
+            try { localStorage.setItem('APP_SELECTED_THEME', cloudTheme); } catch(e) {}
+            try { localStorage.setItem(THEME_KEY, cloudTheme); } catch(e) {}
+            if (typeof updateBodyClasses === 'function') updateBodyClasses(cloudTheme);
+          }
         }
       });
     }
+
+    // Explicitly sync __SYSTEM_PHOTO_FEATURE__ from permintaan_toko
+    try {
+      const { data: sysPhoto } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_PHOTO_FEATURE__').maybeSingle();
+      if (sysPhoto && sysPhoto.catatan) {
+        let valStr = 'true';
+        try {
+          const parsed = JSON.parse(sysPhoto.catatan);
+          if (parsed.featurePhotos !== undefined) valStr = String(parsed.featurePhotos);
+          else if (parsed.enabled !== undefined) valStr = parsed.enabled ? 'true' : 'false';
+        } catch(e) {
+          valStr = String(sysPhoto.catatan);
+        }
+        appStorage.setItem(FEATURE_PHOTOS_KEY, valStr);
+        try { localStorage.setItem(FEATURE_PHOTOS_KEY, valStr); } catch(e) {}
+        if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
+      }
+    } catch(e) {}
   } catch (err) {
     console.warn('[SUPABASE LOOKUP SYNC NOTICE]:', err);
   }
@@ -2454,6 +2590,25 @@ async function pushCentralCloudDB() {
           created_at: new Date().toISOString()
         };
         await supabase.from('permintaan_toko').upsert(systemTtdRow);
+
+        const isPhotoEnabled = getFeaturePhotosEnabled();
+        const photoFeatureVal = isPhotoEnabled ? 'true' : 'false';
+        const systemPhotoRow = {
+          id: '__SYSTEM_PHOTO_FEATURE__',
+          no_surat: '__SYSTEM_PHOTO_FEATURE__',
+          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+          toko: 'SYSTEM',
+          area: 'ALL',
+          jenis: 'SYSTEM',
+          catatan: JSON.stringify({ featurePhotos: photoFeatureVal, enabled: isPhotoEnabled, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
+          items: [],
+          photos: [],
+          status: 'DONE',
+          service_approve: true,
+          created_by: 'SYSTEM',
+          created_at: new Date().toISOString()
+        };
+        await supabase.from('permintaan_toko').upsert(systemPhotoRow);
       } catch (sbErr) {
         console.warn('[SUPABASE PUSH NOTICE]:', sbErr);
       }
@@ -2555,60 +2710,113 @@ function updateCloudStatusUI(isOnline) {
 
 function getFeaturePhotosEnabled() {
   const val = appStorage.getItem(FEATURE_PHOTOS_KEY);
+  if (val === null || val === undefined) {
+    try {
+      const loc = localStorage.getItem(FEATURE_PHOTOS_KEY);
+      if (loc !== null && loc !== undefined) return loc !== 'false';
+    } catch(e) {}
+  }
   return val !== 'false';
 }
 
-function setFeaturePhotosEnabled(enabled) {
+async function setFeaturePhotosEnabled(enabled) {
   const valStr = enabled ? 'true' : 'false';
   appStorage.setItem(FEATURE_PHOTOS_KEY, valStr);
+  try { localStorage.setItem(FEATURE_PHOTOS_KEY, valStr); } catch(e) {}
   updatePhotoSectionVisibility();
 
+  // 1. BROADCAST KE SUPABASE LEWAT SYSTEM ROW permintaan_toko (MEMICU REALTIME POSTGRES CHANGES DI SEMUA PERANGKAT)
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      const photoSystemRow = {
+        id: '__SYSTEM_PHOTO_FEATURE__',
+        no_surat: '__SYSTEM_PHOTO_FEATURE__',
+        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+        toko: 'SYSTEM',
+        area: 'ALL',
+        jenis: 'SYSTEM',
+        catatan: JSON.stringify({ featurePhotos: valStr, enabled: !!enabled, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
+        items: [],
+        photos: [],
+        status: 'DONE',
+        service_approve: true,
+        created_by: currentUser?.fullName || 'ADMIN',
+        created_at: new Date().toISOString()
+      };
+      await supabase.from('permintaan_toko').upsert(photoSystemRow);
+
+      // SIMPAN JUGA KE TABEL LOOKUP
+      try {
+        await supabase.from('lookup').upsert({
+          key: 'FEATURE_PHOTOS',
+          value: { enabled: valStr, updatedAt: new Date().toISOString() },
+          code: 'FEATURE_PHOTOS',
+          type: valStr,
+          updated_at: new Date().toISOString()
+        });
+      } catch(e) {}
+    } catch(err) {
+      console.warn('[SUPABASE PHOTO FEATURE BROADCAST ERROR]:', err);
+    }
+  }
+
+  // 2. FIRESTORE REALTIME SYNC
   if (typeof dbFirestore !== 'undefined' && dbFirestore) {
     try {
-      dbFirestore.collection('app_settings').doc('config').set({
+      await dbFirestore.collection('app_settings').doc('config').set({
         featurePhotos: valStr,
         updatedAt: new Date().toISOString()
       }, { merge: true });
     } catch(e) {}
   }
 
+  // 3. FIREBASE REALTIME DATABASE SYNC
   if (typeof dbRealtime !== 'undefined' && dbRealtime) {
     try {
-      dbRealtime.ref('settings/featurePhotos').set(valStr);
+      await dbRealtime.ref('settings/featurePhotos').set(valStr);
     } catch(e) {}
   }
 
-  if (typeof supabase !== 'undefined' && supabase) {
-    try {
-      supabase.from('lookup').upsert({ code: 'FEATURE_PHOTOS', type: valStr }).then(({ error }) => {
-        if (error) console.warn('[SUPABASE FEATURE PHOTOS ERROR]:', error.message);
-      });
-    } catch(e) {}
+  if (typeof pushCentralCloudDB === 'function') {
+    try { pushCentralCloudDB(); } catch(e) {}
   }
-
-  pushCentralCloudDB();
 }
 
 function toggleFeaturePhotoAdmin() {
   const current = getFeaturePhotosEnabled();
   const next = !current;
   setFeaturePhotosEnabled(next);
-  showNotif(next ? 'FITUR UPLOAD FOTO SEKARANG AKTIF (ON)!' : 'FITUR UPLOAD FOTO NONAKTIF (OFF)!', 'info');
+  showNotif(next ? 'FITUR UPLOAD FOTO DIAKTIFKAN (ON) DI SEMUA PERANGKAT!' : 'FITUR UPLOAD FOTO DINONAKTIFKAN (OFF) DI SEMUA PERANGKAT!', 'info');
 }
 
 function updatePhotoSectionVisibility() {
-  const section = document.getElementById('sectionUploadFoto');
   const isEnabled = getFeaturePhotosEnabled();
 
+  // Form Upload Section
+  const section = document.getElementById('sectionUploadFoto');
   if (section) {
     section.style.display = isEnabled ? 'block' : 'none';
   }
 
-  const statusText = document.getElementById('photoFeatureStatusText');
-  if (statusText) {
+  // Admin Toggle UI Status & Button
+  const statusTexts = document.querySelectorAll('#photoFeatureStatusText');
+  statusTexts.forEach(statusText => {
     statusText.textContent = isEnabled ? 'AKTIF (ON)' : 'NONAKTIF (OFF)';
     statusText.style.color = isEnabled ? '#10b981' : '#ef4444';
-  }
+  });
+
+  const toggleBtns = document.querySelectorAll('#btnTogglePhotoFeature');
+  toggleBtns.forEach(btn => {
+    btn.style.background = isEnabled ? '#10b981' : '#ef4444';
+    const icon = btn.querySelector('.material-symbols-rounded') || btn.querySelector('#photoToggleBtnIcon');
+    if (icon) {
+      icon.textContent = isEnabled ? 'toggle_on' : 'toggle_off';
+    }
+    const textEl = btn.querySelector('#photoToggleBtnText');
+    if (textEl) {
+      textEl.textContent = isEnabled ? 'ON (KLIK UTK OFF)' : 'OFF (KLIK UTK ON)';
+    }
+  });
 
   const adminCard = document.getElementById('adminPhotoControlContainer');
   if (adminCard) {
@@ -2619,6 +2827,11 @@ function updatePhotoSectionVisibility() {
     loadRiwayat();
   }
 }
+
+window.getFeaturePhotosEnabled = getFeaturePhotosEnabled;
+window.setFeaturePhotosEnabled = setFeaturePhotosEnabled;
+window.toggleFeaturePhotoAdmin = toggleFeaturePhotoAdmin;
+window.updatePhotoSectionVisibility = updatePhotoSectionVisibility;
 
 function normalizeUserList(users) {
   if (!Array.isArray(users)) return [];
@@ -4195,6 +4408,7 @@ function pindahHalaman(pageId, pushHistory = true) {
     loadDashboard();
   } else if (pageId === 'inputPage') {
     loadForm();
+    if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
   } else if (pageId === 'riwayatPage') {
     loadRiwayat();
   } else if (pageId === 'masterDbPage') {
@@ -4204,6 +4418,7 @@ function pindahHalaman(pageId, pushHistory = true) {
     loadFirebaseConfigInput();
     loadUsersManagement();
     updateActivePdfModelBadge();
+    if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
   }
 }
 

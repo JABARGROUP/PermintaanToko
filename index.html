@@ -398,26 +398,6 @@
         </div>
       </div>
 
-      <!-- ADMIN CONTROL SWITCH: FEATURE TOGGLE FOR UPLOAD FOTO INPUT -->
-      <div class="box" style="border-left: 4px solid #8b5cf6; margin-bottom: 20px; background: rgba(139, 92, 246, 0.05);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h3 style="color: #8b5cf6; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span class="material-symbols-rounded">camera_alt</span> ATUR KOLOM UNGGAH FOTO USER (ON / OFF)
-            </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
-              KONTROL ADMIN UNTUK MENAMPILKAN ATAU MENYEMBUNYIKAN SEKSI UPLOAD FOTO DI HALAMAN FORM PERMINTAAN SEMUA USER.
-            </p>
-          </div>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span id="photoFeatureStatusText" style="font-weight: 700; font-size: 13px; color: #10b981;">AKTIF (ON)</span>
-            <button type="button" id="btnTogglePhotoFeature" class="btnDownload" style="background: #8b5cf6; height: 38px; padding: 0 16px;" onclick="toggleFeaturePhotoAdmin()">
-              TOGGLE ON / OFF
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- ADMIN CONTROL: PENGATURAN TEMA GLOBAL UNTUK SEMUA PERANGKAT -->
       <div class="box" style="border-left: 4px solid #0284c7; margin-bottom: 20px; background: rgba(2, 132, 199, 0.05);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
@@ -510,13 +490,13 @@
             <span class="material-symbols-rounded">add_a_photo</span> PENGATURAN UPLOAD FOTO BUKTI (GLOBAL ON / OFF)
           </h3>
           <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
-            JIKA STATUS OFF, FITUR UPLOAD FOTO DI SELEKSI FORM INPUT DAN LIHAT FOTO DINOAKTIFKAN UNTUK SEMUA AKUN / USER.
+            KONTROL ADMIN GLOBAL: JIKA STATUS OFF, FITUR UPLOAD FOTO DI FORMULIR PERMINTAAN DAN TOMBOL LIHAT FOTO DINONAKTIFKAN DI SELURUH PERANGKAT USER SECARA REALTIME.
           </p>
         </div>
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
           <span id="photoFeatureStatusText" style="font-size: 13px; font-weight: 800; color: #10b981;">AKTIF (ON)</span>
-          <button type="button" class="btnDownload" style="background: #10b981; height: 38px; padding: 0 16px;" onclick="toggleFeaturePhotoAdmin()">
-            <span class="material-symbols-rounded">toggle_on</span> ON / OFF
+          <button type="button" id="btnTogglePhotoFeature" class="btnDownload" style="background: #10b981; height: 38px; padding: 0 16px; font-weight: 700;" onclick="toggleFeaturePhotoAdmin()">
+            <span id="photoToggleBtnIcon" class="material-symbols-rounded">toggle_on</span> <span id="photoToggleBtnText">ON / OFF</span>
           </button>
         </div>
       </div>
