@@ -1,8 +1,8 @@
 // 1. SUPABASE CLIENT & CREDENTIALS
-const SUPABASE_URL = 'https://ducrykojvabaoioigbgc.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_H2w50rrXQWKqZM2fKZJXBw_sRsEpwNf';
-const SUPABASE_SECRET_KEY = 'sb_secret_Azj8ILdL27v7R5BgUkkgHw_4CwqObZa';
-const SUPABASE_JWKS_URL = 'https://ducrykojvabaoioigbgc.supabase.co/auth/v1/.well-known/jwks.json';
+const SUPABASE_URL = 'https://vnlylgbkjmztnvjjgpjw.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_C7-RE-meqDyD8iXvp4COew_9Yhn8SWS';
+const SUPABASE_SECRET_KEY = 'sb_secret_9pTnKospBREpQH-QFngvnA_01fidjs7';
+const SUPABASE_JWKS_URL = 'https://vnlylgbkjmztnvjjgpjw.supabase.co/auth/v1/.well-known/jwks.json';
 
 const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
 
@@ -1718,101 +1718,481 @@ function simpanFirebaseConfigUser() {
   }
 }
 
-function startCentralCloudSyncEngine() {
-  initFirebaseDB();
-  initGlobalRealtimeSyncEngine();
-  if (typeof setOnDataChangeCallback === 'function') {
-    setOnDataChangeCallback(onSupabaseDataChange);
-  }
-  if (cloudSyncInterval) {
-    clearInterval(cloudSyncInterval);
-    cloudSyncInterval = null;
-  }
-}
+const SUPABASE_LAST_SYNC_KEY = 'STORE_SUPABASE_LAST_SYNC_V7';
+let supabaseRealtimeChannel = null;
 
-function initGlobalRealtimeSyncEngine() {
-  if (window.globalFastRealtimeTimer) {
-    clearInterval(window.globalFastRealtimeTimer);
-    window.globalFastRealtimeTimer = null;
-  }
-  window.globalFastRealtimeTimer = setInterval(() => {
-    if (typeof syncAllDataToCache === 'function') {
-      syncAllDataToCache().catch(() => {});
-    }
-  }, 3000);
-}
+// ==========================================
+// 1. SUPABASE REALTIME ENGINE (EVENT-DRIVEN)
+// ==========================================
+function initSupabaseRealtimeEngine() {
+  if (typeof supabase === 'undefined' || !supabase) return;
 
-async function onGlobalDataChangedRealtime(source) {
+  if (supabaseRealtimeChannel) {
+    try {
+      supabase.removeChannel(supabaseRealtimeChannel);
+    } catch (e) {}
+    supabaseRealtimeChannel = null;
+  }
+
   try {
-    if (typeof syncAllDataToCache === 'function') {
-      await syncAllDataToCache();
-    }
-    if (typeof pullCentralCloudDB === 'function') {
-      await pullCentralCloudDB();
-    }
-
-    if (currentUser) {
-      if (typeof loadDashboard === 'function') loadDashboard();
-      if (typeof loadRiwayat === 'function') loadRiwayat();
-      const hasCheckedMaster = document.querySelectorAll('.masterDbCheckbox:checked').length > 0;
-      if (!hasCheckedMaster && typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) {
-        loadMasterDbTable();
-      }
-      if (typeof loadUsersManagement === 'function' && document.getElementById('userTableBody')) loadUsersManagement();
-      if (typeof loadDaftarTokoModal === 'function' && document.getElementById('daftarTokoTableBody')) loadDaftarTokoModal();
-      if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
-      if (typeof refreshActiveChatUI === 'function') refreshActiveChatUI();
-      if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-      if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
-    }
-  } catch(e) {
-    console.warn('[REALTIME AUTO SYNC NOTICE]:', e);
+    supabaseRealtimeChannel = supabase
+      .channel('public_realtime_sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'permintaan_toko' },
+        (payload) => {
+          handleRealtimePermintaanToko(payload);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        (payload) => {
+          handleRealtimeNotification(payload);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_messages' },
+        (payload) => {
+          handleRealtimeChatMessage(payload);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users' },
+        (payload) => {
+          handleRealtimeUserChange(payload);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'toko_list' },
+        (payload) => {
+          handleRealtimeStoreChange(payload);
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          window.isSupabaseOnline = true;
+          updateGlobalConnectionDotStatus();
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          window.isSupabaseOnline = false;
+          updateGlobalConnectionDotStatus();
+        }
+      });
+  } catch (err) {
+    console.warn('[SUPABASE REALTIME INIT NOTICE]:', err);
   }
 }
-window.initGlobalRealtimeSyncEngine = initGlobalRealtimeSyncEngine;
+window.initSupabaseRealtimeEngine = initSupabaseRealtimeEngine;
+
+// Helper: Format raw row from Supabase permintaan_toko
+function formatSupabaseRequestRow(row) {
+  if (!row) return null;
+  const noSurat = row.no_surat || row.noSurat || '';
+  if (!noSurat) return null;
+
+  return {
+    noSurat: noSurat,
+    tanggal: row.tanggal || '',
+    toko: row.toko || '',
+    area: row.area || 'BDG',
+    jenis: row.jenis || '',
+    catatan: row.catatan || '',
+    items: Array.isArray(row.items) ? row.items : (typeof row.items === 'string' ? JSON.parse(row.items || '[]') : []),
+    photos: parsePhotosArray(row.photos || row.foto),
+    artemisPhotos: parsePhotosArray(row.artemis_photos || row.artemisPhotos),
+    status: row.status || 'PENDING',
+    serviceApprove: row.service_approve !== undefined ? !!row.service_approve : !!row.serviceApprove,
+    serviceUserName: row.service_user_name || row.serviceUserName || '',
+    serviceTTD: row.service_ttd || row.serviceTTD || '',
+    dmUserName: row.dm_user_name || row.dmUserName || '',
+    dmTTD: row.dm_ttd || row.dmTTD || '',
+    createdBy: row.created_by || row.createdBy || '',
+    createdAt: row.created_at || row.createdAt || '',
+    userId: row.user_id || row.userId || '',
+    log: Array.isArray(row.log) ? row.log : (typeof row.log === 'string' ? JSON.parse(row.log || '[]') : [])
+  };
+}
+
+// Check if user has permission to see request
+function isRequestVisibleToCurrentUser(r) {
+  if (!currentUser || !r) return true;
+  const cat = String(currentUser.category || '').toUpperCase();
+  const userArea = String(currentUser.area || '').toUpperCase();
+
+  if (cat === 'ADMIN') return true;
+  if (cat === 'SERVICE') {
+    if (userArea === 'ALL' || userArea === 'TSM') return true;
+    return String(r.area || '').toUpperCase() === userArea;
+  }
+  if (cat === 'DM') {
+    if (userArea === 'ALL') return true;
+    return String(r.area || '').toUpperCase() === userArea;
+  }
+  if (cat === 'TOKO') {
+    if (r.userId && currentUser.id && String(r.userId) === String(currentUser.id)) return true;
+    if (r.toko && currentUser.fullName && String(r.toko).trim().toUpperCase() === String(currentUser.fullName).trim().toUpperCase()) return true;
+    return false;
+  }
+  return true;
+}
+
+// REALTIME: Handle permintaan_toko changes (INSERT, UPDATE, DELETE)
+function handleRealtimePermintaanToko(payload) {
+  try {
+    const eventType = payload.eventType;
+    const requests = getRequestsFromDB();
+
+    if (eventType === 'INSERT') {
+      const newRow = formatSupabaseRequestRow(payload.new);
+      if (newRow && !newRow.noSurat.startsWith('__SYSTEM_') && isRequestVisibleToCurrentUser(newRow)) {
+        const existsIdx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(newRow.noSurat).trim().toUpperCase());
+        if (existsIdx === -1) {
+          requests.unshift(newRow);
+        } else {
+          requests[existsIdx] = { ...requests[existsIdx], ...newRow };
+        }
+        appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
+        refreshRealtimeUI();
+      }
+    } else if (eventType === 'UPDATE') {
+      const updatedRow = formatSupabaseRequestRow(payload.new);
+      if (updatedRow && !updatedRow.noSurat.startsWith('__SYSTEM_')) {
+        const idx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(updatedRow.noSurat).trim().toUpperCase());
+        if (idx !== -1) {
+          requests[idx] = { ...requests[idx], ...updatedRow };
+          appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
+          refreshRealtimeUI();
+        } else if (isRequestVisibleToCurrentUser(updatedRow)) {
+          requests.unshift(updatedRow);
+          appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
+          refreshRealtimeUI();
+        }
+      }
+    } else if (eventType === 'DELETE') {
+      const delNoSurat = payload.old ? (payload.old.no_surat || payload.old.noSurat || payload.old.id) : null;
+      if (delNoSurat) {
+        const filtered = requests.filter(r => r && String(r.noSurat).trim().toUpperCase() !== String(delNoSurat).trim().toUpperCase());
+        appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(filtered));
+        refreshRealtimeUI();
+      }
+    }
+  } catch (err) {
+    console.warn('[REALTIME PERMINTAAN ERROR]:', err);
+  }
+}
+
+// REALTIME: Handle notifications changes
+function handleRealtimeNotification(payload) {
+  try {
+    const eventType = payload.eventType;
+    let notifs = getSystemNotifications();
+
+    if (eventType === 'INSERT' && payload.new) {
+      const n = payload.new;
+      const parsed = {
+        id: n.id,
+        targetRoles: n.target_roles || n.targetRoles || [],
+        targetArea: n.target_area || n.targetArea || 'ALL',
+        message: n.message,
+        noSurat: n.no_surat || n.noSurat || '',
+        time: n.time || `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`,
+        readBy: n.read_by || n.readBy || []
+      };
+
+      if (!notifs.some(x => x.id === parsed.id)) {
+        notifs.unshift(parsed);
+        appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
+        try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs)); } catch(e) {}
+        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+        const popupNotifList = document.getElementById('popupNotifList');
+        if (popupNotifList && (popupNotifList.classList.contains('show') || popupNotifList.style.display === 'flex')) {
+          if (typeof loadNotificationList === 'function') loadNotificationList();
+        }
+      }
+    } else if (eventType === 'UPDATE' && payload.new) {
+      const n = payload.new;
+      const idx = notifs.findIndex(x => x.id === n.id);
+      if (idx !== -1) {
+        notifs[idx] = { ...notifs[idx], ...n };
+        appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
+        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+      }
+    } else if (eventType === 'DELETE' && payload.old) {
+      notifs = notifs.filter(x => x.id !== payload.old.id);
+      appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(notifs));
+      if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+    }
+  } catch (err) {
+    console.warn('[REALTIME NOTIF ERROR]:', err);
+  }
+}
+
+// REALTIME: Handle chat message changes
+function handleRealtimeChatMessage(payload) {
+  try {
+    const eventType = payload.eventType;
+    let chats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+
+    if (eventType === 'INSERT' && payload.new) {
+      const c = payload.new;
+      if (!chats.some(x => x.id === c.id)) {
+        chats.push(c);
+        appStorage.setItem(CHAT_DB_KEY, JSON.stringify(chats));
+        try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(chats)); } catch(e) {}
+        if (typeof refreshActiveChatUI === 'function') refreshActiveChatUI();
+        if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+      }
+    }
+  } catch(e) {}
+}
+
+// REALTIME: Handle user changes
+function handleRealtimeUserChange(payload) {
+  try {
+    const eventType = payload.eventType;
+    let users = getUsersFromDB();
+
+    if ((eventType === 'INSERT' || eventType === 'UPDATE') && payload.new) {
+      const u = payload.new;
+      const formatted = {
+        id: u.id,
+        username: String(u.username || '').trim(),
+        password: String(u.password || '').trim(),
+        fullName: String(u.full_name || u.fullName || '').trim(),
+        storeCode: String(u.store_code || u.storeCode || '').trim(),
+        phone: String(u.phone || '').trim(),
+        category: String(u.category || 'TOKO').trim().toUpperCase(),
+        area: String(u.area || 'BDG').trim().toUpperCase(),
+        createdAt: u.created_at || (typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '')
+      };
+
+      const idx = users.findIndex(x => x && (x.id === formatted.id || String(x.username).toUpperCase() === formatted.username.toUpperCase()));
+      if (idx !== -1) {
+        users[idx] = { ...users[idx], ...formatted };
+      } else {
+        users.push(formatted);
+      }
+      appStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
+      try { localStorage.setItem(USERS_DB_KEY, JSON.stringify(users)); } catch(e) {}
+      if (typeof loadUsersManagement === 'function' && document.getElementById('userTableBody')) loadUsersManagement();
+    } else if (eventType === 'DELETE' && payload.old) {
+      users = users.filter(x => x.id !== payload.old.id && String(x.username).toUpperCase() !== String(payload.old.username).toUpperCase());
+      appStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
+      try { localStorage.setItem(USERS_DB_KEY, JSON.stringify(users)); } catch(e) {}
+      if (typeof loadUsersManagement === 'function' && document.getElementById('userTableBody')) loadUsersManagement();
+    }
+  } catch(e) {}
+}
+
+// REALTIME: Handle store changes
+function handleRealtimeStoreChange(payload) {
+  try {
+    const eventType = payload.eventType;
+    let stores = typeof getStoresFromDB === 'function' ? getStoresFromDB() : [];
+
+    if ((eventType === 'INSERT' || eventType === 'UPDATE') && payload.new) {
+      const s = payload.new;
+      const formatted = {
+        id: s.id || `STK-${s.store_code || Date.now()}`,
+        fullName: String(s.full_name || s.fullName || '').trim(),
+        area: String(s.area || 'BDG').trim().toUpperCase(),
+        storeCode: String(s.store_code || s.storeCode || '').trim(),
+        createdBy: String(s.created_by || s.createdBy || 'ADMIN').trim()
+      };
+
+      const idx = stores.findIndex(x => x.id === formatted.id || (x.fullName && x.fullName.toUpperCase() === formatted.fullName.toUpperCase()));
+      if (idx !== -1) {
+        stores[idx] = { ...stores[idx], ...formatted };
+      } else {
+        stores.push(formatted);
+      }
+      appStorage.setItem(STORES_DB_KEY, JSON.stringify(stores));
+      try { localStorage.setItem(STORES_DB_KEY, JSON.stringify(stores)); } catch(e) {}
+      if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
+      if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
+    } else if (eventType === 'DELETE' && payload.old) {
+      stores = stores.filter(x => x.id !== payload.old.id && String(x.fullName).toUpperCase() !== String(payload.old.full_name).toUpperCase());
+      appStorage.setItem(STORES_DB_KEY, JSON.stringify(stores));
+      try { localStorage.setItem(STORES_DB_KEY, JSON.stringify(stores)); } catch(e) {}
+      if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
+      if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
+    }
+  } catch(e) {}
+}
+
+function refreshRealtimeUI() {
+  if (currentUser) {
+    if (typeof loadDashboard === 'function') loadDashboard();
+    if (typeof loadRiwayat === 'function') loadRiwayat();
+    const hasCheckedMaster = document.querySelectorAll('.masterDbCheckbox:checked').length > 0;
+    if (!hasCheckedMaster && typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) {
+      loadMasterDbTable();
+    }
+    if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+  }
+}
+
+// =======================================================================
+// 2. INCREMENTAL DELTA SYNC USING updated_at (0 KB INITIAL BANDWIDTH)
+// =======================================================================
+async function syncSupabaseIncremental() {
+  if (typeof supabase === 'undefined' || !supabase) return;
+
+  try {
+    const lastSync = appStorage.getItem(SUPABASE_LAST_SYNC_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(SUPABASE_LAST_SYNC_KEY) : null);
+    
+    // If no previous sync timestamp exists, perform full initial sync
+    if (!lastSync) {
+      await syncAllDataToCache();
+      const nowIso = new Date().toISOString();
+      appStorage.setItem(SUPABASE_LAST_SYNC_KEY, nowIso);
+      try { localStorage.setItem(SUPABASE_LAST_SYNC_KEY, nowIso); } catch(e) {}
+      return;
+    }
+
+    // Light Delta Query to Supabase for modified/new rows
+    const { data: deltaReqs, error } = await supabase
+      .from('permintaan_toko')
+      .select('*')
+      .gt('updated_at', lastSync);
+
+    if (!error && Array.isArray(deltaReqs) && deltaReqs.length > 0) {
+      const currentReqs = getRequestsFromDB();
+      let hasChanges = false;
+
+      deltaReqs.forEach(row => {
+        const formatted = formatSupabaseRequestRow(row);
+        if (formatted && !formatted.noSurat.startsWith('__SYSTEM_') && isRequestVisibleToCurrentUser(formatted)) {
+          const idx = currentReqs.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(formatted.noSurat).trim().toUpperCase());
+          if (idx !== -1) {
+            currentReqs[idx] = { ...currentReqs[idx], ...formatted };
+          } else {
+            currentReqs.unshift(formatted);
+          }
+          hasChanges = true;
+        }
+      });
+
+      if (hasChanges) {
+        currentReqs.sort((a,b) => (b.noSurat || '').localeCompare(a.noSurat || ''));
+        appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(currentReqs));
+        refreshRealtimeUI();
+      }
+    }
+
+    // Delta Query for Notifications
+    try {
+      const { data: deltaNotifs } = await supabase
+        .from('notifications')
+        .select('*')
+        .gt('updated_at', lastSync);
+
+      if (Array.isArray(deltaNotifs) && deltaNotifs.length > 0) {
+        const currentNotifs = getSystemNotifications();
+        let notifUpdated = false;
+
+        deltaNotifs.forEach(n => {
+          const parsed = {
+            id: n.id,
+            targetRoles: n.target_roles || n.targetRoles || [],
+            targetArea: n.target_area || n.targetArea || 'ALL',
+            message: n.message,
+            noSurat: n.no_surat || n.noSurat || '',
+            time: n.time || `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`,
+            readBy: n.read_by || n.readBy || []
+          };
+          const idx = currentNotifs.findIndex(x => x.id === parsed.id);
+          if (idx !== -1) {
+            currentNotifs[idx] = { ...currentNotifs[idx], ...parsed };
+          } else {
+            currentNotifs.unshift(parsed);
+          }
+          notifUpdated = true;
+        });
+
+        if (notifUpdated) {
+          appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(currentNotifs));
+          try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(currentNotifs)); } catch(e) {}
+          if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+        }
+      }
+    } catch (e) {}
+
+    // Update last sync timestamp
+    const newSyncTime = new Date().toISOString();
+    appStorage.setItem(SUPABASE_LAST_SYNC_KEY, newSyncTime);
+    try { localStorage.setItem(SUPABASE_LAST_SYNC_KEY, newSyncTime); } catch(e) {}
+  } catch (err) {
+    console.warn('[INCREMENTAL DELTA SYNC NOTICE]:', err);
+  }
+}
+window.syncSupabaseIncremental = syncSupabaseIncremental;
+
+// Full Initial Sync (Used when local cache is empty)
+async function syncAllDataToCache() {
+  if (typeof supabase === 'undefined' || !supabase) return;
+  try {
+    await syncSupabaseRequestsToLocalCache();
+    await syncSupabaseUsersToLocalCache();
+    await syncSupabaseNotifsAndChatToLocalCache();
+    await syncSupabaseStoresToLocalCache();
+    await syncSupabaseLookupToLocalCache();
+    await syncSupabaseThemeToLocalCache();
+
+    const nowIso = new Date().toISOString();
+    appStorage.setItem(SUPABASE_LAST_SYNC_KEY, nowIso);
+    try { localStorage.setItem(SUPABASE_LAST_SYNC_KEY, nowIso); } catch(e) {}
+  } catch (err) {
+    console.warn('[FULL SYNC NOTICE]:', err);
+  }
+}
+window.syncAllDataToCache = syncAllDataToCache;
 
 async function syncSupabaseRequestsToLocalCache() {
   if (typeof supabase === 'undefined' || !supabase) return;
   try {
-    const { data, error } = await supabase.from('permintaan_toko').select('*');
+    let query = supabase.from('permintaan_toko').select('*');
+
+    // Role-based server filter if currentUser is set
+    if (currentUser) {
+      const cat = String(currentUser.category || '').toUpperCase();
+      const userArea = String(currentUser.area || '').toUpperCase();
+
+      if (cat === 'TOKO') {
+        query = query.or(`user_id.eq.${currentUser.id},toko.ilike.%${currentUser.fullName}%`);
+      } else if (cat === 'SERVICE') {
+        if (userArea !== 'ALL' && userArea !== 'TSM') {
+          query = query.eq('area', userArea);
+        }
+      } else if (cat === 'DM') {
+        if (userArea !== 'ALL') {
+          query = query.eq('area', userArea);
+        }
+      }
+    }
+
+    const { data, error } = await query;
     if (!error && Array.isArray(data)) {
       const delReqs = new Set(
         (JSON.parse(appStorage.getItem(DELETED_REQUESTS_KEY) || '[]') || [])
           .filter(Boolean)
-          .map(v => String(v).trim())
+          .map(v => String(v).trim().toUpperCase())
       );
 
       const freshReqs = data
         .filter(row => {
           const ns = String(row.no_surat || row.noSurat || '').trim();
-          return ns && !ns.startsWith('__SYSTEM_') && !delReqs.has(ns);
+          return ns && !ns.startsWith('__SYSTEM_') && !delReqs.has(ns.toUpperCase());
         })
-        .map(row => ({
-          noSurat: row.no_surat || row.noSurat,
-          tanggal: row.tanggal,
-          toko: row.toko,
-          area: row.area,
-          jenis: row.jenis,
-          catatan: row.catatan || '',
-          items: row.items || [],
-          photos: parsePhotosArray(row.photos || row.foto),
-          status: row.status || 'PENDING',
-          serviceApprove: row.service_approve !== undefined ? row.service_approve : row.serviceApprove,
-          createdBy: row.created_by || row.createdBy,
-          createdAt: row.created_at || row.createdAt,
-          userId: row.user_id || row.userId,
-          log: row.log || []
-        }));
+        .map(row => formatSupabaseRequestRow(row))
+        .filter(Boolean);
 
       freshReqs.sort((a,b) => (b.noSurat || '').localeCompare(a.noSurat || ''));
       appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(freshReqs));
-
-      if (typeof currentUser !== 'undefined' && currentUser) {
-        if (typeof loadDashboard === 'function') loadDashboard();
-        if (typeof loadRiwayat === 'function') loadRiwayat();
-        if (typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) loadMasterDbTable();
-        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-      }
+      refreshRealtimeUI();
     }
   } catch (e) {
     console.warn('[SUPABASE REQUESTS SYNC NOTICE]:', e);
@@ -1876,7 +2256,7 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
           targetArea: n.target_area || n.targetArea || 'ALL',
           message: n.message,
           noSurat: n.no_surat || n.noSurat || '',
-          time: n.time,
+          time: n.time || '',
           readBy: n.read_by || n.readBy || []
         }));
         if (parsedNotifs.length > 0) {
@@ -1886,111 +2266,13 @@ async function syncSupabaseNotifsAndChatToLocalCache() {
       }
     } catch(e) {}
 
-    const { data, error } = await supabase
-      .from('permintaan_toko')
-      .select('*')
-      .in('no_surat', ['__SYSTEM_NOTIFICATIONS__', '__SYSTEM_CHAT_MESSAGES__', '__SYSTEM_TTD_MAP__', '__SYSTEM_GLOBAL_THEME__']);
-
-    if (!error && Array.isArray(data)) {
-      let notifChanged = false;
-      let chatChanged = false;
-
-      data.forEach(row => {
-        const ns = row.no_surat || row.noSurat || '';
-        if (ns === '__SYSTEM_NOTIFICATIONS__' && row.catatan) {
-          try {
-            appStorage.setItem(NOTIFICATIONS_DB_KEY, row.catatan);
-            try { localStorage.setItem(NOTIFICATIONS_DB_KEY, row.catatan); } catch(e) {}
-            notifChanged = true;
-          } catch(e) {}
-        } else if (ns === '__SYSTEM_CHAT_MESSAGES__' && row.catatan) {
-          try {
-            const chats = JSON.parse(row.catatan);
-            if (Array.isArray(chats)) {
-              appStorage.setItem(CHAT_DB_KEY, JSON.stringify(chats));
-              try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(chats)); } catch(e) {}
-
-              // REBUILD CHAT ROOMS LOCALLY FROM SUPABASE CHAT MESSAGES
-              const roomMap = new Map();
-              chats.forEach(c => {
-                const rName = c.room || ('ROOM_' + (c.user || '').toUpperCase());
-                const rUser = c.user || c.senderUsername || 'USER';
-                const lastMsg = (c.pengirim === 'SERVICE' ? 'SERVICE TSM: ' : '') + c.pesan;
-                const isUnreadUser = (c.pengirim === 'SERVICE' && !c.isRead) ? 1 : 0;
-                const isUnreadAdmin = (c.pengirim === 'USER' && !c.isRead) ? 1 : 0;
-
-                if (!roomMap.has(rName)) {
-                  roomMap.set(rName, {
-                    room: rName,
-                    user: rUser,
-                    userArea: c.userArea || 'BDG',
-                    last: lastMsg,
-                    unreadAdmin: isUnreadAdmin,
-                    unreadUser: isUnreadUser,
-                    lastTime: c.tanggal
-                  });
-                } else {
-                  const rm = roomMap.get(rName);
-                  rm.last = lastMsg;
-                  rm.lastTime = c.tanggal;
-                  if (isUnreadAdmin) rm.unreadAdmin = (rm.unreadAdmin || 0) + 1;
-                  if (isUnreadUser) rm.unreadUser = (rm.unreadUser || 0) + 1;
-                }
-              });
-
-              const roomList = Array.from(roomMap.values());
-              appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(roomList));
-              try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(roomList)); } catch(e) {}
-              chatChanged = true;
-            }
-          } catch(e) {}
-        } else if (ns === '__SYSTEM_TTD_MAP__' && row.catatan) {
-          try {
-            const cloudTtd = JSON.parse(row.catatan);
-            if (cloudTtd && typeof cloudTtd === 'object') {
-              const localTtd = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-              const mergedTtd = { ...localTtd, ...cloudTtd };
-              appStorage.setItem(TTD_DB_KEY, JSON.stringify(mergedTtd));
-              try { localStorage.setItem('APP_USER_TTD_MAP', JSON.stringify(mergedTtd)); } catch(e) {}
-            }
-          } catch(e) {}
-        } else if (ns === '__SYSTEM_GLOBAL_THEME__' && row.catatan) {
-          try {
-            const themeObj = JSON.parse(row.catatan);
-            if (themeObj && themeObj.theme) {
-              const cloudTime = Number(themeObj.time || 0);
-              const lastAdminTime = Number(appStorage.getItem(LAST_ADMIN_THEME_TIME_KEY) || 0);
-              const userThemeTime = Number(appStorage.getItem('STORE_USER_THEME_TIME') || 0);
-
-              if (cloudTime > lastAdminTime) {
-                appStorage.setItem(GLOBAL_THEME_KEY, themeObj.theme);
-                appStorage.setItem(THEME_KEY, themeObj.theme);
-                appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(cloudTime));
-                try { localStorage.setItem('APP_SELECTED_THEME', themeObj.theme); } catch(e) {}
-                if (typeof updateBodyClasses === 'function') {
-                  updateBodyClasses(themeObj.theme);
-                }
-              }
-            }
-          } catch(e) {}
-        }
-      });
-
-      // TRIGGER REALTIME UI UPDATES ACROSS ALL CONNECTED DEVICES
-      if (notifChanged) {
-        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-        const popupNotifList = document.getElementById('popupNotifList');
-        if (popupNotifList && (popupNotifList.classList.contains('show') || popupNotifList.style.display === 'flex')) {
-          if (typeof loadNotificationList === 'function') loadNotificationList();
-        }
-      }
-      if (chatChanged) {
-        if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
-        if (typeof refreshActiveChatUI === 'function') refreshActiveChatUI();
-      }
+    const { data: chatData } = await supabase.from('chat_messages').select('*');
+    if (Array.isArray(chatData) && chatData.length > 0) {
+      appStorage.setItem(CHAT_DB_KEY, JSON.stringify(chatData));
+      try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(chatData)); } catch(e) {}
     }
   } catch (err) {
-    console.warn('[SUPABASE SYSTEM ROW SYNC NOTICE]:', err);
+    console.warn('[SUPABASE NOTIF & CHAT SYNC NOTICE]:', err);
   }
 }
 
@@ -1998,18 +2280,41 @@ async function syncSupabaseStoresToLocalCache() {
   if (typeof supabase === 'undefined' || !supabase) return;
   try {
     const { data: supaStores, error } = await supabase.from('toko_list').select('*');
-    if (!error && Array.isArray(supaStores) && supaStores.length > 0) {
-      const formattedStores = supaStores.map(s => ({
-        id: s.id || `STK-${s.store_code || Date.now()}`,
-        fullName: String(s.full_name || s.fullName || '').trim(),
-        area: String(s.area || 'BDG').trim().toUpperCase(),
-        storeCode: String(s.store_code || s.storeCode || '').trim(),
-        createdBy: String(s.created_by || s.createdBy || 'ADMIN').trim()
-      })).filter(s => s.fullName);
+    if (!error && Array.isArray(supaStores)) {
+      const delStores = new Set(
+        (JSON.parse(appStorage.getItem(DELETED_STORES_KEY) || '[]') || [])
+          .filter(Boolean)
+          .map(v => String(v).trim().toUpperCase())
+      );
+      const delUsers = new Set(
+        (JSON.parse(appStorage.getItem(DELETED_USERS_KEY) || '[]') || [])
+          .filter(Boolean)
+          .map(v => String(v).trim().toUpperCase())
+      );
 
-      if (formattedStores.length > 0) {
-        appStorage.setItem(STORES_DB_KEY, JSON.stringify(formattedStores));
-        try { localStorage.setItem(STORES_DB_KEY, JSON.stringify(formattedStores)); } catch(e) {}
+      const formattedStores = supaStores
+        .map(s => ({
+          id: s.id || `STK-${s.store_code || Date.now()}`,
+          fullName: String(s.full_name || s.fullName || '').trim(),
+          area: String(s.area || 'BDG').trim().toUpperCase(),
+          storeCode: String(s.store_code || s.storeCode || '').trim(),
+          createdBy: String(s.created_by || s.createdBy || 'ADMIN').trim()
+        }))
+        .filter(s => {
+          if (!s.fullName) return false;
+          const sId = String(s.id || '').toUpperCase();
+          const sName = s.fullName.toUpperCase();
+          const sKey = `${sName}_${s.area}`;
+          if (delStores.has(sId) || delStores.has(sName) || delStores.has(sKey)) return false;
+          if (delUsers.has(sId) || delUsers.has(sName)) return false;
+          return true;
+        });
+
+      appStorage.setItem(STORES_DB_KEY, JSON.stringify(formattedStores));
+      try { localStorage.setItem(STORES_DB_KEY, JSON.stringify(formattedStores)); } catch(e) {}
+
+      if (typeof updateStoreDropdownOptions === 'function') {
+        updateStoreDropdownOptions();
       }
     }
   } catch (err) {
@@ -2021,26 +2326,14 @@ window.syncSupabaseStoresToLocalCache = syncSupabaseStoresToLocalCache;
 async function syncSupabaseLookupToLocalCache() {
   if (typeof supabase === 'undefined' || !supabase) return;
   try {
-    const cloudMap = {};
-    const { data: sysData } = await supabase
-      .from('permintaan_toko')
-      .select('*')
-      .eq('no_surat', '__SYSTEM_KODE_UNIT_MAP__');
-
-    if (Array.isArray(sysData) && sysData.length > 0 && sysData[0].catatan) {
-      try {
-        const sysMap = JSON.parse(sysData[0].catatan);
-        if (sysMap && typeof sysMap === 'object') {
-          Object.assign(cloudMap, sysMap);
+    const { data: lookupData } = await supabase.from('lookup').select('*');
+    if (Array.isArray(lookupData)) {
+      lookupData.forEach(item => {
+        if (item.key === 'kodeUnitMap' && item.value) {
+          appStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(item.value));
+          try { localStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(item.value)); } catch(e) {}
         }
-      } catch(e) {}
-    }
-
-    if (Object.keys(cloudMap).length > 0) {
-      const existingMap = JSON.parse(appStorage.getItem(KODE_UNIT_MAP_KEY) || '{}');
-      const mergedMap = { ...existingMap, ...cloudMap };
-      appStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(mergedMap));
-      try { localStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(mergedMap)); } catch(e) {}
+      });
     }
   } catch (err) {
     console.warn('[SUPABASE LOOKUP SYNC NOTICE]:', err);
@@ -2051,40 +2344,14 @@ window.syncSupabaseLookupToLocalCache = syncSupabaseLookupToLocalCache;
 async function syncSupabaseThemeToLocalCache() {
   if (typeof supabase === 'undefined' || !supabase) return;
   try {
-    let cloudTheme = null;
-    let cloudTime = 0;
-
-    const { data: sysData } = await supabase
-      .from('permintaan_toko')
-      .select('*')
-      .eq('no_surat', '__SYSTEM_GLOBAL_THEME__');
-
-    if (Array.isArray(sysData) && sysData.length > 0 && sysData[0].catatan) {
-      try {
-        const themeObj = JSON.parse(sysData[0].catatan);
-        if (themeObj && themeObj.theme) {
-          cloudTheme = themeObj.theme;
-          cloudTime = Number(themeObj.time || 0);
-        }
-      } catch(e) {}
-    }
-
-    if (cloudTheme) {
-      const lastAdminTime = Number(appStorage.getItem(LAST_ADMIN_THEME_TIME_KEY) || 0);
-      const userThemeTime = Number(appStorage.getItem('STORE_USER_THEME_TIME') || 0);
-
-      if (cloudTime > lastAdminTime) {
-        appStorage.setItem(GLOBAL_THEME_KEY, cloudTheme);
-        appStorage.setItem(THEME_KEY, cloudTheme);
-        appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(cloudTime));
-        try { localStorage.setItem('APP_SELECTED_THEME', cloudTheme); } catch(e) {}
-
-        const idx = THEME_MODES.findIndex(m => m.id === cloudTheme);
-        if (idx !== -1) currentThemeIndex = idx;
-
-        if (typeof updateBodyClasses === 'function') {
-          updateBodyClasses(cloudTheme);
-        }
+    const { data: sysData } = await supabase.from('lookup').select('*').eq('key', 'global_theme').maybeSingle();
+    if (sysData && sysData.value && sysData.value.theme) {
+      const cloudTheme = sysData.value.theme;
+      appStorage.setItem(GLOBAL_THEME_KEY, cloudTheme);
+      appStorage.setItem(THEME_KEY, cloudTheme);
+      try { localStorage.setItem('APP_SELECTED_THEME', cloudTheme); } catch(e) {}
+      if (typeof updateBodyClasses === 'function') {
+        updateBodyClasses(cloudTheme);
       }
     }
   } catch (err) {
@@ -2092,50 +2359,6 @@ async function syncSupabaseThemeToLocalCache() {
   }
 }
 window.syncSupabaseThemeToLocalCache = syncSupabaseThemeToLocalCache;
-
-async function syncAllDataToCache() {
-  try {
-    await syncSupabaseRequestsToLocalCache();
-    await syncSupabaseUsersToLocalCache();
-    await syncSupabaseNotifsAndChatToLocalCache();
-    await syncSupabaseStoresToLocalCache();
-    await syncSupabaseLookupToLocalCache();
-    await syncSupabaseThemeToLocalCache();
-
-    if (dbFirestore) {
-      try {
-        // 1. SYNC USERS MASTER DATA
-        const userSnapshot = await dbFirestore.collection('users').get();
-        if (!userSnapshot.empty) {
-          const usrs = [];
-          userSnapshot.forEach(doc => usrs.push(doc.data()));
-          if (usrs.length > 0) {
-            appStorage.setItem(USERS_DB_KEY, JSON.stringify(usrs));
-          }
-        }
-
-        // 3. SYNC APP SETTINGS, THEMES, TOKENS
-        const configDoc = await dbFirestore.collection('app_settings').doc('config').get();
-        if (configDoc.exists) {
-          const cfg = configDoc.data() || {};
-          if (cfg.fonteToken) appStorage.setItem(FONTE_TOKEN_KEY, cfg.fonteToken);
-          if (cfg.adminReminder !== undefined) appStorage.setItem(ADMIN_REMINDER_KEY, String(cfg.adminReminder));
-          if (cfg.adminReminderTime) appStorage.setItem(ADMIN_REMINDER_TIME_KEY, cfg.adminReminderTime);
-          if (cfg.featurePhotos !== undefined) appStorage.setItem(FEATURE_PHOTOS_KEY, String(cfg.featurePhotos));
-          if (cfg.kodeUnitMap) {
-            const existingMap = JSON.parse(appStorage.getItem(KODE_UNIT_MAP_KEY) || '{}');
-            const mergedMap = { ...existingMap, ...cfg.kodeUnitMap };
-            appStorage.setItem(KODE_UNIT_MAP_KEY, JSON.stringify(mergedMap));
-          }
-        }
-      } catch (err) {
-        console.warn("[FIREBASE SYNC NOTICE]:", err.message);
-      }
-    }
-  } catch (err) {
-    console.error("Sync error:", err);
-  }
-}
 
 async function pushCentralCloudDB() {
   try {
@@ -2319,12 +2542,8 @@ async function pushCentralCloudDB() {
         console.warn("[FIREBASE REALTIME PUSH NOTICE]:", err.message);
       }
     }
-
-    await syncAllDataToCache();
-  } finally {
-    setTimeout(() => {
-      hideLoading();
-    }, 300);
+  } catch (err) {
+    console.warn('[PUSH CENTRAL CLOUD NOTICE]:', err);
   }
 }
 
@@ -2621,16 +2840,45 @@ function getStoresFromDB() {
 
   if (!Array.isArray(stores)) stores = [];
 
+  const delStores = new Set(
+    (JSON.parse(appStorage.getItem(DELETED_STORES_KEY) || '[]') || [])
+      .filter(Boolean)
+      .map(v => String(v).trim().toUpperCase())
+  );
+  const delUsers = new Set(
+    (JSON.parse(appStorage.getItem(DELETED_USERS_KEY) || '[]') || [])
+      .filter(Boolean)
+      .map(v => String(v).trim().toUpperCase())
+  );
+
+  // Filter out any stores that were deleted
+  stores = stores.filter(s => {
+    if (!s || !s.fullName) return false;
+    const sId = String(s.id || '').toUpperCase();
+    const sName = String(s.fullName).trim().toUpperCase();
+    const sArea = String(s.area || '').trim().toUpperCase();
+    const sKey = `${sName}_${sArea}`;
+    if (delStores.has(sId) || delStores.has(sName) || delStores.has(sKey)) return false;
+    if (delUsers.has(sId) || delUsers.has(sName)) return false;
+    return true;
+  });
+
   const users = (typeof getUsersFromDB === 'function' ? getUsersFromDB() : []);
   users.forEach(u => {
     if (u && u.category === 'TOKO' && u.fullName) {
-      const exists = stores.some(s => s && s.fullName && s.fullName.trim().toUpperCase() === u.fullName.trim().toUpperCase());
+      const uName = String(u.fullName).trim().toUpperCase();
+      const uArea = String(u.area || 'BDG').trim().toUpperCase();
+      const uKey = `${uName}_${uArea}`;
+      if (delStores.has(uName) || delStores.has(uKey) || delUsers.has(String(u.id || '').toUpperCase()) || delUsers.has(String(u.username || '').toUpperCase())) {
+        return;
+      }
+      const exists = stores.some(s => s && s.fullName && s.fullName.trim().toUpperCase() === uName && (!s.area || s.area === uArea));
       if (!exists) {
         stores.push({
           id: u.id || `STK-${u.username}`,
           fullName: u.fullName,
           area: u.area || 'BDG',
-          storeCode: u.storeCode || '',
+          storeCode: u.storeCode || generateStoreCode(u.fullName, u.area),
           createdBy: 'SYSTEM'
         });
       }
@@ -3145,11 +3393,41 @@ function toggleTheme() {
 
   if (currentUser) {
     currentUser.theme = t.id;
-    if (typeof supabase !== 'undefined' && supabase && currentUser.id) {
-      supabase.from('users').update({ theme: t.id }).eq('id', currentUser.id).then(({ error }) => {
-        if (error) console.warn('[SUPABASE USER THEME NOTICE]:', error.message);
-        else console.log('⚡ [SUPABASE USER THEME SAVED]:', currentUser.username, t.id);
-      });
+  }
+
+  // JIKA AKUN YANG LOGIN ADALAH ADMIN, DISINKRONKAN TEMA KE SELURUH PERANGKAT REALTIME VIA CLOUD
+  const isAdminUser = currentUser && (
+    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
+    String(currentUser.username || '').toUpperCase() === 'ADMIN'
+  );
+
+  if (isAdminUser) {
+    appStorage.setItem(GLOBAL_THEME_KEY, t.id);
+    appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(now));
+
+    if (typeof supabase !== 'undefined' && supabase) {
+      const themePayload = {
+        id: '__SYSTEM_GLOBAL_THEME__',
+        no_surat: '__SYSTEM_GLOBAL_THEME__',
+        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+        toko: 'SYSTEM',
+        area: 'ALL',
+        jenis: 'SYSTEM',
+        catatan: JSON.stringify({ theme: t.id, time: now, by: currentUser.username }),
+        items: [],
+        photos: [],
+        status: 'DONE',
+        service_approve: true,
+        created_by: currentUser.fullName || 'ADMIN',
+        created_at: new Date().toISOString()
+      };
+
+      supabase.from('permintaan_toko').upsert(themePayload).then(({ error }) => {
+        if (!error) {
+          console.log('⚡ [SUPABASE GLOBAL THEME SYNC SUCCESS]: Tema disebar ke semua perangkat!', t.id);
+          showNotif(`TEMA '${t.name.toUpperCase()}' BERHASIL DISINKRONKAN KE SEMUA PERANGKAT!`, 'info');
+        }
+      }).catch(e => console.warn('[SUPABASE GLOBAL THEME EXCEPTION]:', e));
     }
   }
 
@@ -3337,43 +3615,47 @@ async function prosesLogin() {
     return;
   }
 
-  showLoading('MENGHAPUS PENYIMPANAN LOKAL & MEMUAT DATA SUPABASE CLOUD...');
-
   try {
-    // 1. HAPUS SEMUA DATA PENYIMPANAN LOKAL (KECUALI SETTINGAN TEMA & TTD)
-    await clearLocalStorageKeepThemeAndTTD();
-
-    // 2. TARIK DATA DARI SUPABASE CLOUD
-    if (typeof syncAllDataToCache === 'function') {
-      try {
-        await syncAllDataToCache();
-      } catch (e) {}
-    }
-
+    // 1. CEK DULU DI PENYIMPANAN LOKAL (0 ms INSTANT)
     let users = getUsersFromDB();
     let user = users.find(x => x && x.username && String(x.username).trim().toUpperCase() === u && String(x.password).trim() === p);
 
-    // Fallback search in Supabase if not yet cached locally
+    // 2. JIKA BELUM ADA DI LOKAL, CEK KE SUPABASE
     if (!user && typeof supabase !== 'undefined' && supabase) {
       try {
-        const { data: supaUsers } = await supabase.from('users').select('*');
-        if (Array.isArray(supaUsers) && supaUsers.length > 0) {
-          const formatted = supaUsers.map(u => ({
-            id: u.id,
-            username: String(u.username || '').trim(),
-            password: String(u.password || '').trim(),
-            fullName: String(u.full_name || u.fullName || '').trim(),
-            storeCode: String(u.store_code || u.storeCode || '').trim(),
-            phone: String(u.phone || '').trim(),
-            category: String(u.category || 'TOKO').trim().toUpperCase(),
-            area: String(u.area || 'BDG').trim().toUpperCase(),
-            theme: u.theme || '',
-            createdAt: u.created_at || (typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '')
-          }));
-          saveUsersToDB(formatted);
-          user = formatted.find(x => x && x.username && String(x.username).trim().toUpperCase() === u && String(x.password).trim() === p);
+        const { data: supaUsers, error } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('username', u)
+          .limit(1);
+
+        if (!error && Array.isArray(supaUsers) && supaUsers.length > 0) {
+          const su = supaUsers[0];
+          if (String(su.password).trim() === p) {
+            user = {
+              id: su.id,
+              username: String(su.username || '').trim(),
+              password: String(su.password || '').trim(),
+              fullName: String(su.full_name || su.fullName || '').trim(),
+              storeCode: String(su.store_code || su.storeCode || '').trim(),
+              phone: String(su.phone || '').trim(),
+              category: String(su.category || 'TOKO').trim().toUpperCase(),
+              area: String(su.area || 'BDG').trim().toUpperCase(),
+              theme: su.theme || '',
+              createdAt: su.created_at || (typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '')
+            };
+
+            // Simpan ke cache lokal
+            const localUsers = getUsersFromDB();
+            const uIdx = localUsers.findIndex(x => x && (x.id === user.id || String(x.username).toUpperCase() === user.username.toUpperCase()));
+            if (uIdx !== -1) localUsers[uIdx] = user;
+            else localUsers.push(user);
+            saveUsersToDB(localUsers);
+          }
         }
-      } catch(sbErr) {}
+      } catch (sbErr) {
+        console.warn('[SUPABASE LOGIN QUERY NOTICE]:', sbErr);
+      }
     }
 
     if (user) {
@@ -3415,14 +3697,12 @@ async function prosesLogin() {
 window.prosesLogin = prosesLogin;
 
 async function catatLogLogin(username, nama, area, status) {
-  if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+  if (typeof supabase !== 'undefined' && supabase) {
     try {
-      await supabaseClient.from('log_login').insert([{
-        username: username,
-        nama_lengkap: nama,
-        area: area,
-        status: status
-      }]);
+      await supabase.from('lookup').upsert({
+        key: `login_log_${Date.now()}`,
+        value: { username, nama, area, status, time: new Date().toISOString() }
+      });
     } catch (e) {}
   }
 }
@@ -3449,8 +3729,7 @@ function logout() {
     } catch (e) {}
 
     currentUser = null;
-
-    await clearLocalStorageKeepThemeAndTTD();
+    appStorage.removeItem(SESSION_KEY);
 
     if (rememberedCreds) {
       try {
@@ -3478,14 +3757,11 @@ function logout() {
   });
 }
 
+// =======================================================================
+// BUKA MAIN APP: LOCAL-FIRST (0ms INSTANT LOAD) + REALTIME + DELTA SYNC
+// =======================================================================
 async function bukaMainApp() {
   updateBodyClasses();
-
-  if (typeof syncAllDataToCache === 'function') {
-    try {
-      await syncAllDataToCache();
-    } catch (e) {}
-  }
 
   if (currentUser) {
     try {
@@ -3508,12 +3784,39 @@ async function bukaMainApp() {
 
   updateAdminNavVisibility();
   const isAdmin = checkIsAdminUser();
-
   isAdminChat = typeof isServiceTSMUser === 'function' ? isServiceTSMUser() : (isAdmin || (currentUser && currentUser.category === 'SERVICE'));
 
-  pindahHalaman('dashboardPage');
-  if (typeof loadDashboard === 'function') loadDashboard();
-  if (typeof loadRiwayat === 'function') loadRiwayat();
+  // 1. CEK PENYIMPANAN LOKAL DULU
+  const localRequests = getRequestsFromDB();
+  const hasLocalData = Array.isArray(localRequests) && localRequests.length > 0;
+
+  if (hasLocalData) {
+    // ----------------------------------------------------
+    // KONDISI A: DATA LOKAL ADA (0ms INSTANT LOAD, 0 KB BANDWIDTH)
+    // ----------------------------------------------------
+    pindahHalaman('dashboardPage');
+    if (typeof loadDashboard === 'function') loadDashboard();
+    if (typeof loadRiwayat === 'function') loadRiwayat();
+
+    // Jalankan Realtime Listener & Sinkronisasi Delta (updated_at) di latar belakang
+    initSupabaseRealtimeEngine();
+    syncSupabaseIncremental().catch(e => console.warn(e));
+  } else {
+    // ----------------------------------------------------
+    // KONDISI B: DATA LOKAL KOSONG (MISAL PERANGKAT BARU)
+    // ----------------------------------------------------
+    showLoading('MEMUAT DATA PERTAMA KALI DARI SUPABASE CLOUD...');
+    try {
+      await syncAllDataToCache();
+    } catch (e) {}
+    hideLoading();
+
+    pindahHalaman('dashboardPage');
+    if (typeof loadDashboard === 'function') loadDashboard();
+    if (typeof loadRiwayat === 'function') loadRiwayat();
+
+    initSupabaseRealtimeEngine();
+  }
 
   if (typeof setupBottomMenuAutoHide === 'function') {
     setupBottomMenuAutoHide();
@@ -3525,13 +3828,8 @@ async function bukaMainApp() {
     }
   }, 400);
 
-  if (typeof setOnDataChangeCallback === 'function' && typeof onSupabaseDataChange === 'function') {
-    setOnDataChangeCallback(onSupabaseDataChange);
-  }
-
   if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
   if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-  if (typeof startGlobalRealtimeLoop === 'function') startGlobalRealtimeLoop();
   if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
   if (typeof startAdminReminderTimeChecker === 'function') startAdminReminderTimeChecker();
   if (typeof checkAndTriggerPendingReminders === 'function') checkAndTriggerPendingReminders(false);
@@ -3913,18 +4211,20 @@ function getAccessibleRequests() {
   const requests = getRequestsFromDB();
   if (!currentUser) return [];
 
+  const role = (currentUser.category || '').toUpperCase();
   if (
-    currentUser.category === 'ADMIN' ||
-    currentUser.category === 'DM' ||
+    role === 'ADMIN' ||
+    role === 'DM' ||
     (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN')
   ) {
     return requests;
   }
 
-  if (currentUser.category === 'TOKO') {
+  if (role === 'TOKO' || role === 'GBJ') {
     return requests.filter(r => 
       r.userId === currentUser.id || 
-      r.toko.toUpperCase() === currentUser.fullName.toUpperCase()
+      (r.createdBy && r.createdBy.toUpperCase() === currentUser.fullName.toUpperCase()) ||
+      (r.toko && r.toko.toUpperCase() === currentUser.fullName.toUpperCase())
     );
   }
 
@@ -4081,6 +4381,8 @@ function updateStoreDropdownOptions(selectedStoreName = '') {
 
   if (currentUser.category === 'TOKO') {
     tokoSelect.innerHTML = `<option value="${currentUser.fullName}">${currentUser.fullName} (${currentUser.area})</option>`;
+  } else if (currentUser.category === 'GBJ') {
+    tokoSelect.innerHTML = `<option value="${currentUser.fullName || 'GBJ'}">${currentUser.fullName || 'GBJ'} (${currentUser.area})</option>`;
   } else {
     const allStores = getStoresFromDB();
     const areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
@@ -4093,7 +4395,7 @@ function updateStoreDropdownOptions(selectedStoreName = '') {
         tokoSelect.innerHTML += `<option value="${s.fullName}" ${isSelected}>${s.fullName} (${s.area || currentUser.area})</option>`;
       });
     } else {
-      tokoSelect.innerHTML = `<option value="Silahkan Tambah Nama Toko">INPUT TOKO..... (${currentUser.area})</option>`;
+      tokoSelect.innerHTML = `<option value="INPUT TOKO.....">INPUT TOKO..... (${currentUser.area})</option>`;
     }
   }
 
@@ -4113,7 +4415,7 @@ function loadForm() {
 
   const containerTambahToko = document.getElementById('containerTambahToko');
   if (containerTambahToko) {
-    containerTambahToko.style.display = (currentUser.category === 'TOKO') ? 'none' : 'block';
+    containerTambahToko.style.display = (currentUser.category === 'TOKO' || currentUser.category === 'GBJ') ? 'none' : 'block';
   }
 
   if (typeof updatePhotoSectionVisibility === 'function') {
@@ -4613,198 +4915,216 @@ function simpanData() {
 }
 
 async function prosesSimpanKeDB(toko, jenis, catatan, items) {
-  if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-    await syncSupabaseRequestsToLocalCache().catch(() => {});
-  }
+  const requests = getRequestsFromDB();
 
-  setTimeout(async () => {
-    hideLoading();
-    const requests = getRequestsFromDB();
-
-    if (modeEdit && editNoSurat) {
-      const idx = requests.findIndex(r => r.noSurat === editNoSurat);
-      if (idx !== -1) {
-        requests[idx].toko = toko;
-        requests[idx].jenis = jenis;
-        requests[idx].catatan = catatan;
-        requests[idx].items = items;
-        requests[idx].photos = [...currentPhotos];
-        
-        saveRequestsToDB(requests);
-
-        const docId = String(editNoSurat).replace(/[\/\.]/g, '_');
-        const supaEditRow = {
-          id: docId,
-          no_surat: requests[idx].noSurat,
-          tanggal: requests[idx].tanggal,
-          toko: requests[idx].toko,
-          area: requests[idx].area,
-          jenis: requests[idx].jenis,
-          catatan: requests[idx].catatan || '',
-          items: requests[idx].items || [],
-          photos: requests[idx].photos || [],
-          status: requests[idx].status,
-          service_approve: !!requests[idx].serviceApprove,
-          created_by: requests[idx].createdBy || '',
-          created_at: requests[idx].createdAt || '',
-          user_id: requests[idx].userId || ''
-        };
-
-        if (typeof supabase !== 'undefined' && supabase) {
-          try {
-            const { error } = await supabase.from('permintaan_toko').upsert(supaEditRow);
-            if (error) console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
-            else console.log('⚡ [SUPABASE UPDATE SUCCESS]: Data berhasil diperbarui di Supabase Database!');
-          } catch(sbErr) {
-            console.warn('[SUPABASE UPDATE EXCEPTION]:', sbErr);
-          }
-        }
-        if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-          dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
-        }
-        if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-          dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
-        }
-
-        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-          await syncSupabaseRequestsToLocalCache();
-        }
-
-        showNotif(`PERMINTAAN #${editNoSurat} DATA BERHASIL DIPERBARUHI!`, 'success');
-        bersihkanForm();
-        pindahHalaman('riwayatPage');
-        if (typeof loadRiwayat === 'function') loadRiwayat();
-        if (typeof loadDashboard === 'function') loadDashboard();
-      }
-    } else {
-      const now = new Date();
-      const codeYear = String(now.getFullYear()).slice(-2);
-      const codeMonth = String(now.getMonth() + 1).padStart(2, '0');
-      const codeDay = String(now.getDate()).padStart(2, '0');
-
-      const allStores = getStoresFromDB();
-      const safeToko = String(toko || '').trim().toUpperCase();
-      const matchedStore = allStores.find(s => s && s.fullName && String(s.fullName).trim().toUpperCase() === safeToko);
-      let storeCode = matchedStore ? (matchedStore.storeCode || generateStoreCode(matchedStore.fullName)) : generateStoreCode(safeToko);
-      const targetArea = (matchedStore && matchedStore.area) ? matchedStore.area : (getUserAreaList(currentUser.area)[0] || 'BDG');
-
-      const seqNo = String(requests.length + 1).padStart(2, '0');
-      const noSurat = `PRMT/${targetArea}-${storeCode}/${codeYear}${codeMonth}${codeDay}${seqNo}`;
+  if (modeEdit && editNoSurat) {
+    const idx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(editNoSurat).trim().toUpperCase());
+    if (idx !== -1) {
+      requests[idx].toko = toko;
+      requests[idx].jenis = jenis;
+      requests[idx].catatan = catatan;
+      requests[idx].items = items;
+      requests[idx].photos = [...currentPhotos];
       
-      const isDMUser = currentUser && currentUser.category === 'DM';
-      const autoServiceApprove = isDMUser ? true : false;
-      const serviceUserNameVal = isDMUser ? (currentUser.fullName || currentUser.username) : '';
-
-      let autoServiceTTD = '';
-      if (isDMUser) {
-        const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-        autoServiceTTD = ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap['SERVICE_' + targetArea] || ttdMap['SERVICE'] || ttdMap['DM'] || '';
-      }
-
-      const initialLog = [];
-      if (isDMUser) {
-        initialLog.push({
-          action: 'AUTO_APPROVE_SERVICE',
-          user: currentUser.fullName || currentUser.username,
-          notes: 'AUTO APPROVE SERVICE (DIBUAT OLEH DM)',
-          time: `${getFormattedDateDDMMYYYY(now)} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
-        });
-      }
-
-      const newRecord = {
-        noSurat,
-        tanggal: getFormattedDateDDMMYYYY(now),
-        area: targetArea,
-        userId: currentUser.id,
-        toko,
-        jenis,
-        catatan,
-        items,
-        photos: [...currentPhotos],
-        status: 'PENDING',
-        serviceApprove: autoServiceApprove,
-        serviceUserName: serviceUserNameVal,
-        serviceTTD: autoServiceTTD,
-        createdBy: currentUser.fullName,
-        createdAt: `${getFormattedDateDDMMYYYY(now)} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
-        log: initialLog
-      };
-      requests.unshift(newRecord);
+      // 1. SIMPAN LOKAL SECARA INSTAN (0 ms)
       saveRequestsToDB(requests);
 
-      const docId = String(noSurat).replace(/[\/\.]/g, '_');
-      const supaNewRow = {
-        id: docId,
-        no_surat: newRecord.noSurat,
-        tanggal: newRecord.tanggal,
-        toko: newRecord.toko,
-        area: newRecord.area,
-        jenis: newRecord.jenis,
-        catatan: newRecord.catatan || '',
-        items: newRecord.items || [],
-        photos: newRecord.photos || [],
-        status: newRecord.status || 'PENDING',
-        service_approve: !!newRecord.serviceApprove,
-        created_by: newRecord.createdBy || '',
-        created_at: newRecord.createdAt || '',
-        user_id: newRecord.userId || ''
-      };
-
-      if (typeof supabase !== 'undefined' && supabase) {
-        try {
-          const { error } = await supabase.from('permintaan_toko').upsert(supaNewRow);
-          if (error) console.warn('[SUPABASE SAVE NOTICE]:', error.message);
-          else console.log('⚡ [SUPABASE SAVE SUCCESS]: Data berhasil disimpan ke Supabase Database!');
-        } catch(sbErr) {
-          console.warn('[SUPABASE SAVE EXCEPTION]:', sbErr);
-        }
-      }
-      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-        dbFirestore.collection('requests').doc(docId).set(newRecord).catch(e => console.warn('[FIRESTORE SAVE NOTICE]:', e));
-      }
-      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-        dbRealtime.ref(`requests/${docId}`).set(newRecord).catch(e => console.warn('[REALTIME SAVE NOTICE]:', e));
-      }
-
-      if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-        await syncSupabaseRequestsToLocalCache();
-      }
-
-      showNotif(`PERMINTAAN #${noSurat} DATA BERHASIL DISIMPAN!`, 'success');
+      // 2. MUNCULKAN NOTIFIKASI LANGSUNG DI AWAL & PINDAH HALAMAN
+      showNotif(`PERMINTAAN #${editNoSurat} DATA BERHASIL DIPERBARUHI!`, 'success');
       bersihkanForm();
-
-      if (isDMUser) {
-        tambahNotifikasiSistem(['DM'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI DM (${currentUser.fullName}). SILAKAN MEMPROSES APPROVAL DM.`, noSurat);
-      } else {
-        tambahNotifikasiSistem(['SERVICE'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI TOKO ${toko}. MOHON APPROVAL SERVICE.`, noSurat);
-      }
-
-      const allUsers = getUsersFromDB();
-      const serviceUsers = allUsers.filter(u => u.category === 'SERVICE' && (u.area === currentUser.area || u.area === 'ALL'));
-      serviceUsers.forEach(srv => {
-        if (srv.phone && srv.phone !== '-') {
-          const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
-          kirimNotifikasiWA(srv.phone,
-            `Yth. Bapak/Ibu ${srvName},\n\n` +
-            `Pemberitahuan Sistem Permintaan Barang:\n` +
-            `Telah dibuat pengajuan permintaan barang baru dengan rincian berikut:\n` +
-            `• Nomor Dokumen : #${noSurat}\n` +
-            `• Toko / Pemohon : ${toko} (${currentUser.area})\n` +
-            `• Waktu Pengajuan : ${newRecord.createdAt}\n` +
-            `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
-            `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`
-          );
-        }
-      });
-
       pindahHalaman('riwayatPage');
       if (typeof loadRiwayat === 'function') loadRiwayat();
       if (typeof loadDashboard === 'function') loadDashboard();
-      if (currentUser && currentUser.category === 'SERVICE' && currentUser.area === 'TSM' && typeof loadMasterDbTable === 'function') {
-        loadMasterDbTable();
+
+      // 3. PROSES PENGIRIMAN KE SUPABASE DI LATAR BELAKANG
+      const docId = String(editNoSurat).replace(/[\/\.]/g, '_');
+      const supaEditRow = {
+        id: docId,
+        no_surat: requests[idx].noSurat,
+        tanggal: requests[idx].tanggal,
+        toko: requests[idx].toko,
+        area: requests[idx].area,
+        jenis: requests[idx].jenis,
+        catatan: requests[idx].catatan || '',
+        items: requests[idx].items || [],
+        photos: requests[idx].photos || [],
+        artemis_photos: requests[idx].artemisPhotos || [],
+        status: requests[idx].status,
+        service_approve: !!requests[idx].serviceApprove,
+        service_user_name: requests[idx].serviceUserName || '',
+        service_ttd: requests[idx].serviceTTD || '',
+        dm_user_name: requests[idx].dmUserName || '',
+        dm_ttd: requests[idx].dmTTD || '',
+        created_by: requests[idx].createdBy || '',
+        created_at: requests[idx].createdAt || '',
+        user_id: requests[idx].userId || '',
+        log: requests[idx].log || [],
+        updated_at: new Date().toISOString()
+      };
+
+      if (typeof supabase !== 'undefined' && supabase) {
+        supabase.from('permintaan_toko').upsert(supaEditRow).then(({ error }) => {
+          if (error) console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
+        }).catch(e => console.warn(e));
+      }
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
       }
     }
-  }, 200);
+  } else {
+    const now = new Date();
+    const codeYear = String(now.getFullYear()).slice(-2);
+    const codeMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const codeDay = String(now.getDate()).padStart(2, '0');
+    const timeCode = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
+
+    const allStores = getStoresFromDB();
+    const safeToko = String(toko || '').trim().toUpperCase();
+    const matchedStore = allStores.find(s => s && s.fullName && String(s.fullName).trim().toUpperCase() === safeToko);
+    let storeCode = matchedStore ? (matchedStore.storeCode || generateStoreCode(matchedStore.fullName)) : generateStoreCode(safeToko);
+    const targetArea = (matchedStore && matchedStore.area) ? matchedStore.area : (getUserAreaList(currentUser.area)[0] || 'BDG');
+
+    // Pastikan nomor surat unik dengan stempel waktu
+    let seq = requests.length + 1;
+    let noSurat = `PRMT/${targetArea}-${storeCode}/${codeYear}${codeMonth}${codeDay}-${String(seq).padStart(2, '0')}${timeCode.slice(-3)}`;
+    while (requests.some(r => r && String(r.noSurat).trim().toUpperCase() === noSurat.toUpperCase())) {
+      seq++;
+      noSurat = `PRMT/${targetArea}-${storeCode}/${codeYear}${codeMonth}${codeDay}-${String(seq).padStart(2, '0')}${timeCode.slice(-3)}`;
+    }
+    
+    const isDMUser = currentUser && currentUser.category === 'DM';
+    const autoServiceApprove = isDMUser ? true : false;
+    const serviceUserNameVal = isDMUser ? (currentUser.fullName || currentUser.username) : '';
+
+    const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+    let pemohonTTD = currentUser.ttd || ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap[currentUser.fullName] || '';
+    if (!pemohonTTD && (currentUser.category === 'GBJ' || currentUser.category === 'TOKO')) {
+      pemohonTTD = ttdMap['GBJ'] || ttdMap[currentUser.storeCode] || '';
+    }
+
+    let autoServiceTTD = '';
+    if (isDMUser) {
+      const users = getUsersFromDB();
+      const areaSvcUser = users.find(u => u && u.category === 'SERVICE' && isAreaMatch(u.area, targetArea));
+      if (areaSvcUser) {
+        autoServiceTTD = areaSvcUser.ttd || ttdMap[areaSvcUser.id] || ttdMap[areaSvcUser.username] || ttdMap[areaSvcUser.fullName] || ttdMap['SERVICE_' + targetArea] || '';
+      } else {
+        autoServiceTTD = ttdMap['SERVICE_' + targetArea] || '';
+      }
+    }
+
+    const initialLog = [];
+    if (isDMUser) {
+      initialLog.push({
+        action: 'AUTO_APPROVE_SERVICE',
+        user: currentUser.fullName || currentUser.username,
+        notes: 'AUTO APPROVE SERVICE (DIBUAT OLEH DM)',
+        time: `${getFormattedDateDDMMYYYY(now)} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+      });
+    }
+
+    const newRecord = {
+      noSurat,
+      tanggal: getFormattedDateDDMMYYYY(now),
+      area: targetArea,
+      userId: currentUser.id,
+      toko,
+      jenis,
+      catatan,
+      items,
+      photos: [...currentPhotos],
+      artemisPhotos: [],
+      status: 'PENDING',
+      serviceApprove: autoServiceApprove,
+      serviceUserName: serviceUserNameVal,
+      serviceTTD: autoServiceTTD,
+      dmUserName: '',
+      dmTTD: '',
+      tokoTTD: pemohonTTD,
+      pemohonTTD: pemohonTTD,
+      createdBy: currentUser.fullName,
+      createdAt: `${getFormattedDateDDMMYYYY(now)} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
+      log: initialLog
+    };
+
+    // 1. SIMPAN LOKAL SECARA INSTAN (0 ms)
+    requests.unshift(newRecord);
+    saveRequestsToDB(requests);
+
+    // 2. MUNCULKAN NOTIFIKASI LANGSUNG DI AWAL & PINDAH HALAMAN
+    showNotif(`PERMINTAAN #${noSurat} DATA BERHASIL DISIMPAN!`, 'success');
+    bersihkanForm();
+    pindahHalaman('riwayatPage');
+    if (typeof loadRiwayat === 'function') loadRiwayat();
+    if (typeof loadDashboard === 'function') loadDashboard();
+
+    // 3. PROSES PENGIRIMAN KE SUPABASE DI LATAR BELAKANG
+    const docId = String(noSurat).replace(/[\/\.]/g, '_');
+    const supaNewRow = {
+      id: docId,
+      no_surat: newRecord.noSurat,
+      tanggal: newRecord.tanggal,
+      toko: newRecord.toko,
+      area: newRecord.area,
+      jenis: newRecord.jenis,
+      catatan: newRecord.catatan || '',
+      items: newRecord.items || [],
+      photos: newRecord.photos || [],
+      artemis_photos: [],
+      status: newRecord.status || 'PENDING',
+      service_approve: !!newRecord.serviceApprove,
+      service_user_name: newRecord.serviceUserName || '',
+      service_ttd: newRecord.serviceTTD || '',
+      dm_user_name: '',
+      dm_ttd: '',
+      toko_ttd: newRecord.tokoTTD || '',
+      pemohon_ttd: newRecord.pemohonTTD || '',
+      created_by: newRecord.createdBy || '',
+      created_at: newRecord.createdAt || '',
+      user_id: newRecord.userId || '',
+      log: newRecord.log || [],
+      updated_at: new Date().toISOString()
+    };
+
+    if (typeof supabase !== 'undefined' && supabase) {
+      supabase.from('permintaan_toko').upsert(supaNewRow).then(({ error }) => {
+        if (error) console.warn('[SUPABASE SAVE NOTICE]:', error.message);
+      }).catch(e => console.warn(e));
+    }
+    if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+      dbFirestore.collection('requests').doc(docId).set(newRecord).catch(e => console.warn('[FIRESTORE SAVE NOTICE]:', e));
+    }
+    if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+      dbRealtime.ref(`requests/${docId}`).set(newRecord).catch(e => console.warn('[REALTIME SAVE NOTICE]:', e));
+    }
+
+    if (isDMUser) {
+      tambahNotifikasiSistem(['DM'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI DM (${currentUser.fullName}). SILAKAN MEMPROSES APPROVAL DM.`, noSurat);
+    } else {
+      tambahNotifikasiSistem(['SERVICE'], currentUser.area, `PERMINTAAN BARU #${noSurat} DARI TOKO ${toko}. MOHON APPROVAL SERVICE.`, noSurat);
+    }
+
+    const allUsers = getUsersFromDB();
+    const serviceUsers = allUsers.filter(u => u.category === 'SERVICE' && (u.area === currentUser.area || u.area === 'ALL'));
+    serviceUsers.forEach(srv => {
+      if (srv.phone && srv.phone !== '-') {
+        const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
+        kirimNotifikasiWA(srv.phone,
+          `Yth. Bapak/Ibu ${srvName},\n\n` +
+          `Pemberitahuan Sistem Permintaan Barang:\n` +
+          `Telah dibuat pengajuan permintaan barang baru dengan rincian berikut:\n` +
+          `• Nomor Dokumen : #${noSurat}\n` +
+          `• Toko / Pemohon : ${toko} (${currentUser.area})\n` +
+          `• Waktu Pengajuan : ${newRecord.createdAt}\n` +
+          `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
+          `Mohon dapat segera diperiksa pada aplikasi. Terima kasih.`
+        );
+      }
+    });
+  }
 }
 
 function bukaMenuRiwayat() {
@@ -4820,6 +5140,21 @@ function bukaRiwayat(status) {
   if (searchInput) searchInput.value = '';
   showPage('riwayatPage');
 }
+
+function isPdfButtonAllowed(req) {
+  if (!req || !currentUser) return false;
+  const role = String(currentUser.category || '').toUpperCase();
+  
+  // TOMBOL PDF TIDAK DIBERIKAN UNTUK ROLE TOKO DAN SALES
+  if (role === 'TOKO' || role === 'SALES') {
+    return false;
+  }
+
+  // TOMBOL PDF HANYA KELUAR JIKA DM JUGA SUDAH APPROVE (STATUS APPROVE ATAU DONE)
+  const isDmApproved = (req.status === 'APPROVE' || req.status === 'DONE');
+  return isDmApproved;
+}
+window.isPdfButtonAllowed = isPdfButtonAllowed;
 
 function loadRiwayat() {
   const dropdown = document.getElementById('filterStatusDropdown');
@@ -4883,115 +5218,109 @@ function filterRiwayat() {
   data.forEach(r => {
     let aksi = '';
 
-    const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+    const isDeletedRow = (r.status === 'BATAL' || r.unfulfilled === true);
 
-    if (isAdminUser) {
-      if (r.status === 'PENDING' && !r.serviceApprove) {
-        aksi += `
-          <button class="btnIcon btnApprove" onclick="approveService('${r.noSurat}')" title="APPROVE SERVICE"><span class="material-symbols-rounded">check_circle</span></button>
-          <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'SERVICE')" title="REJECT SERVICE"><span class="material-symbols-rounded">cancel</span></button>
-        `;
-      } else if (r.status === 'PENDING' && r.serviceApprove) {
-        aksi += `
-          <button class="btnIcon btnApprove" onclick="approveDM('${r.noSurat}')" title="APPROVE DM"><span class="material-symbols-rounded">check_circle</span></button>
-          <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'DM')" title="REJECT DM"><span class="material-symbols-rounded">cancel</span></button>
-        `;
-      } else if (r.status === 'APPROVE') {
-        aksi += `
-          <button class="btnIcon btnDone" onclick="doneService('${r.noSurat}')" title="DONE"><span class="material-symbols-rounded">task_alt</span></button>
-        `;
-      }
-    } else if (role === 'SERVICE') {
-      if (r.status === 'PENDING' && !r.serviceApprove) {
-        aksi += `
-          <button class="btnIcon btnApprove" onclick="approveService('${r.noSurat}')" title="APPROVE SERVICE"><span class="material-symbols-rounded">check_circle</span></button>
-          <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'SERVICE')" title="REJECT SERVICE"><span class="material-symbols-rounded">cancel</span></button>
-        `;
-      } else if (r.status === 'APPROVE') {
-        aksi += `
-          <button class="btnIcon btnDone" onclick="doneService('${r.noSurat}')" title="DONE"><span class="material-symbols-rounded">task_alt</span></button>
-        `;
-      }
-    } else if (role === 'DM') {
-      if (r.status === 'PENDING' && r.serviceApprove) {
-        aksi += `
-          <button class="btnIcon btnApprove" onclick="approveDM('${r.noSurat}')" title="APPROVE DM"><span class="material-symbols-rounded">check_circle</span></button>
-          <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'DM')" title="REJECT DM"><span class="material-symbols-rounded">cancel</span></button>
-        `;
-      }
-    }
-
-    const isOwner = currentUser && (r.userId === currentUser.id || r.createdBy === currentUser.fullName || r.createdBy === currentUser.username);
-    const canEdit = (r.status === 'PENDING' && !r.serviceApprove && isOwner) || (isAdminUser && r.status === 'PENDING');
-    const canDelete = (r.status === 'PENDING' && !r.serviceApprove && isOwner) || isAdminUser;
-
-    if (canEdit) {
-      aksi += `
-        <button class="btnIcon btnEdit" onclick="editPermintaan('${r.noSurat}')" title="EDIT PERMINTAAN"><span class="material-symbols-rounded">edit</span></button>
+    if (isDeletedRow) {
+      // UNTUK BARIS YG SUDAH DI HAPUS: HILANGKAN SEMUA TOMBOL LAINNYA, SISAKAN HANYA ICON MATA (LIHAT DETAIL)
+      aksi = `
+        <button class="btnIcon btnInfo" onclick="lihatDetail('${r.noSurat}')" title="LIHAT DETAIL"><span class="material-symbols-rounded">visibility</span></button>
       `;
-    }
-
-    if (canDelete) {
-      aksi += `
-        <button class="btnIcon btnDelete" onclick="hapusData('${r.noSurat}')" title="HAPUS PERMINTAAN"><span class="material-symbols-rounded">delete</span></button>
-      `;
-    }
-
-    // TOMBOL KHUSUS LOGIN ADMIN TERLETAK DI SEBELAH TOMBOL HAPUS DATA
-    if (isAdminUser) {
-      if (r.serviceApprove) {
-        aksi += `
-          <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE (KHUSUS ADMIN)" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
-        `;
-      }
-      if (r.status === 'APPROVE' || r.dmUserName || r.dmTTD) {
-        aksi += `
-          <button class="btnIcon" onclick="batalApproveDM('${r.noSurat}')" title="BATAL APPROVE DM (KHUSUS ADMIN)" style="background: #f97316 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
-        `;
-      }
-    }
-
-    aksi += `
-      <button class="btnIcon btnInfo" onclick="lihatDetail('${r.noSurat}')" title="LIHAT DETAIL"><span class="material-symbols-rounded">visibility</span></button>
-    `;
-
-    const hasPhotos = (r.photos && Array.isArray(r.photos) && r.photos.length > 0) || (r.artemisPhotos && Array.isArray(r.artemisPhotos) && r.artemisPhotos.length > 0);
-
-    if (r.status === 'DONE') {
-      if (hasPhotos) {
-        aksi += `
-          <button class="btnIcon btnView" onclick="lihatFotoByNoSurat('${r.noSurat}')" title="BUKTI PROSES ARTEMIS (${(r.artemisPhotos || r.photos).length})" style="background: var(--primary) !important; color: #ffffff !important; box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;"><span class="material-symbols-rounded" style="font-size: 16px !important;">photo_library</span></button>
-        `;
-      }
     } else {
-      const isPhotoHidden = (r.status === 'APPROVE' || r.status === 'REJECT') || !getFeaturePhotosEnabled();
-      if (hasPhotos && !isPhotoHidden) {
+      const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+
+      if (isAdminUser) {
+        if (r.status === 'PENDING' && !r.serviceApprove) {
+          aksi += `
+            <button class="btnIcon btnApprove" onclick="approveService('${r.noSurat}')" title="APPROVE SERVICE"><span class="material-symbols-rounded">check_circle</span></button>
+            <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'SERVICE')" title="REJECT SERVICE"><span class="material-symbols-rounded">cancel</span></button>
+          `;
+        } else if (r.status === 'PENDING' && r.serviceApprove) {
+          aksi += `
+            <button class="btnIcon btnApprove" onclick="approveDM('${r.noSurat}')" title="APPROVE DM"><span class="material-symbols-rounded">check_circle</span></button>
+            <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'DM')" title="REJECT DM"><span class="material-symbols-rounded">cancel</span></button>
+          `;
+        } else if (r.status === 'APPROVE') {
+          aksi += `
+            <button class="btnIcon btnDone" onclick="doneService('${r.noSurat}')" title="DONE"><span class="material-symbols-rounded">task_alt</span></button>
+          `;
+        }
+      } else if (role === 'SERVICE') {
+        if (r.status === 'PENDING' && !r.serviceApprove) {
+          aksi += `
+            <button class="btnIcon btnApprove" onclick="approveService('${r.noSurat}')" title="APPROVE SERVICE"><span class="material-symbols-rounded">check_circle</span></button>
+            <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'SERVICE')" title="REJECT SERVICE"><span class="material-symbols-rounded">cancel</span></button>
+          `;
+        } else if (r.status === 'APPROVE') {
+          aksi += `
+            <button class="btnIcon btnDone" onclick="doneService('${r.noSurat}')" title="DONE"><span class="material-symbols-rounded">task_alt</span></button>
+          `;
+        }
+      } else if (role === 'DM') {
+        if (r.status === 'PENDING' && r.serviceApprove) {
+          aksi += `
+            <button class="btnIcon btnApprove" onclick="approveDM('${r.noSurat}')" title="APPROVE DM"><span class="material-symbols-rounded">check_circle</span></button>
+            <button class="btnIcon btnReject" onclick="tolakServiceModal('${r.noSurat}', 'DM')" title="REJECT DM"><span class="material-symbols-rounded">cancel</span></button>
+          `;
+        }
+      }
+
+      const isOwner = currentUser && (r.userId === currentUser.id || r.createdBy === currentUser.fullName || r.createdBy === currentUser.username);
+      const canEdit = (r.status === 'PENDING' && !r.serviceApprove && isOwner) || (isAdminUser && r.status === 'PENDING');
+      const canDelete = (r.status === 'PENDING' && !r.serviceApprove && isOwner) || isAdminUser;
+
+      if (canEdit) {
         aksi += `
-          <button class="btnIcon btnView" onclick="lihatFotoByNoSurat('${r.noSurat}')" title="LIHAT FOTO PERMINTAAN"><span class="material-symbols-rounded">image</span></button>
+          <button class="btnIcon btnEdit" onclick="editPermintaan('${r.noSurat}')" title="EDIT PERMINTAAN"><span class="material-symbols-rounded">edit</span></button>
         `;
       }
-    }
 
-function isPdfButtonAllowed(req) {
-  if (!req || !currentUser) return false;
-  const role = String(currentUser.category || '').toUpperCase();
-  
-  // TOMBOL PDF TIDAK DIBERIKAN UNTUK ROLE TOKO DAN SALES
-  if (role === 'TOKO' || role === 'SALES') {
-    return false;
-  }
+      if (canDelete) {
+        aksi += `
+          <button class="btnIcon btnDelete" onclick="hapusData('${r.noSurat}')" title="HAPUS PERMINTAAN"><span class="material-symbols-rounded">delete</span></button>
+        `;
+      }
 
-  // TOMBOL PDF HANYA KELUAR JIKA DM JUGA SUDAH APPROVE (STATUS APPROVE ATAU DONE)
-  const isDmApproved = (req.status === 'APPROVE' || req.status === 'DONE');
-  return isDmApproved;
-}
-window.isPdfButtonAllowed = isPdfButtonAllowed;
+      // TOMBOL KHUSUS LOGIN ADMIN TERLETAK DI SEBELAH TOMBOL HAPUS DATA
+      if (isAdminUser) {
+        if (r.serviceApprove) {
+          aksi += `
+            <button class="btnIcon" onclick="batalApproveService('${r.noSurat}')" title="BATAL APPROVE SERVICE (KHUSUS ADMIN)" style="background: #eab308 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
+          `;
+        }
+        if (r.status === 'APPROVE' || r.dmUserName || r.dmTTD) {
+          aksi += `
+            <button class="btnIcon" onclick="batalApproveDM('${r.noSurat}')" title="BATAL APPROVE DM (KHUSUS ADMIN)" style="background: #f97316 !important; color: #ffffff !important;"><span class="material-symbols-rounded">undo</span></button>
+          `;
+        }
+      }
 
-    const isPdfVisible = isPdfButtonAllowed(r);
-    if (isPdfVisible) {
       aksi += `
-        <button class="btnIcon btnPdf" onclick="bukaPdfModal('${r.noSurat}')" title="CETAK PDF"><span class="material-symbols-rounded">picture_as_pdf</span></button>
+        <button class="btnIcon btnInfo" onclick="lihatDetail('${r.noSurat}')" title="LIHAT DETAIL"><span class="material-symbols-rounded">visibility</span></button>
       `;
+
+      const hasPhotos = (r.photos && Array.isArray(r.photos) && r.photos.length > 0) || (r.artemisPhotos && Array.isArray(r.artemisPhotos) && r.artemisPhotos.length > 0);
+
+      if (r.status === 'DONE') {
+        if (hasPhotos) {
+          aksi += `
+            <button class="btnIcon btnView" onclick="lihatFotoByNoSurat('${r.noSurat}')" title="BUKTI PROSES ARTEMIS (${(r.artemisPhotos || r.photos).length})" style="background: var(--primary) !important; color: #ffffff !important; box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;"><span class="material-symbols-rounded" style="font-size: 16px !important;">photo_library</span></button>
+          `;
+        }
+      } else {
+        const isPhotoHidden = (r.status === 'APPROVE' || r.status === 'REJECT') || !getFeaturePhotosEnabled();
+        if (hasPhotos && !isPhotoHidden) {
+          aksi += `
+            <button class="btnIcon btnView" onclick="lihatFotoByNoSurat('${r.noSurat}')" title="LIHAT FOTO PERMINTAAN"><span class="material-symbols-rounded">image</span></button>
+          `;
+        }
+      }
+
+      const isPdfVisible = isPdfButtonAllowed(r);
+      if (isPdfVisible) {
+        aksi += `
+          <button class="btnIcon btnPdf" onclick="bukaPdfModal('${r.noSurat}')" title="CETAK PDF"><span class="material-symbols-rounded">picture_as_pdf</span></button>
+        `;
+      }
     }
 
     const isWaitingDM = (r.status === 'PENDING' && r.serviceApprove);
@@ -5215,147 +5544,158 @@ function gantiFotoViewer(arah) {
 
 function approveService(noSurat) {
   showConfirm(`APPROVE PERMINTAAN #${noSurat}?`, () => {
-    showLoading('');
-    setTimeout(async () => {
-      hideLoading();
-      const requests = getRequestsFromDB();
-      const idx = requests.findIndex(r => r.noSurat === noSurat);
-      if (idx !== -1) {
-        requests[idx].serviceApprove = true;
-        requests[idx].serviceUserName = currentUser.fullName;
+    const requests = getRequestsFromDB();
+    const idx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(noSurat).trim().toUpperCase());
+    if (idx !== -1) {
+      requests[idx].serviceApprove = true;
+      requests[idx].serviceUserName = currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE';
 
-        const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-        const sig = ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap['SERVICE_' + currentUser.area] || ttdMap['SERVICE'] || '';
-        if (sig) {
-          requests[idx].serviceTTD = sig;
-        }
-
-        if (!requests[idx].log) requests[idx].log = [];
-        requests[idx].log.push({
-          action: 'APPROVE_SERVICE',
-          user: currentUser.fullName,
-          notes: 'DISETUJUI SERVICE',
-          time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
-        });
-        saveRequestsToDB(requests);
-
-        if (typeof supabase !== 'undefined' && supabase) {
-          try {
-            await supabase.from('permintaan_toko').update({
-              service_approve: true,
-              status: requests[idx].status || 'PENDING'
-            }).eq('no_surat', noSurat);
-          } catch(e) {}
-        }
-        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-          await syncSupabaseRequestsToLocalCache();
-        }
-
-        showNotif(`APPROVE BERHASIL`, 'info');
-
-        tambahNotifikasiSistem(['DM'], 'ALL', `PERMINTAAN #${noSurat} DISETUJUI SERVICE (${currentUser.fullName || currentUser.username}). MOHON APPROVAL DM.`, noSurat);
-
-        const users = getUsersFromDB();
-        const dmUsers = users.filter(u => u.category === 'DM');
-        dmUsers.forEach(dm => {
-          if (dm.phone && dm.phone !== '-') {
-            const dmName = dm.fullName || dm.username || 'Bapak/Ibu DM';
-            kirimNotifikasiWA(dm.phone,
-              `Yth. Bapak/Ibu ${dmName},\n\n` +
-              `Pemberitahuan Sistem Permintaan Barang:\n` +
-              `Pengajuan permintaan barang berikut telah DISETUJUI oleh Service (${currentUser.fullName || currentUser.username}):\n` +
-              `• Nomor Dokumen : #${noSurat}\n` +
-              `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-              `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
-              `Mohon berkenan untuk melakukan peninjauan dan persetujuan (approval) tingkat DM melalui sistem aplikasi. Terima kasih.`
-            );
-          }
-        });
-
-        loadRiwayat();
-        loadDashboard();
-        if (currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
+      const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+      const sig = (currentUser && currentUser.ttd) ||
+                  ttdMap[currentUser.id] || 
+                  ttdMap[currentUser.username] || 
+                  ttdMap[currentUser.fullName] || 
+                  ttdMap[`SERVICE_${currentUser.area}`] || 
+                  '';
+      if (sig) {
+        requests[idx].serviceTTD = sig;
       }
-    }, 300);
+
+      if (!requests[idx].log) requests[idx].log = [];
+      requests[idx].log.push({
+        action: 'APPROVE_SERVICE',
+        user: currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE',
+        notes: 'DISETUJUI SERVICE',
+        time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+      });
+
+      // 1. SIMPAN LOKAL & UPDATE UI INSTAN (0 ms)
+      saveRequestsToDB(requests);
+      showNotif(`APPROVE BERHASIL`, 'info');
+      loadRiwayat();
+      loadDashboard();
+      if (currentUser && currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
+
+      // 2. PROSES SYNC SUPABASE DI LATAR BELAKANG
+      const docId = String(noSurat).replace(/[\/\.]/g, '_');
+      if (typeof supabase !== 'undefined' && supabase) {
+        supabase.from('permintaan_toko').update({
+          service_approve: true,
+          service_user_name: requests[idx].serviceUserName,
+          service_ttd: requests[idx].serviceTTD || '',
+          status: requests[idx].status || 'PENDING',
+          log: requests[idx].log,
+          updated_at: new Date().toISOString()
+        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
+      }
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
+      }
+
+      tambahNotifikasiSistem(['DM'], 'ALL', `PERMINTAAN #${noSurat} DISETUJUI SERVICE (${currentUser.fullName || currentUser.username}). MOHON APPROVAL DM.`, noSurat);
+
+      const users = getUsersFromDB();
+      const dmUsers = users.filter(u => u.category === 'DM');
+      dmUsers.forEach(dm => {
+        if (dm.phone && dm.phone !== '-') {
+          const dmName = dm.fullName || dm.username || 'Bapak/Ibu DM';
+          kirimNotifikasiWA(dm.phone,
+            `Yth. Bapak/Ibu ${dmName},\n\n` +
+            `Pemberitahuan Sistem Permintaan Barang:\n` +
+            `Pengajuan permintaan barang berikut telah DISETUJUI oleh Service (${currentUser.fullName || currentUser.username}):\n` +
+            `• Nomor Dokumen : #${noSurat}\n` +
+            `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
+            `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
+            `Mohon berkenan untuk melakukan peninjauan dan persetujuan (approval) tingkat DM melalui sistem aplikasi. Terima kasih.`
+          );
+        }
+      });
+    }
   });
 }
 
 function approveDM(noSurat) {
   const requests = getRequestsFromDB();
-  const req = requests.find(r => r.noSurat === noSurat);
+  const req = requests.find(r => r && String(r.noSurat).trim().toUpperCase() === String(noSurat).trim().toUpperCase());
   if (req && !req.serviceApprove) {
     showNotif('PERMINTAAN WAJIB DI-APPROVE OLEH SERVICE TERLEBIH DAHULU SEBELUM DM DAPAT MEMPROSES APPROVAL!', 'warning');
     return;
   }
 
   showConfirm(`APPROVE PERMINTAAN #${noSurat}?`, () => {
-    showLoading('');
-    setTimeout(async () => {
-      hideLoading();
-      const requests = getRequestsFromDB();
-      const idx = requests.findIndex(r => r.noSurat === noSurat);
-      if (idx !== -1) {
-        if (!requests[idx].serviceApprove) {
-          showNotif('PERMINTAAN WAJIB DI-APPROVE OLEH SERVICE TERLEBIH DAHULU!', 'warning');
-          return;
-        }
-        requests[idx].status = 'APPROVE';
-        requests[idx].dmUserName = currentUser.fullName;
-
-        const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-        const sig = ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap['DM'] || '';
-        if (sig) {
-          requests[idx].dmTTD = sig;
-        }
-
-        if (!requests[idx].log) requests[idx].log = [];
-        requests[idx].log.push({
-          action: 'APPROVE_DM',
-          user: currentUser.fullName,
-          notes: 'DISETUJUI DM',
-          time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
-        });
-        saveRequestsToDB(requests);
-
-        if (typeof supabase !== 'undefined' && supabase) {
-          try {
-            await supabase.from('permintaan_toko').update({
-              status: 'APPROVE'
-            }).eq('no_surat', noSurat);
-          } catch(e) {}
-        }
-        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-          await syncSupabaseRequestsToLocalCache();
-        }
-
-        showNotif(`APPROVE BERHASIL`, 'info');
-
-        tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI DM. SILAKAN DIPROSES.`, noSurat);
-        const users = getUsersFromDB();
-        const serviceUsers = users.filter(u => u.category === 'SERVICE' && (u.area === requests[idx].area || u.area === 'ALL'));
-        serviceUsers.forEach(srv => {
-          if (srv.phone && srv.phone !== '-') {
-            const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
-            kirimNotifikasiWA(srv.phone,
-              `Yth. Bapak/Ibu ${srvName},\n\n` +
-              `Pemberitahuan Sistem Permintaan Barang:\n` +
-              `Pengajuan permintaan barang berikut telah DISETUJUI OLEH DM:\n` +
-              `• Nomor Dokumen : #${noSurat}\n` +
-              `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-              `• Status : DISETUJUI (APPROVE)\n` +
-              `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
-              `Dokumen saat ini siap diproses oleh Tim Service. Terima kasih atas kerja samanya.`
-            );
-          }
-        });
-
-        loadRiwayat();
-        loadDashboard();
-        if (currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
-        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-        if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+    const requests = getRequestsFromDB();
+    const idx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(noSurat).trim().toUpperCase());
+    if (idx !== -1) {
+      if (!requests[idx].serviceApprove) {
+        showNotif('PERMINTAAN WAJIB DI-APPROVE OLEH SERVICE TERLEBIH DAHULU!', 'warning');
+        return;
       }
-    }, 300);
+      requests[idx].status = 'APPROVE';
+      requests[idx].dmUserName = currentUser ? (currentUser.fullName || currentUser.username) : 'DM';
+
+      const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+      const sig = ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap['DM'] || '';
+      if (sig) {
+        requests[idx].dmTTD = sig;
+      }
+
+      if (!requests[idx].log) requests[idx].log = [];
+      requests[idx].log.push({
+        action: 'APPROVE_DM',
+        user: currentUser ? (currentUser.fullName || currentUser.username) : 'DM',
+        notes: 'DISETUJUI DM',
+        time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+      });
+
+      // 1. SIMPAN LOKAL & UPDATE UI INSTAN (0 ms)
+      saveRequestsToDB(requests);
+      showNotif(`APPROVE BERHASIL`, 'info');
+      loadRiwayat();
+      loadDashboard();
+      if (currentUser && currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
+      if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+      if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+
+      // 2. PROSES SYNC SUPABASE DI LATAR BELAKANG
+      const docId = String(noSurat).replace(/[\/\.]/g, '_');
+      if (typeof supabase !== 'undefined' && supabase) {
+        supabase.from('permintaan_toko').update({
+          status: 'APPROVE',
+          dm_user_name: requests[idx].dmUserName,
+          dm_ttd: requests[idx].dmTTD || '',
+          log: requests[idx].log,
+          updated_at: new Date().toISOString()
+        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
+      }
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
+      }
+
+      tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH DISETUJUI DM. SILAKAN DIPROSES.`, noSurat);
+      const users = getUsersFromDB();
+      const serviceUsers = users.filter(u => u.category === 'SERVICE' && (u.area === requests[idx].area || u.area === 'ALL'));
+      serviceUsers.forEach(srv => {
+        if (srv.phone && srv.phone !== '-') {
+          const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
+          kirimNotifikasiWA(srv.phone,
+            `Yth. Bapak/Ibu ${srvName},\n\n` +
+            `Pemberitahuan Sistem Permintaan Barang:\n` +
+            `Pengajuan permintaan barang berikut telah DISETUJUI OLEH DM:\n` +
+            `• Nomor Dokumen : #${noSurat}\n` +
+            `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
+            `• Status : DISETUJUI (APPROVE)\n` +
+            `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
+            `Dokumen saat ini siap diproses oleh Tim Service. Terima kasih atas kerja samanya.`
+          );
+        }
+      });
+    }
   });
 }
 
@@ -5524,80 +5864,87 @@ function prosesSimpanDoneDenganBuktiArtemis() {
   }
 
   showConfirm(`SELESAIKAN PERMINTAAN #${noSurat} DAN SIMPAN BUKTI PROSES ARTEMIS?`, () => {
-    showLoading('MENYIMPAN DATA BUKTI ARTEMIS & MENYELESAIKAN PERMINTAAN...');
-    setTimeout(async () => {
-      try {
-        const requests = getRequestsFromDB();
-        const idx = requests.findIndex(r => r && (r.noSurat === noSurat || String(r.noSurat) === String(noSurat) || r.id === noSurat));
+    try {
+      const requests = getRequestsFromDB();
+      const targetNo = String(noSurat).trim().toUpperCase();
+      const idx = requests.findIndex(r => r && (
+        String(r.noSurat || '').trim().toUpperCase() === targetNo ||
+        String(r.id || '').trim().toUpperCase() === targetNo
+      ));
 
-        if (idx !== -1) {
-          requests[idx].status = 'DONE';
-          requests[idx].artemisPhotos = [...tempArtemisPhotos];
+      if (idx !== -1) {
+        requests[idx].status = 'DONE';
+        requests[idx].artemisPhotos = Array.isArray(tempArtemisPhotos) ? [...tempArtemisPhotos] : [];
 
-          if (!Array.isArray(requests[idx].photos)) requests[idx].photos = [];
-          if (tempArtemisPhotos.length > 0) {
-            requests[idx].photos = [...requests[idx].photos, ...tempArtemisPhotos];
-          }
-
-          if (!requests[idx].log) requests[idx].log = [];
-          requests[idx].log.push({
-            action: 'DONE_WITH_ARTEMIS_PHOTOS',
-            user: currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE',
-            notes: `SELESAI DENGAN ${tempArtemisPhotos.length} BUKTI FOTO ARTEMIS`,
-            time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
-          });
-
-          saveRequestsToDB(requests);
-
-          if (typeof supabase !== 'undefined' && supabase) {
-            try {
-              const { error: err1 } = await supabase.from('permintaan_toko').update({
-                status: 'DONE',
-                photos: requests[idx].photos,
-                artemis_photos: tempArtemisPhotos
-              }).eq('no_surat', noSurat);
-
-              if (err1) {
-                await supabase.from('permintaan_toko').update({
-                  status: 'DONE',
-                  photos: requests[idx].photos,
-                  artemis_photos: tempArtemisPhotos
-                }).eq('id', requests[idx].id || noSurat);
-              }
-            } catch (e) {
-              console.error("Supabase update error:", e);
-            }
-          }
-
-          if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-            await syncSupabaseRequestsToLocalCache();
-          }
-
-          if (typeof notifySupabaseDataChanged === 'function') {
-            notifySupabaseDataChanged('permintaan_toko');
-          }
-
-          hideLoading();
-          closeArtemisModal();
-          showNotif(`PERMINTAAN #${noSurat} TELAH SELESAI (DONE) & BUKTI FOTO ARTEMIS DISIMPAN!`, 'success');
-
-          tambahNotifikasiSistem(['TOKO', 'SALES', 'DM'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH SELESAI (DONE) DENGAN BUKTI PROSES ARTEMIS.`, noSurat);
-
-          loadRiwayat();
-          loadDashboard();
-          if (currentUser && currentUser.category === 'SERVICE' && currentUser.area === 'TSM') {
-            if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
-          }
-        } else {
-          hideLoading();
-          showNotif('DATA PERMINTAAN TIDAK DITEMUKAN!', 'warning');
+        if (!Array.isArray(requests[idx].photos)) requests[idx].photos = [];
+        if (Array.isArray(tempArtemisPhotos) && tempArtemisPhotos.length > 0) {
+          requests[idx].photos = [...requests[idx].photos, ...tempArtemisPhotos];
         }
-      } catch (err) {
-        hideLoading();
-        console.error(err);
-        showNotif('GAGAL MENYIMPAN STATUS DONE KE CLOUD', 'danger');
+
+        // OTOMATIS: JIKA STATUS DONE, SEMUA ITEM YANG TERPENUHI MAKA KETPART JADI "DIPENUHI"
+        if (Array.isArray(requests[idx].items)) {
+          requests[idx].items.forEach(item => {
+            if (!item.unfulfilled) {
+              if (!item.statusPart && !item.keteranganPart) {
+                item.statusPart = 'DIPENUHI';
+                item.keteranganPart = 'DIPENUHI';
+              }
+            } else {
+              item.statusPart = 'TIDAK DIPENUHI';
+              item.keteranganPart = 'TIDAK DIPENUHI';
+            }
+          });
+        }
+
+        if (!requests[idx].log) requests[idx].log = [];
+        requests[idx].log.push({
+          action: 'DONE_WITH_ARTEMIS_PHOTOS',
+          user: currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE',
+          notes: `SELESAI DENGAN ${(tempArtemisPhotos || []).length} BUKTI FOTO ARTEMIS`,
+          time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+        });
+
+        // 1. SIMPAN LOKAL & UPDATE UI INSTAN (0 ms)
+        saveRequestsToDB(requests);
+        closeArtemisModal();
+        showNotif(`PERMINTAAN #${noSurat} TELAH SELESAI (DONE) & BUKTI FOTO ARTEMIS DISIMPAN!`, 'success');
+        
+        tambahNotifikasiSistem(['TOKO', 'SALES', 'DM'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} TELAH SELESAI (DONE) DENGAN BUKTI PROSES ARTEMIS.`, noSurat);
+        loadRiwayat();
+        loadDashboard();
+        if (currentUser && currentUser.category === 'SERVICE' && currentUser.area === 'TSM') {
+          if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+        }
+
+        // 2. PROSES SYNC SUPABASE DI LATAR BELAKANG (ISOLATED NON-BLOCKING)
+        try {
+          const docId = String(noSurat).replace(/[\/\.]/g, '_');
+          if (typeof supabase !== 'undefined' && supabase) {
+            supabase.from('permintaan_toko').update({
+              status: 'DONE',
+              items: requests[idx].items,
+              photos: requests[idx].photos,
+              artemis_photos: requests[idx].artemisPhotos,
+              log: requests[idx].log,
+              updated_at: new Date().toISOString()
+            }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn('[SUPABASE DONE UPDATE NOTICE]:', e));
+          }
+          if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+            dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+          }
+          if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+            dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
+          }
+        } catch(sbErr) {
+          console.warn('[BACKGROUND SYNC NOTICE]:', sbErr);
+        }
+      } else {
+        showNotif('DATA PERMINTAAN TIDAK DITEMUKAN!', 'warning');
       }
-    }, 300);
+    } catch (err) {
+      console.error('[PROSES DONE ERROR]:', err);
+      showNotif('GAGAL MENYIMPAN STATUS DONE: ' + (err.message || err), 'danger');
+    }
   });
 }
 window.prosesSimpanDoneDenganBuktiArtemis = prosesSimpanDoneDenganBuktiArtemis;
@@ -5611,46 +5958,46 @@ function batalApproveService(noSurat) {
   }
 
   showConfirm(`BATALKAN APPROVAL SERVICE UNTUK PERMINTAAN #${noSurat}?`, () => {
-    showLoading('');
-    setTimeout(async () => {
-      hideLoading();
-      const requests = getRequestsFromDB();
-      const idx = requests.findIndex(r => r.noSurat === noSurat);
-      if (idx !== -1) {
-        requests[idx].serviceApprove = false;
-        requests[idx].serviceUserName = '';
-        requests[idx].serviceTTD = '';
-        requests[idx].status = 'PENDING';
+    const requests = getRequestsFromDB();
+    const idx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(noSurat).trim().toUpperCase());
+    if (idx !== -1) {
+      requests[idx].serviceApprove = false;
+      requests[idx].serviceUserName = '';
+      requests[idx].serviceTTD = '';
+      requests[idx].status = 'PENDING';
 
-        if (!requests[idx].log) requests[idx].log = [];
-        requests[idx].log.push({
-          action: 'BATAL_APPROVE_SERVICE',
-          user: currentUser ? currentUser.fullName : 'ADMIN',
-          notes: 'BATAL APPROVAL SERVICE',
-          time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
-        });
+      if (!requests[idx].log) requests[idx].log = [];
+      requests[idx].log.push({
+        action: 'BATAL_APPROVE_SERVICE',
+        user: currentUser ? currentUser.fullName : 'ADMIN',
+        notes: 'BATAL APPROVAL SERVICE',
+        time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+      });
 
-        saveRequestsToDB(requests);
+      saveRequestsToDB(requests);
+      showNotif(`BERHASIL MEMBATALKAN APPROVAL SERVICE #${noSurat}!`, 'info');
+      loadRiwayat();
+      loadDashboard();
+      if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
 
-        if (typeof supabase !== 'undefined' && supabase) {
-          try {
-            await supabase.from('permintaan_toko').update({
-              service_approve: false,
-              status: 'PENDING'
-            }).eq('no_surat', noSurat);
-          } catch(e) {}
-        }
-        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-          await syncSupabaseRequestsToLocalCache();
-        }
-
-        showNotif(`BERHASIL MEMBATALKAN APPROVAL SERVICE #${noSurat}!`, 'info');
-
-        loadRiwayat();
-        loadDashboard();
-        if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+      const docId = String(noSurat).replace(/[\/\.]/g, '_');
+      if (typeof supabase !== 'undefined' && supabase) {
+        supabase.from('permintaan_toko').update({
+          service_approve: false,
+          service_user_name: '',
+          service_ttd: '',
+          status: 'PENDING',
+          log: requests[idx].log,
+          updated_at: new Date().toISOString()
+        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
       }
-    }, 300);
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
+      }
+    }
   });
 }
 window.batalApproveService = batalApproveService;
@@ -5664,45 +6011,45 @@ function batalApproveDM(noSurat) {
   }
 
   showConfirm(`BATALKAN APPROVAL DM UNTUK PERMINTAAN #${noSurat}?`, () => {
-    showLoading('');
-    setTimeout(async () => {
-      hideLoading();
-      const requests = getRequestsFromDB();
-      const idx = requests.findIndex(r => r.noSurat === noSurat);
-      if (idx !== -1) {
-        requests[idx].dmApprove = false;
-        requests[idx].dmUserName = '';
-        requests[idx].dmTTD = '';
-        requests[idx].status = 'PENDING';
+    const requests = getRequestsFromDB();
+    const idx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(noSurat).trim().toUpperCase());
+    if (idx !== -1) {
+      requests[idx].dmApprove = false;
+      requests[idx].dmUserName = '';
+      requests[idx].dmTTD = '';
+      requests[idx].status = 'PENDING';
 
-        if (!requests[idx].log) requests[idx].log = [];
-        requests[idx].log.push({
-          action: 'BATAL_APPROVE_DM',
-          user: currentUser ? currentUser.fullName : 'ADMIN',
-          notes: 'BATAL APPROVAL DM',
-          time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
-        });
+      if (!requests[idx].log) requests[idx].log = [];
+      requests[idx].log.push({
+        action: 'BATAL_APPROVE_DM',
+        user: currentUser ? currentUser.fullName : 'ADMIN',
+        notes: 'BATAL APPROVAL DM',
+        time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+      });
 
-        saveRequestsToDB(requests);
+      saveRequestsToDB(requests);
+      showNotif(`BERHASIL MEMBATALKAN APPROVAL DM #${noSurat}!`, 'info');
+      loadRiwayat();
+      loadDashboard();
+      if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
 
-        if (typeof supabase !== 'undefined' && supabase) {
-          try {
-            await supabase.from('permintaan_toko').update({
-              status: 'PENDING'
-            }).eq('no_surat', noSurat);
-          } catch(e) {}
-        }
-        if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-          await syncSupabaseRequestsToLocalCache();
-        }
-
-        showNotif(`BERHASIL MEMBATALKAN APPROVAL DM #${noSurat}!`, 'info');
-
-        loadRiwayat();
-        loadDashboard();
-        if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+      const docId = String(noSurat).replace(/[\/\.]/g, '_');
+      if (typeof supabase !== 'undefined' && supabase) {
+        supabase.from('permintaan_toko').update({
+          status: 'PENDING',
+          dm_user_name: '',
+          dm_ttd: '',
+          log: requests[idx].log,
+          updated_at: new Date().toISOString()
+        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
       }
-    }, 300);
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
+      }
+    }
   });
 }
 window.batalApproveDM = batalApproveDM;
@@ -5739,92 +6086,76 @@ function kirimReject() {
   }
 
   closeReject();
-  showLoading('');
-  setTimeout(async () => {
-    hideLoading();
-    const requests = getRequestsFromDB();
-    const idx = requests.findIndex(r => r.noSurat === noSurat);
-    if (idx !== -1) {
-      requests[idx].status = 'REJECT';
-      requests[idx].catatan = `DITOLAK ${roleType}: ${alasan}`;
-      if (!requests[idx].log) requests[idx].log = [];
-      requests[idx].log.push({
-        action: `REJECT_${roleType}`,
-        user: currentUser.fullName,
-        notes: alasan,
-        time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
-      });
-      saveRequestsToDB(requests);
+  const requests = getRequestsFromDB();
+  const idx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(noSurat).trim().toUpperCase());
+  if (idx !== -1) {
+    requests[idx].status = 'REJECT';
+    requests[idx].catatan = `DITOLAK ${roleType}: ${alasan}`;
+    if (!requests[idx].log) requests[idx].log = [];
+    requests[idx].log.push({
+      action: `REJECT_${roleType}`,
+      user: currentUser ? (currentUser.fullName || currentUser.username) : 'ADMIN',
+      notes: alasan,
+      time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+    });
 
-      if (typeof supabase !== 'undefined' && supabase) {
-        try {
-          await supabase.from('permintaan_toko').update({
-            status: 'REJECT',
-            catatan: requests[idx].catatan
-          }).eq('no_surat', noSurat);
-        } catch(e) {}
-      }
-      if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-        await syncSupabaseRequestsToLocalCache();
-      }
+    // 1. SIMPAN LOKAL & UPDATE UI INSTAN (0 ms)
+    saveRequestsToDB(requests);
+    showNotif(`PERMINTAAN BERHASIL DITOLAK`, 'info');
+    loadRiwayat();
+    loadDashboard();
+    if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
 
-      showNotif(`PERMINTAAN BERHASIL DITOLAK`, 'info');
-
-      const users = getUsersFromDB();
-      const creator = users.find(u => u.id === requests[idx].userId || u.fullName === requests[idx].createdBy);
-
-      if (roleType === 'SERVICE') {
-        tambahNotifikasiSistem(['TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DITOLAK SERVICE. CATATAN: ${alasan}`, noSurat);
-        if (creator && creator.phone) {
-          kirimNotifikasiWA(creator.phone,
-            `Yth. Bapak/Ibu,\n\n` +
-            `Pemberitahuan Sistem Permintaan Barang:\n` +
-            `Pengajuan permintaan barang berikut DITOLAK oleh Tim Service:\n` +
-            `• Nomor Dokumen : #${noSurat}\n` +
-            `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-            `• Catatan / Alasan : ${alasan}\n` +
-            `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
-            `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
-          );
-        }
-      } else if (roleType === 'DM') {
-        tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} DITOLAK DM. CATATAN: ${alasan}`, noSurat);
-        if (creator && creator.phone) {
-          kirimNotifikasiWA(creator.phone,
-            `Yth. Bapak/Ibu,\n\n` +
-            `Pemberitahuan Sistem Permintaan Barang:\n` +
-            `Pengajuan permintaan barang berikut DITOLAK oleh DM Pusat:\n` +
-            `• Nomor Dokumen : #${noSurat}\n` +
-            `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-            `• Catatan / Alasan : ${alasan}\n` +
-            `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
-            `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
-          );
-        }
-        const serviceUsers = users.filter(u => u.category === 'SERVICE' && u.area === requests[idx].area);
-        serviceUsers.forEach(srv => {
-          if (srv.phone) {
-            kirimNotifikasiWA(srv.phone,
-              `Yth. Bapak/Ibu,\n\n` +
-              `Pemberitahuan Sistem Permintaan Barang:\n` +
-              `Pengajuan permintaan barang berikut DITOLAK oleh DM Pusat:\n` +
-              `• Nomor Dokumen : #${noSurat}\n` +
-              `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
-              `• Catatan / Alasan : ${alasan}\n` +
-              `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
-              `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
-            );
-          }
-        });
-      }
-
-      loadRiwayat();
-      loadDashboard();
-      if (currentUser.category === 'SERVICE' && currentUser.area === 'TSM') loadMasterDbTable();
-      if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-      if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+    // 2. PROSES SYNC SUPABASE DI LATAR BELAKANG
+    const docId = String(noSurat).replace(/[\/\.]/g, '_');
+    if (typeof supabase !== 'undefined' && supabase) {
+      supabase.from('permintaan_toko').update({
+        status: 'REJECT',
+        catatan: requests[idx].catatan,
+        log: requests[idx].log,
+        updated_at: new Date().toISOString()
+      }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
     }
-  }, 300);
+    if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+      dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+    }
+    if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+      dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
+    }
+
+    const users = getUsersFromDB();
+    const creator = users.find(u => u && (u.id === requests[idx].userId || u.fullName === requests[idx].createdBy));
+
+    if (roleType === 'SERVICE') {
+      tambahNotifikasiSistem(['TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DITOLAK SERVICE. CATATAN: ${alasan}`, noSurat);
+      if (creator && creator.phone) {
+        kirimNotifikasiWA(creator.phone,
+          `Yth. Bapak/Ibu,\n\n` +
+          `Pemberitahuan Sistem Permintaan Barang:\n` +
+          `Pengajuan permintaan barang berikut DITOLAK oleh Tim Service:\n` +
+          `• Nomor Dokumen : #${noSurat}\n` +
+          `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
+          `• Catatan / Alasan : ${alasan}\n` +
+          `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
+          `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
+        );
+      }
+    } else if (roleType === 'DM') {
+      tambahNotifikasiSistem(['SERVICE', 'TOKO', 'SALES'], requests[idx].area, `PERMINTAAN #${noSurat} DARI ${requests[idx].toko} DITOLAK DM. CATATAN: ${alasan}`, noSurat);
+      if (creator && creator.phone) {
+        kirimNotifikasiWA(creator.phone,
+          `Yth. Bapak/Ibu,\n\n` +
+          `Pemberitahuan Sistem Permintaan Barang:\n` +
+          `Pengajuan permintaan barang berikut DITOLAK oleh DM Pusat:\n` +
+          `• Nomor Dokumen : #${noSurat}\n` +
+          `• Toko / Pemohon : ${requests[idx].toko} (${requests[idx].area})\n` +
+          `• Catatan / Alasan : ${alasan}\n` +
+          `• Link Detail : ${getAppDirectLink(noSurat)}\n\n` +
+          `Silakan periksa kembali rincian dokumen pada sistem aplikasi. Terima kasih.`
+        );
+      }
+    }
+  }
 }
 
 function editPermintaan(noSurat) {
@@ -5906,58 +6237,49 @@ function hapusData(noSurat) {
   if (!noSurat) return;
   showConfirm(`APAKAH ANDA YAKIN INGIN MENGHAPUS PERMINTAAN #${noSurat} INI?`, () => {
     try {
-      showLoading('MENGUPDATE STATUS PERMINTAAN...');
-      setTimeout(async () => {
-        const currentReqs = getRequestsFromDB();
-        const idx = currentReqs.findIndex(r => r.noSurat === noSurat);
-        if (idx !== -1) {
-          currentReqs[idx].status = 'BATAL';
-          currentReqs[idx].unfulfilled = true;
-          if (Array.isArray(currentReqs[idx].items)) {
-            currentReqs[idx].items.forEach(i => i.unfulfilled = true);
-          }
-          if (!currentReqs[idx].log) currentReqs[idx].log = [];
-          currentReqs[idx].log.push({
-            action: 'TIDAK_DIPENUHI',
-            user: currentUser ? currentUser.fullName : 'USER',
-            notes: 'HAPUS PERMINTAAN',
-            time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
-          });
-
-          saveRequestsToDB(currentReqs);
-
-          // UPDATE STATUS DI SUPABASE (TANPA MENGHAPUS DATA DARI SUPABASE DATABASE)
-          if (typeof supabase !== 'undefined' && supabase) {
-            try {
-              await supabase.from('permintaan_toko').update({
-                status: 'BATAL',
-                items: currentReqs[idx].items
-              }).eq('no_surat', noSurat);
-            } catch(e) {
-              console.warn('[SUPABASE UNFULFILLED NOTICE]:', e);
-            }
-          }
-          if (typeof syncSupabaseRequestsToLocalCache === 'function') {
-            await syncSupabaseRequestsToLocalCache();
-          }
-
-          if (typeof pushCentralCloudDB === 'function') {
-            try { await pushCentralCloudDB(); } catch(e) {}
-          }
-
-          hideLoading();
-          showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS!`, 'warning');
-          if (typeof loadRiwayat === 'function') loadRiwayat();
-          if (typeof loadDashboard === 'function') loadDashboard();
-          if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
-        } else {
-          hideLoading();
+      const currentReqs = getRequestsFromDB();
+      const idx = currentReqs.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(noSurat).trim().toUpperCase());
+      if (idx !== -1) {
+        currentReqs[idx].status = 'BATAL';
+        currentReqs[idx].unfulfilled = true;
+        if (Array.isArray(currentReqs[idx].items)) {
+          currentReqs[idx].items.forEach(i => i.unfulfilled = true);
         }
-      }, 300);
+        if (!currentReqs[idx].log) currentReqs[idx].log = [];
+        currentReqs[idx].log.push({
+          action: 'TIDAK_DIPENUHI',
+          user: currentUser ? (currentUser.fullName || currentUser.username) : 'USER',
+          notes: 'HAPUS PERMINTAAN',
+          time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+        });
+
+        // 1. SIMPAN LOKAL SECARA INSTAN (0 ms)
+        saveRequestsToDB(currentReqs);
+        showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS!`, 'warning');
+        if (typeof loadRiwayat === 'function') loadRiwayat();
+        if (typeof loadDashboard === 'function') loadDashboard();
+        if (typeof loadMasterDbTable === 'function') loadMasterDbTable();
+
+        // 2. PROSES SYNC SUPABASE DI LATAR BELAKANG
+        const docId = String(noSurat).replace(/[\/\.]/g, '_');
+        if (typeof supabase !== 'undefined' && supabase) {
+          supabase.from('permintaan_toko').update({
+            status: 'BATAL',
+            items: currentReqs[idx].items,
+            log: currentReqs[idx].log,
+            updated_at: new Date().toISOString()
+          }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
+        }
+        if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+          dbFirestore.collection('requests').doc(docId).set(currentReqs[idx], { merge: true }).catch(e => console.warn(e));
+        }
+        if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+          dbRealtime.ref(`requests/${docId}`).set(currentReqs[idx]).catch(e => console.warn(e));
+        }
+      }
     } catch (err) {
-      hideLoading();
       console.error('[HAPUS DATA ERROR]:', err);
-      showNotif('GAGAL MENGUPDATE STATUS PERMINTAAN!', 'error');
+      showNotif('GAGAL MENGHAPUS PERMINTAAN: ' + (err.message || err), 'error');
     }
   });
 }
@@ -6188,16 +6510,23 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     try { itemsList = JSON.parse(rawItems || '[]'); } catch (e) { itemsList = []; }
   }
 
-  const thStyleCenter = "width: 55px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; box-shadow: none !important; text-shadow: none !important;";
-  const thStyleQty = "width: 60px !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; box-shadow: none !important; text-shadow: none !important;";
-  const thStyleLeft = (widthPct) => `width: ${widthPct} !important; text-align: center !important; background: var(--primary) !important; color: #ffffff !important; padding: 7px 10px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; box-shadow: none !important; text-shadow: none !important;`;
+  const thBase = "background: var(--primary) !important; color: #ffffff !important; padding: 8px 10px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.3px !important; box-shadow: none !important; text-shadow: none !important;";
+  const thStyleAutofit = `${thBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
+  const thStyleLeft = `${thBase} text-align: left !important;`;
 
-  const tdStyle = "padding: 7px 10px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; text-align: left !important;";
+  const tdBase = "padding: 8px 10px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important;";
+  const tdStyleAutofit = `${tdBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
+  const tdStyleLeft = `${tdBase} text-align: left !important;`;
 
-  const role = currentUser ? currentUser.category : '';
-  const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+  const role = currentUser ? (currentUser.category || '').toUpperCase() : '';
+  const isAdminUser = currentUser && (role === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
   const isServiceUser = (role === 'SERVICE' || isAdminUser);
-  const canServiceRowDelete = isServiceUser && req.status !== 'DONE';
+  
+  // HANYA MUNCUL TOMBOL AKSI BARIS (TIDAK DIPENUHI & EDIT KETERANGAN PART) APABILA STATUSNYA SUDAH APPROVE
+  const canServiceRowActions = isServiceUser && (req.status === 'APPROVE');
+  
+  // KOLOM KETERANGAN PART HANYA DITAMPILKAN JIKA STATUS APPROVE ATAU DONE (PENDING & REJECT TIDAK DITAMPILKAN)
+  const showKetPartCol = (req.status === 'APPROVE' || req.status === 'DONE');
 
   let itemsHtml = itemsList.map((i, idx) => {
     const isUnfulfilled = i.unfulfilled === true;
@@ -6210,49 +6539,96 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     const alasanVal = i.alasan || i.keterangan || '-';
     const qtyVal = i.qty || i.jumlah || 1;
 
+    // RENDER BADGE NO / STATUS PART (OTOMATIS 'DIPENUHI' JIKA STATUS DONE DAN TERPENUHI)
+    let statusPartVal = (i.statusPart || i.keteranganPart || i.noPart || '').trim();
+    if (req.status === 'DONE' && !isUnfulfilled && !statusPartVal) {
+      statusPartVal = 'DIPENUHI';
+    }
+
+    let statusPartBadgeHtml = '<span style="color: var(--text-muted); font-size: 11px;">-</span>';
+    if (isUnfulfilled) {
+      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 700; font-size: 11px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444;">TIDAK DIPENUHI</span>`;
+    } else if (statusPartVal) {
+      const up = statusPartVal.toUpperCase();
+      let badgeBg = 'rgba(2, 132, 199, 0.12)';
+      let badgeColor = '#0284c7';
+      let badgeBorder = '#0284c7';
+      if (up.includes('DIPENUHI') || up.includes('READY') || up.includes('TERSEDIA') || up.includes('TERPASANG')) {
+        badgeBg = 'rgba(16, 185, 129, 0.15)';
+        badgeColor = '#10b981';
+        badgeBorder = '#10b981';
+      } else if (up.includes('INDENT') || up.includes('ORDER') || up.includes('PROSES') || up.includes('PESAN')) {
+        badgeBg = 'rgba(245, 158, 11, 0.15)';
+        badgeColor = '#f59e0b';
+        badgeBorder = '#f59e0b';
+      } else if (up.includes('BATAL') || up.includes('KOSONG') || up.includes('TIDAK DIPENUHI')) {
+        badgeBg = 'rgba(239, 68, 68, 0.15)';
+        badgeColor = '#ef4444';
+        badgeBorder = '#ef4444';
+      }
+      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 700; font-size: 11px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">${statusPartVal}</span>`;
+    }
+
+    let ketPartTdHtml = showKetPartCol ? `<td style="${tdStyleLeft} ${strikeStyle}">${statusPartBadgeHtml}</td>` : '';
+
     let actionTdHtml = '';
-    if (canServiceRowDelete) {
+    if (canServiceRowActions) {
+      let unfulfilledBtn = '';
       if (isUnfulfilled) {
-        actionTdHtml = `
-          <td style="${tdStyle} text-align: center !important;">
-            <button type="button" class="btnIcon btnUndo" onclick="undoBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="BATALKAN (UNDO)" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #f59e0b !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
-              <span class="material-symbols-rounded" style="font-size: 15px !important;">undo</span>
-            </button>
-          </td>
+        unfulfilledBtn = `
+          <button type="button" class="btnIcon btnUndo" onclick="undoBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="BATALKAN (UNDO)" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #f59e0b !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
+            <span class="material-symbols-rounded" style="font-size: 15px !important;">undo</span>
+          </button>
         `;
       } else {
-        actionTdHtml = `
-          <td style="${tdStyle} text-align: center !important;">
-            <button type="button" class="btnIcon btnDelete" onclick="hapusBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="TANDAI TIDAK DIPENUHI" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #ef4444 !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
-              <span class="material-symbols-rounded" style="font-size: 15px !important;">cancel</span>
-            </button>
-          </td>
+        unfulfilledBtn = `
+          <button type="button" class="btnIcon btnDelete" onclick="hapusBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="TANDAI TIDAK DIPENUHI" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #ef4444 !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
+            <span class="material-symbols-rounded" style="font-size: 15px !important;">cancel</span>
+          </button>
         `;
       }
+
+      // TOMBOL EDIT KETERANGAN PART (MANUAL FREE TEXT) PERSIS DI SEBELAH TOMBOL TIDAK DIPENUHI
+      const editPartBtn = `
+        <button type="button" class="btnIcon btnEditPartRow" onclick="bukaModalEditKetPartSingle('${req.noSurat}', ${idx})" title="EDIT KETERANGAN / NO PART (FREE TEXT)" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #0284c7 !important; color: #ffffff !important; border: none !important; cursor: pointer !important; margin-left: 4px !important;">
+          <span class="material-symbols-rounded" style="font-size: 15px !important;">edit_note</span>
+        </button>
+      `;
+
+      actionTdHtml = `
+        <td style="${tdStyleAutofit}">
+          <div style="display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+            ${unfulfilledBtn}
+            ${editPartBtn}
+          </div>
+        </td>
+      `;
     }
 
     if (isDus) {
       return `
         <tr style="${isUnfulfilled ? 'background: rgba(239, 68, 68, 0.08) !important;' : ''}">
-          <td style="${tdStyle} text-align: center !important; ${strikeStyle}">${idx + 1}</td>
-          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${typeVal}</td>
-          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${seriVal}</td>
-          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${barangVal}</td>
-          <td style="${tdStyle} text-align: left !important; color: #d97706 !important; font-weight: 600 !important; ${strikeStyle}">${dusVal}</td>
-          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${alasanVal}</td>
-          <td style="${tdStyle} text-align: center !important; ${strikeStyle}">${qtyVal}</td>
+          <td style="${tdStyleAutofit} ${strikeStyle}">${idx + 1}</td>
+          <td style="${tdStyleLeft} ${strikeStyle}">${typeVal}</td>
+          <td style="${tdStyleLeft} ${strikeStyle}">${seriVal}</td>
+          <td style="${tdStyleLeft} ${strikeStyle}">${barangVal}</td>
+          <td style="${tdStyleLeft} color: #d97706 !important; font-weight: 600 !important; ${strikeStyle}">${dusVal}</td>
+          <td style="${tdStyleLeft} ${strikeStyle}">${alasanVal}</td>
+          <td style="${tdStyleAutofit} font-weight: 700 !important; ${strikeStyle}">${qtyVal}</td>
+          ${ketPartTdHtml}
           ${actionTdHtml}
         </tr>
       `;
     } else {
       return `
         <tr style="${isUnfulfilled ? 'background: rgba(239, 68, 68, 0.08) !important;' : ''}">
-          <td style="${tdStyle} text-align: center !important; ${strikeStyle}">${idx + 1}</td>
-          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${typeVal}</td>
-          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${seriVal}</td>
-          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${barangVal}</td>
-          <td style="${tdStyle} text-align: left !important; ${strikeStyle}">${alasanVal}</td>
-          <td style="${tdStyle} text-align: center !important; ${strikeStyle}">${qtyVal}</td>
+          <td style="${tdStyleAutofit} ${strikeStyle}">${idx + 1}</td>
+          <td style="${tdStyleLeft} ${strikeStyle}">${typeVal}</td>
+          <td style="${tdStyleLeft} ${strikeStyle}">${seriVal}</td>
+          <td style="${tdStyleLeft} ${strikeStyle}">${barangVal}</td>
+          <td style="${tdStyleLeft} ${strikeStyle}">${alasanVal}</td>
+          <td style="${tdStyleAutofit} font-weight: 700 !important; ${strikeStyle}">${qtyVal}</td>
+          ${ketPartTdHtml}
           ${actionTdHtml}
         </tr>
       `;
@@ -6262,20 +6638,37 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   let bottomActionsHtml = '';
   let actionButtons = [];
 
-  if (req.status === 'PENDING') {
-    if (role === 'SERVICE' || isAdminUser) {
-      if (!req.serviceApprove) {
-        actionButtons.push(`
-          <button type="button" class="btnIcon btnApprove btnIconOnly" title="APPROVE" onclick="tutupDetailBarangV2(); approveService('${req.noSurat}');">
-            <span class="material-symbols-rounded">check_circle</span>
-          </button>
-        `);
-        actionButtons.push(`
-          <button type="button" class="btnIcon btnReject btnIconOnly" title="TOLAK" onclick="tutupDetailBarangV2(); tolakServiceModal('${req.noSurat}', 'SERVICE');">
-            <span class="material-symbols-rounded">cancel</span>
-          </button>
-        `);
-      } else if (isAdminUser) {
+  const isDeletedReq = (req.status === 'BATAL' || req.unfulfilled === true);
+
+  if (!isDeletedReq) {
+    if (req.status === 'PENDING') {
+      if (role === 'SERVICE' || isAdminUser) {
+        if (!req.serviceApprove) {
+          actionButtons.push(`
+            <button type="button" class="btnIcon btnApprove btnIconOnly" title="APPROVE" onclick="tutupDetailBarangV2(); approveService('${req.noSurat}');">
+              <span class="material-symbols-rounded">check_circle</span>
+            </button>
+          `);
+          actionButtons.push(`
+            <button type="button" class="btnIcon btnReject btnIconOnly" title="TOLAK" onclick="tutupDetailBarangV2(); tolakServiceModal('${req.noSurat}', 'SERVICE');">
+              <span class="material-symbols-rounded">cancel</span>
+            </button>
+          `);
+        } else if (isAdminUser) {
+          actionButtons.push(`
+            <button type="button" class="btnIcon btnApprove btnIconOnly" title="APPROVE" onclick="tutupDetailBarangV2(); approveDM('${req.noSurat}');">
+              <span class="material-symbols-rounded">check_circle</span>
+            </button>
+          `);
+          actionButtons.push(`
+            <button type="button" class="btnIcon btnReject btnIconOnly" title="TOLAK" onclick="tutupDetailBarangV2(); tolakServiceModal('${req.noSurat}', 'DM');">
+              <span class="material-symbols-rounded">cancel</span>
+            </button>
+          `);
+        }
+      }
+      
+      if (role === 'DM' && req.serviceApprove) {
         actionButtons.push(`
           <button type="button" class="btnIcon btnApprove btnIconOnly" title="APPROVE" onclick="tutupDetailBarangV2(); approveDM('${req.noSurat}');">
             <span class="material-symbols-rounded">check_circle</span>
@@ -6288,80 +6681,67 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         `);
       }
     }
-    
-    if (role === 'DM' && req.serviceApprove) {
+
+    const isPdfVisible = isPdfButtonAllowed(req);
+    if (isPdfVisible) {
       actionButtons.push(`
-        <button type="button" class="btnIcon btnApprove btnIconOnly" title="APPROVE" onclick="tutupDetailBarangV2(); approveDM('${req.noSurat}');">
-          <span class="material-symbols-rounded">check_circle</span>
-        </button>
-      `);
-      actionButtons.push(`
-        <button type="button" class="btnIcon btnReject btnIconOnly" title="TOLAK" onclick="tutupDetailBarangV2(); tolakServiceModal('${req.noSurat}', 'DM');">
-          <span class="material-symbols-rounded">cancel</span>
+        <button type="button" class="btnIcon btnPdf btnIconOnly" title="CETAK PDF" onclick="tutupDetailBarangV2(); bukaPdfModal('${req.noSurat}');">
+          <span class="material-symbols-rounded">picture_as_pdf</span>
         </button>
       `);
     }
-  }
 
-  const isPdfVisible = isPdfButtonAllowed(req);
-  if (isPdfVisible) {
-    actionButtons.push(`
-      <button type="button" class="btnIcon btnPdf btnIconOnly" title="CETAK PDF" onclick="tutupDetailBarangV2(); bukaPdfModal('${req.noSurat}');">
-        <span class="material-symbols-rounded">picture_as_pdf</span>
-      </button>
-    `);
-  }
-
-  if (req.status === 'APPROVE' && (role === 'SERVICE' || isAdminUser)) {
-    actionButtons.push(`
-      <button type="button" class="btnIcon btnDone btnIconOnly" title="SET DONE" onclick="tutupDetailBarangV2(); doneService('${req.noSurat}');">
-        <span class="material-symbols-rounded">task_alt</span>
-      </button>
-    `);
-  }
-
-  if (canServiceRowDelete) {
-    actionButtons.push(`
-      <button type="button" class="btnIcon btnSave btnIconOnly" title="SIMPAN PERUBAHAN KE CLOUD" onclick="simpanPerubahanDetailAdmin('${req.noSurat}');" style="background: #059669 !important; color: #ffffff !important;">
-        <span class="material-symbols-rounded">save</span>
-      </button>
-    `);
-  }
-
-  // BATAL APPROVE SERVICE / DM BUTTONS EXCLUSIVELY VISIBLE FOR ADMIN LOGIN ACCOUNT ONLY (HILANGKAN DARI SERVICE, DM, TOKO, SALES)
-  if (isAdminUser) {
-    if (req.serviceApprove) {
+    if (req.status === 'APPROVE' && (role === 'SERVICE' || isAdminUser)) {
       actionButtons.push(`
-        <button type="button" class="btnIcon btnIconOnly" title="BATAL APPROVE SERVICE" onclick="tutupDetailBarangV2(); batalApproveService('${req.noSurat}');" style="background: #eab308 !important; color: #ffffff !important;">
-          <span class="material-symbols-rounded">undo</span>
+        <button type="button" class="btnIcon btnDone btnIconOnly" title="SET DONE" onclick="tutupDetailBarangV2(); doneService('${req.noSurat}');">
+          <span class="material-symbols-rounded">task_alt</span>
         </button>
       `);
     }
-    if (req.status === 'APPROVE' || req.dmUserName || req.dmTTD) {
+
+    if (canServiceRowActions) {
       actionButtons.push(`
-        <button type="button" class="btnIcon btnIconOnly" title="BATAL APPROVE DM" onclick="tutupDetailBarangV2(); batalApproveDM('${req.noSurat}');" style="background: #f97316 !important; color: #ffffff !important;">
-          <span class="material-symbols-rounded">undo</span>
+        <button type="button" class="btnIcon btnSave btnIconOnly" title="SIMPAN PERUBAHAN KE CLOUD" onclick="simpanPerubahanDetailAdmin('${req.noSurat}');" style="background: #059669 !important; color: #ffffff !important;">
+          <span class="material-symbols-rounded">save</span>
         </button>
       `);
     }
-  }
 
-  const isCreator = currentUser && (req.userId === currentUser.id || req.createdBy === currentUser.fullName || (currentUser.category === 'TOKO' && req.toko.toUpperCase() === currentUser.fullName.toUpperCase()));
-  const canCreatorEditDelete = isCreator && !req.serviceApprove && req.status === 'PENDING';
-  const canServiceEditDelete = (role === 'SERVICE' && !req.serviceApprove && req.status === 'PENDING');
-  const canAdminEditDelete = isAdminUser;
+    // BATAL APPROVE SERVICE / DM BUTTONS EXCLUSIVELY VISIBLE FOR ADMIN LOGIN ACCOUNT ONLY (HILANGKAN DARI SERVICE, DM, TOKO, SALES)
+    if (isAdminUser) {
+      if (req.serviceApprove) {
+        actionButtons.push(`
+          <button type="button" class="btnIcon btnIconOnly" title="BATAL APPROVE SERVICE" onclick="tutupDetailBarangV2(); batalApproveService('${req.noSurat}');" style="background: #eab308 !important; color: #ffffff !important;">
+            <span class="material-symbols-rounded">undo</span>
+          </button>
+        `);
+      }
+      if (req.status === 'APPROVE' || req.dmUserName || req.dmTTD) {
+        actionButtons.push(`
+          <button type="button" class="btnIcon btnIconOnly" title="BATAL APPROVE DM" onclick="tutupDetailBarangV2(); batalApproveDM('${req.noSurat}');" style="background: #f97316 !important; color: #ffffff !important;">
+            <span class="material-symbols-rounded">undo</span>
+          </button>
+        `);
+      }
+    }
 
-  if (canCreatorEditDelete || canServiceEditDelete || canAdminEditDelete) {
-    actionButtons.push(`
-      <button type="button" class="btnIcon btnEdit btnIconOnly" title="EDIT" onclick="tutupDetailBarangV2(); editPermintaan('${req.noSurat}');">
-        <span class="material-symbols-rounded">edit</span>
-      </button>
-    `);
-    actionButtons.push(`
-      <button type="button" class="btnIcon btnDelete btnIconOnly" title="HAPUS PERMINTAAN" onclick="tutupDetailBarangV2(); hapusData('${req.noSurat}');">
-        <span class="material-symbols-rounded">delete</span>
-      </button>
-    `);
+    const isCreator = currentUser && (req.userId === currentUser.id || req.createdBy === currentUser.fullName || (currentUser.category === 'TOKO' && req.toko.toUpperCase() === currentUser.fullName.toUpperCase()));
+    const canCreatorEditDelete = isCreator && !req.serviceApprove && req.status === 'PENDING';
+    const canServiceEditDelete = (role === 'SERVICE' && !req.serviceApprove && req.status === 'PENDING');
+    const canAdminEditDelete = isAdminUser;
+
+    if (canCreatorEditDelete || canServiceEditDelete || canAdminEditDelete) {
+      actionButtons.push(`
+        <button type="button" class="btnIcon btnEdit btnIconOnly" title="EDIT" onclick="tutupDetailBarangV2(); editPermintaan('${req.noSurat}');">
+          <span class="material-symbols-rounded">edit</span>
+        </button>
+      `);
+      actionButtons.push(`
+        <button type="button" class="btnIcon btnDelete btnIconOnly" title="HAPUS PERMINTAAN" onclick="tutupDetailBarangV2(); hapusData('${req.noSurat}');">
+          <span class="material-symbols-rounded">delete</span>
+        </button>
+      `);
+    }
   }
 
   const allReqPhotos = [
@@ -6386,30 +6766,33 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     `;
   }
 
-  const thActionHtml = canServiceRowDelete ? `<th style="${thStyleCenter}">AKSI</th>` : '';
+  const thKetPartHtml = showKetPartCol ? `<th style="${thStyleLeft}">KETERANGAN PART</th>` : '';
+  const thActionHtml = canServiceRowActions ? `<th style="${thStyleAutofit}">AKSI</th>` : '';
 
   const tableHeaderHtml = isDus ? `
     <thead>
       <tr style="background: var(--primary) !important; color: #ffffff !important;">
-        <th style="${thStyleCenter}">NO</th>
-        <th style="${thStyleLeft('14%')}">TYPE</th>
-        <th style="${thStyleLeft('16%')}">SERI BARANG</th>
-        <th style="${thStyleLeft('20%')}">PERMINTAAN</th>
-        <th style="${thStyleLeft('16%')}">SERI DUS</th>
-        <th style="${thStyleLeft('16%')}">ALASAN</th>
-        <th style="${thStyleQty}">QTY</th>
+        <th style="${thStyleAutofit}">NO</th>
+        <th style="${thStyleLeft}">TYPE</th>
+        <th style="${thStyleLeft}">SERI BARANG</th>
+        <th style="${thStyleLeft}">PERMINTAAN</th>
+        <th style="${thStyleLeft}">SERI DUS</th>
+        <th style="${thStyleLeft}">ALASAN</th>
+        <th style="${thStyleAutofit}">QTY</th>
+        ${thKetPartHtml}
         ${thActionHtml}
       </tr>
     </thead>
   ` : `
     <thead>
       <tr style="background: var(--primary) !important; color: #ffffff !important;">
-        <th style="${thStyleCenter}">NO</th>
-        <th style="${thStyleLeft('16%')}">TYPE</th>
-        <th style="${thStyleLeft('18%')}">SERI BARANG</th>
-        <th style="${thStyleLeft('24%')}">PERMINTAAN</th>
-        <th style="${thStyleLeft('22%')}">ALASAN</th>
-        <th style="${thStyleQty}">QTY</th>
+        <th style="${thStyleAutofit}">NO</th>
+        <th style="${thStyleLeft}">TYPE</th>
+        <th style="${thStyleLeft}">SERI BARANG</th>
+        <th style="${thStyleLeft}">PERMINTAAN</th>
+        <th style="${thStyleLeft}">ALASAN</th>
+        <th style="${thStyleAutofit}">QTY</th>
+        ${thKetPartHtml}
         ${thActionHtml}
       </tr>
     </thead>
@@ -6420,7 +6803,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
       ${headerInfoHtml}
       
       <div class="tableCardV2 tableWrap" style="display: block !important; border-top: 1px solid var(--border-color) !important; border-bottom: 1px solid var(--border-color) !important; border-left: none !important; border-right: none !important; border-radius: 0 !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: auto !important; overscroll-behavior: contain !important; max-height: 55vh !important; background: var(--bg-box) !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 0 !important; position: relative !important;">
-        <table class="detailTableV2" style="width: 100% !important; min-width: 750px !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
+        <table class="detailTableV2" style="width: 100% !important; min-width: 100% !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
           ${tableHeaderHtml}
           <tbody>
             ${itemsHtml}
@@ -6445,6 +6828,324 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   }
   return true;
 }
+
+// ----------------------------------------------------
+// FITUR UPDATE NO & STATUS PART (KHUSUS LOGIN SERVICE / ADMIN)
+// ----------------------------------------------------
+function bukaModalEditStatusPart(noSurat) {
+  if (!noSurat) return;
+  const role = currentUser ? (currentUser.category || '').toUpperCase() : '';
+  const isAdm = currentUser && (role === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+  if (role !== 'SERVICE' && !isAdm) {
+    showNotif('FITUR EDIT NO / STATUS PART HANYA DAPAT DIAKSES OLEH KATEGORI SERVICE!', 'warning');
+    return;
+  }
+
+  const requests = getRequestsFromDB();
+  const targetNo = String(noSurat).trim().toUpperCase();
+  const req = requests.find(r => r && (
+    String(r.noSurat || '').trim().toUpperCase() === targetNo ||
+    String(r.id || '').trim().toUpperCase() === targetNo
+  ));
+
+  if (!req) {
+    showNotif('DATA PERMINTAAN TIDAK DITEMUKAN!', 'warning');
+    return;
+  }
+
+  const titleEl = document.getElementById('editStatusPartTitle');
+  if (titleEl) titleEl.textContent = `UPDATE NO & STATUS PART (#${req.noSurat})`;
+
+  const noSuratInput = document.getElementById('editStatusPartNoSurat');
+  if (noSuratInput) noSuratInput.value = req.noSurat;
+
+  const container = document.getElementById('editStatusPartItemsContainer');
+  if (!container) return;
+
+  const items = Array.isArray(req.items) ? req.items : [];
+  if (items.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-muted);">TIDAK ADA ITEM DALAM PERMINTAAN INI.</div>';
+  } else {
+    container.innerHTML = items.map((i, idx) => {
+      const typeVal = i.type || i.tipe || '-';
+      const seriVal = i.seri || i.sn || '-';
+      const barangVal = i.barang || i.permintaan || '-';
+      const currentNoPart = i.noPart || '';
+      const currentStatusPart = i.statusPart || '';
+
+      return `
+        <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">
+            <strong style="font-size: 13px; color: var(--primary);">${idx + 1}. ${typeVal} (SN: ${seriVal})</strong>
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);">${barangVal} (Qty: ${i.qty || 1})</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">NO PART / KODE PART</label>
+              <input type="text" id="input_nopart_${idx}" value="${currentNoPart}" placeholder="Contoh: PRT-99210 / BAUT..." style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">STATUS PART</label>
+              <input type="text" id="input_statuspart_${idx}" list="list_statuspart_presets" value="${currentStatusPart}" placeholder="Pilih / Ketik Status..." style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
+              <datalist id="list_statuspart_presets">
+                <option value="READY / TERSEDIA">
+                <option value="PROSES">
+                <option value="INDENT / PESAN">
+                <option value="TERPASANG">
+                <option value="KOSONG / BATAL">
+              </datalist>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const modal = document.getElementById('popupEditStatusPart');
+  if (modal) {
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.classList.add('show');
+  }
+}
+window.bukaModalEditStatusPart = bukaModalEditStatusPart;
+
+function tutupModalEditStatusPart() {
+  const modal = document.getElementById('popupEditStatusPart');
+  if (modal) {
+    modal.style.setProperty('display', 'none', 'important');
+    modal.classList.remove('show');
+  }
+}
+window.tutupModalEditStatusPart = tutupModalEditStatusPart;
+
+function simpanStatusPart() {
+  const noSuratInput = document.getElementById('editStatusPartNoSurat');
+  const noSurat = noSuratInput ? noSuratInput.value.trim() : '';
+  if (!noSurat) {
+    showNotif('NOMOR SURAT TIDAK VALID!', 'warning');
+    return;
+  }
+
+  showConfirm(`SIMPAN PERUBAHAN NO & STATUS PART UNTUK #${noSurat}?`, () => {
+    try {
+      const requests = getRequestsFromDB();
+      const targetNo = String(noSurat).trim().toUpperCase();
+      const idx = requests.findIndex(r => r && (
+        String(r.noSurat || '').trim().toUpperCase() === targetNo ||
+        String(r.id || '').trim().toUpperCase() === targetNo
+      ));
+
+      if (idx === -1) {
+        showNotif('DATA PERMINTAAN TIDAK DITEMUKAN!', 'warning');
+        return;
+      }
+
+      const items = Array.isArray(requests[idx].items) ? requests[idx].items : [];
+      items.forEach((item, itemIdx) => {
+        const noPartEl = document.getElementById(`input_nopart_${itemIdx}`);
+        const statusPartEl = document.getElementById(`input_statuspart_${itemIdx}`);
+        if (noPartEl) {
+          item.noPart = noPartEl.value.trim().toUpperCase();
+        }
+        if (statusPartEl) {
+          item.statusPart = statusPartEl.value.trim().toUpperCase();
+        }
+      });
+
+      if (!requests[idx].log) requests[idx].log = [];
+      requests[idx].log.push({
+        action: 'UPDATE_STATUS_PART',
+        user: currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE',
+        notes: `UPDATE NO & STATUS PART OLEH SERVICE`,
+        time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+      });
+
+      // 1. SIMPAN LOKAL SECARA INSTAN (0 ms)
+      saveRequestsToDB(requests);
+      tutupModalEditStatusPart();
+      showNotif(`NO & STATUS PART #${noSurat} BERHASIL DIPERBARUI!`, 'success');
+      
+      if (typeof loadRiwayat === 'function') loadRiwayat();
+      if (typeof loadDashboard === 'function') loadDashboard();
+      if (typeof lihatDetail === 'function') lihatDetail(noSurat);
+
+      // 2. SINKRONISASI SUPABASE CLOUD DI LATAR BELAKANG
+      const docId = String(noSurat).replace(/[\/\.]/g, '_');
+      if (typeof supabase !== 'undefined' && supabase) {
+        supabase.from('permintaan_toko').update({
+          items: requests[idx].items,
+          log: requests[idx].log,
+          updated_at: new Date().toISOString()
+        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn('[SUPABASE STATUS PART UPDATE NOTICE]:', e));
+      }
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
+      }
+    } catch (err) {
+      console.error('[SIMPAN STATUS PART ERROR]:', err);
+      showNotif('GAGAL MENYIMPAN STATUS PART: ' + (err.message || err), 'error');
+    }
+  });
+}
+window.simpanStatusPart = simpanStatusPart;
+
+// ----------------------------------------------------
+// FITUR EDIT KETERANGAN PART PER BARIS (FREE TEXT MANUAL KHUSUS SERVICE / ADMIN)
+// ----------------------------------------------------
+function bukaModalEditKetPartSingle(noSurat, itemIndex) {
+  if (!noSurat) return;
+  const role = currentUser ? (currentUser.category || '').toUpperCase() : '';
+  const isAdm = currentUser && (role === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
+  if (role !== 'SERVICE' && !isAdm) {
+    showNotif('FITUR EDIT KETERANGAN PART HANYA DAPAT DIAKSES OLEH KATEGORI SERVICE!', 'warning');
+    return;
+  }
+
+  const requests = getRequestsFromDB();
+  const targetNo = String(noSurat).trim().toUpperCase();
+  const req = requests.find(r => r && (
+    String(r.noSurat || '').trim().toUpperCase() === targetNo ||
+    String(r.id || '').trim().toUpperCase() === targetNo
+  ));
+
+  if (!req) {
+    showNotif('DATA PERMINTAAN TIDAK DITEMUKAN!', 'warning');
+    return;
+  }
+
+  const items = Array.isArray(req.items) ? req.items : [];
+  if (itemIndex < 0 || itemIndex >= items.length) {
+    showNotif('ITEM TIDAK DITEMUKAN!', 'warning');
+    return;
+  }
+
+  const item = items[itemIndex];
+  const typeVal = item.type || item.tipe || '-';
+  const seriVal = item.seri || item.sn || '-';
+  const barangVal = item.barang || item.permintaan || '-';
+  const currentKet = item.statusPart || item.keteranganPart || item.noPart || '';
+
+  const titleEl = document.getElementById('editKetPartSingleTitle');
+  if (titleEl) titleEl.textContent = `EDIT KETERANGAN PART (BARIS ${itemIndex + 1})`;
+
+  const noSuratHidden = document.getElementById('editKetPartSingleNoSurat');
+  if (noSuratHidden) noSuratHidden.value = req.noSurat;
+
+  const idxHidden = document.getElementById('editKetPartSingleItemIndex');
+  if (idxHidden) idxHidden.value = itemIndex;
+
+  const infoEl = document.getElementById('editKetPartSingleItemInfo');
+  if (infoEl) {
+    infoEl.innerHTML = `
+      <div style="color: var(--primary); font-size: 13px; font-weight: 800; margin-bottom: 2px;">#${req.noSurat} - Baris ${itemIndex + 1}</div>
+      <div style="color: var(--text-main); font-size: 12px; font-weight: 600;">Item: <strong>${barangVal}</strong> | Type: <strong>${typeVal}</strong> (SN: ${seriVal})</div>
+    `;
+  }
+
+  const inputEl = document.getElementById('editKetPartSingleInput');
+  if (inputEl) {
+    inputEl.value = currentKet;
+    setTimeout(() => inputEl.focus(), 150);
+  }
+
+  const modal = document.getElementById('popupEditKeteranganPartSingle');
+  if (modal) {
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.classList.add('show');
+  }
+}
+window.bukaModalEditKetPartSingle = bukaModalEditKetPartSingle;
+
+function tutupModalEditKetPartSingle() {
+  const modal = document.getElementById('popupEditKeteranganPartSingle');
+  if (modal) {
+    modal.style.setProperty('display', 'none', 'important');
+    modal.classList.remove('show');
+  }
+}
+window.tutupModalEditKetPartSingle = tutupModalEditKetPartSingle;
+
+function simpanKeteranganPartSingle() {
+  const noSuratHidden = document.getElementById('editKetPartSingleNoSurat');
+  const idxHidden = document.getElementById('editKetPartSingleItemIndex');
+  const inputEl = document.getElementById('editKetPartSingleInput');
+
+  const noSurat = noSuratHidden ? noSuratHidden.value.trim() : '';
+  const itemIndex = idxHidden ? parseInt(idxHidden.value, 10) : -1;
+  const newKet = inputEl ? inputEl.value.trim().toUpperCase() : '';
+
+  if (!noSurat || itemIndex < 0) {
+    showNotif('DATA TIDAK VALID!', 'warning');
+    return;
+  }
+
+  try {
+    const requests = getRequestsFromDB();
+    const targetNo = String(noSurat).trim().toUpperCase();
+    const idx = requests.findIndex(r => r && (
+      String(r.noSurat || '').trim().toUpperCase() === targetNo ||
+      String(r.id || '').trim().toUpperCase() === targetNo
+    ));
+
+    if (idx === -1) {
+      showNotif('DATA PERMINTAAN TIDAK DITEMUKAN!', 'warning');
+      return;
+    }
+
+    const items = Array.isArray(requests[idx].items) ? requests[idx].items : [];
+    if (itemIndex >= items.length) {
+      showNotif('ITEM TIDAK DITEMUKAN!', 'warning');
+      return;
+    }
+
+    // SIMPAN KE STATUS PART & KETERANGAN PART
+    items[itemIndex].statusPart = newKet;
+    items[itemIndex].keteranganPart = newKet;
+    requests[idx].items = items;
+
+    const targetItemName = items[itemIndex].barang || items[itemIndex].permintaan || `Baris ${itemIndex + 1}`;
+
+    if (!requests[idx].log) requests[idx].log = [];
+    requests[idx].log.push({
+      action: 'UPDATE_KETERANGAN_PART_BARIS',
+      user: currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE',
+      notes: `Update keterangan part item '${targetItemName}': ${newKet || '(dikosongkan)'}`,
+      time: `${getFormattedDateDDMMYYYY()} ${new Date().toLocaleTimeString('id-ID')}`
+    });
+
+    // 1. SIMPAN LOKAL SECARA INSTAN (0 ms)
+    saveRequestsToDB(requests);
+    tutupModalEditKetPartSingle();
+    showNotif(`KETERANGAN PART '${targetItemName}' BERHASIL DISIMPAN!`, 'success');
+
+    if (typeof loadRiwayat === 'function') loadRiwayat();
+    if (typeof loadDashboard === 'function') loadDashboard();
+    if (typeof lihatDetail === 'function') lihatDetail(noSurat);
+
+    // 2. SINKRONISASI SUPABASE CLOUD DI LATAR BELAKANG
+    const docId = String(noSurat).replace(/[\/\.]/g, '_');
+    if (typeof supabase !== 'undefined' && supabase) {
+      supabase.from('permintaan_toko').update({
+        items: requests[idx].items,
+        log: requests[idx].log,
+        updated_at: new Date().toISOString()
+      }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn('[SUPABASE STATUS PART UPDATE NOTICE]:', e));
+    }
+    if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+      dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
+    }
+    if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+      dbRealtime.ref(`requests/${docId}`).set(requests[idx]).catch(e => console.warn(e));
+    }
+  } catch (err) {
+    console.error('[SIMPAN KETERANGAN PART SINGLE ERROR]:', err);
+    showNotif('GAGAL MENYIMPAN KETERANGAN PART: ' + (err.message || err), 'error');
+  }
+}
+window.simpanKeteranganPartSingle = simpanKeteranganPartSingle;
 
 // LISTEN FOR MOBILE DEVICE / BROWSER BACK BUTTON TO CLOSE POPUP DETAIL
 window.addEventListener('popstate', (e) => {
@@ -6732,17 +7433,20 @@ function bukaPdfModal(noSurat) {
   }).join('');
 
   const users = getUsersFromDB();
-  const serviceUser = users.find(u => u.category === 'SERVICE' && u.area === req.area) || users.find(u => u.category === 'SERVICE');
-  const dmUser = users.find(u => u.category === 'DM') || users.find(u => u.username === 'ADMIN');
+  const serviceUser = users.find(u => u && u.category === 'SERVICE' && (
+    (req.serviceUserName && String(u.fullName || u.username).toUpperCase() === String(req.serviceUserName).toUpperCase()) ||
+    (u.area && isAreaMatch(u.area, req.area))
+  ));
+  const dmUser = users.find(u => u && u.category === 'DM') || users.find(u => u && u.username === 'ADMIN');
   const serviceName = req.serviceUserName || (serviceUser ? serviceUser.fullName : 'SERVICE SUPERVISOR');
 
   const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
   let serviceTTD = req.serviceTTD || '';
   if (!serviceTTD && serviceUser) {
-    serviceTTD = ttdMap[serviceUser.id] || ttdMap[serviceUser.username] || ttdMap[serviceUser.fullName] || '';
+    serviceTTD = serviceUser.ttd || ttdMap[serviceUser.id] || ttdMap[serviceUser.username] || ttdMap[serviceUser.fullName] || ttdMap['SERVICE_' + serviceUser.area] || '';
   }
-  if (!serviceTTD) {
-    serviceTTD = ttdMap['SERVICE_' + req.area] || ttdMap['SERVICE'] || ttdMap['HODS'] || '';
+  if (!serviceTTD && req.area) {
+    serviceTTD = ttdMap['SERVICE_' + req.area] || '';
   }
 
   let dmTTD = req.dmTTD || '';
@@ -6771,10 +7475,22 @@ function bukaPdfModal(noSurat) {
   );
 
   let tokoTTD = '';
-  if (!isCreatedByServiceOrAdmin) {
+  if (req.pemohonTTD) {
+    tokoTTD = req.pemohonTTD;
+  }
+  if (!tokoTTD && req.tokoTTD) {
+    tokoTTD = req.tokoTTD;
+  }
+  if (!tokoTTD && !isCreatedByServiceOrAdmin) {
     if (req.createdBy) {
-      tokoTTD = ttdMap[req.createdBy] || ttdMap[req.toko] || '';
+      tokoTTD = ttdMap[req.createdBy] || ttdMap[req.toko] || (creatorUser && (creatorUser.ttd || ttdMap[creatorUser.id] || ttdMap[creatorUser.username])) || '';
     }
+  }
+  if (!tokoTTD && req.userId) {
+    tokoTTD = ttdMap[req.userId] || (creatorUser && (creatorUser.ttd || ttdMap[creatorUser.fullName])) || '';
+  }
+  if (!tokoTTD && (creatorCategory === 'GBJ' || String(req.toko).toUpperCase().includes('GBJ') || String(req.createdBy).toUpperCase().includes('GBJ'))) {
+    tokoTTD = ttdMap['GBJ'] || '';
   }
 
   const nowPrint = new Date();
@@ -6889,11 +7605,11 @@ function bukaPdfModal(noSurat) {
             <thead>
               <tr style="background: ${tableHeaderBg}; color: #ffffff;">
                 <th style="width: 28px; text-align:center; padding:6px 4px; border:1px solid #cbd5e1;">NO</th>
-                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">TIPE BARANG</th>
-                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">NO. SERI</th>
-                ${req.jenis === 'DUS' ? `<th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">NO. SERI DUS</th>` : ''}
-                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">PERMINTAAN BARANG</th>
-                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:left;">ALASAN PERMINTAAN</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:center;">TIPE BARANG</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:center;">NO. SERI</th>
+                ${req.jenis === 'DUS' ? `<th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:center;">NO. SERI DUS</th>` : ''}
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:center;">PERMINTAAN BARANG</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; text-align:center;">ALASAN PERMINTAAN</th>
                 <th style="width: 38px; text-align:center; padding:6px 4px; border:1px solid #cbd5e1;">QTY</th>
               </tr>
             </thead>
@@ -6928,7 +7644,7 @@ function bukaPdfModal(noSurat) {
             </div>
             <div style="width: 100%; text-align: center !important;">
               <div style="font-weight: 800; color: #0f172a; font-size: 11.5px; text-align: center !important;">${req.toko}</div>
-              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; text-align: center !important;">PEMOHON (TOKO)</div>
+              <div style="font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; text-align: center !important;">PEMOHON (${(creatorCategory === 'GBJ' || String(req.toko).toUpperCase().includes('GBJ') || String(req.createdBy).toUpperCase().includes('GBJ')) ? 'GBJ' : 'TOKO'})</div>
             </div>
           </div>
 
@@ -7059,8 +7775,8 @@ function cetakDokumenPdf() {
 }
 
 function bukaTTD() {
-  if (!currentUser || (currentUser.category !== 'SERVICE' && currentUser.category !== 'DM')) {
-    showNotif('TANDA TANGAN DIGITAL KHUSUS UNTUK SERVICE & DM!', 'warning');
+  if (!currentUser || (currentUser.category !== 'SERVICE' && currentUser.category !== 'DM' && currentUser.category !== 'GBJ')) {
+    showNotif('TANDA TANGAN DIGITAL KHUSUS UNTUK SERVICE, DM & GBJ!', 'warning');
     return;
   }
   const modal = document.getElementById('popupTTD');
@@ -7360,16 +8076,21 @@ function simpanTTD() {
     if (!canvasTTD) return;
     const png = cropAndCenterCanvasSignature(canvasTTD);
     const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-    const key = currentUser.category === 'DM' ? 'DM' : `SERVICE_${currentUser.area}`;
+    let key = currentUser.category === 'DM' ? 'DM' : `SERVICE_${currentUser.area}`;
+    if (currentUser.category === 'GBJ') key = 'GBJ';
     ttdMap[key] = png;
-    ttdMap[currentUser.fullName] = png;
-    ttdMap[currentUser.username] = png;
-    ttdMap[currentUser.id] = png;
+    if (currentUser.fullName) ttdMap[currentUser.fullName] = png;
+    if (currentUser.username) ttdMap[currentUser.username] = png;
+    if (currentUser.id) ttdMap[currentUser.id] = png;
     if (currentUser.category === 'SERVICE') {
-      ttdMap['SERVICE'] = png;
       ttdMap[`SERVICE_${currentUser.area}`] = png;
       ttdMap['HODS'] = png;
+      delete ttdMap['SERVICE'];
     }
+    if (currentUser.category === 'GBJ') {
+      ttdMap['GBJ'] = png;
+    }
+    currentUser.ttd = png;
     appStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap));
     
     // SIMPAN PERSISTEN PADA PENYIMPANAN LOKAL (LOCALSTORAGE) PERANGKAT
@@ -8344,6 +9065,9 @@ function hapusMultiUser() {
         appStorage.setItem(DELETED_USERS_KEY, JSON.stringify(delUsers));
         appStorage.setItem(DELETED_STORES_KEY, JSON.stringify(delStores));
         appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
+        try { localStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores)); } catch(e) {}
+        try { localStorage.setItem(DELETED_STORES_KEY, JSON.stringify(delStores)); } catch(e) {}
+        try { localStorage.setItem(DELETED_USERS_KEY, JSON.stringify(delUsers)); } catch(e) {}
 
         const remainingUsers = users.filter(u => 
           !userIds.includes(u.id) || 
@@ -8365,6 +9089,8 @@ function hapusMultiUser() {
         if (typeof loadUsersManagement === 'function') loadUsersManagement();
         if (typeof loadForm === 'function') loadForm();
         if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
+        if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
+        if (typeof loadDashboard === 'function') loadDashboard();
       } catch (err) {
         hideLoading();
         console.error('[HAPUS MULTI USER ERROR]:', err);
@@ -9149,10 +9875,10 @@ function prosesBukaAkun() {
 
   const menuTTD = document.getElementById('menuTTD');
   if (menuTTD) {
-    menuTTD.style.display = (currentUser.category === 'SERVICE' || currentUser.category === 'DM') ? 'block' : 'none';
+    menuTTD.style.display = (currentUser.category === 'SERVICE' || currentUser.category === 'DM' || currentUser.category === 'GBJ') ? 'block' : 'none';
   }
 
-  const isToko = (currentUser.category === 'TOKO');
+  const isToko = (currentUser.category === 'TOKO' || currentUser.category === 'GBJ');
   const isAdmin = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
   
   const menuKelolaTokoAkun = document.getElementById('menuKelolaTokoAkun');
@@ -9808,14 +10534,45 @@ async function prosesUploadExcelToko(event) {
         return;
       }
 
+      // 1. BERSIHKAN DAFTAR DELETED KEYS DARI TOKO / USER YANG DIUNGGAH ULANG
+      const uploadedStoreNames = new Set(newStoresList.map(s => s.fullName.toUpperCase()));
+      const uploadedUsernames = new Set(newUsersList.map(u => u.username.toUpperCase()));
+
+      let delStores = JSON.parse(appStorage.getItem(DELETED_STORES_KEY) || '[]');
+      delStores = delStores.filter(k => {
+        const val = String(k || '').trim().toUpperCase();
+        if (uploadedStoreNames.has(val)) return false;
+        for (let s of newStoresList) {
+          if (val === `${s.fullName.toUpperCase()}_${s.area.toUpperCase()}`) return false;
+        }
+        return true;
+      });
+      appStorage.setItem(DELETED_STORES_KEY, JSON.stringify(delStores));
+      try { localStorage.setItem(DELETED_STORES_KEY, JSON.stringify(delStores)); } catch(e) {}
+
+      let delUsers = JSON.parse(appStorage.getItem(DELETED_USERS_KEY) || '[]');
+      delUsers = delUsers.filter(k => {
+        const val = String(k || '').trim().toUpperCase();
+        return !uploadedUsernames.has(val) && !uploadedStoreNames.has(val);
+      });
+      appStorage.setItem(DELETED_USERS_KEY, JSON.stringify(delUsers));
+      try { localStorage.setItem(DELETED_USERS_KEY, JSON.stringify(delUsers)); } catch(e) {}
+
+      // 2. SIMPAN KE STORES_DB_KEY SECARA LOKAL & PERSISTEN
       const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
-      newStoresList.forEach(ns => localStores.push(ns));
+      newStoresList.forEach(ns => {
+        if (!localStores.some(s => s && s.fullName && s.fullName.toUpperCase() === ns.fullName.toUpperCase() && s.area === ns.area)) {
+          localStores.push(ns);
+        }
+      });
       appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
+      try { localStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores)); } catch(e) {}
 
       if (newUsersList.length > 0) {
         saveUsersToDB(users);
       }
 
+      // 3. SIMPAN KE SUPABASE (TABEL toko_list & users)
       if (typeof supabase !== 'undefined' && supabase) {
         try {
           const supaStoresPayload = newStoresList.map(s => ({
@@ -9855,6 +10612,7 @@ async function prosesUploadExcelToko(event) {
       if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
       if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
       if (typeof loadUsersManagement === 'function') loadUsersManagement();
+      if (typeof loadForm === 'function') loadForm();
 
     } catch(err) {
       hideLoading();
@@ -9955,7 +10713,10 @@ function showConfirm(msg, callback) {
   if (msgEl) msgEl.innerHTML = msg;
   confirmCallback = callback;
   const modal = document.getElementById('confirmOverlay');
-  if (modal) modal.style.display = 'flex';
+  if (modal) {
+    modal.style.setProperty('z-index', '999999999', 'important');
+    modal.style.setProperty('display', 'flex', 'important');
+  }
   pushPopupHistoryState();
 }
 
@@ -10037,7 +10798,10 @@ function showNotif(msg, type = 'info') {
     }
   }
 
-  notifOverlay.style.display = 'flex';
+  if (notifOverlay) {
+    notifOverlay.style.setProperty('z-index', '9999999999', 'important');
+    notifOverlay.style.setProperty('display', 'flex', 'important');
+  }
 }
 
 function closePopup() {
