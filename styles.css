@@ -512,19 +512,19 @@ section#masterDbPage.page.active,
   transform: none !important;
 }
 
-/* RESPONSIVE HP / MOBILE: POPUP BANTUAN CHAT SEJAJAR KIRI & KANAN DENGAN CARD */
+/* RESPONSIVE HP / MOBILE: POPUP BANTUAN CHAT SEJAJAR DENGAN CARD (LEBIH KE KANAN) */
 @media (max-width: 640px) {
   .popupBantuan,
   #helpModal,
   #chatWindow {
     position: fixed !important;
     top: auto !important;
-    left: 8px !important;
-    right: 8px !important;
+    left: 6px !important;
+    right: 4px !important;
     bottom: 48px !important;
     transform: none !important;
     width: auto !important;
-    max-width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 10px) !important;
     display: none;
     margin: 0 !important;
     z-index: 9999999 !important;
@@ -535,12 +535,12 @@ section#masterDbPage.page.active,
   #chatWindow.show {
     display: block !important;
     top: auto !important;
-    left: 8px !important;
-    right: 8px !important;
+    left: 6px !important;
+    right: 4px !important;
     bottom: 48px !important;
     transform: none !important;
     width: auto !important;
-    max-width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 10px) !important;
   }
   .chatBox,
   #helpModal .chatBox,
