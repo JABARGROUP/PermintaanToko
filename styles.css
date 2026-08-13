@@ -5846,7 +5846,7 @@ body:has(#masterDbPage.active) {
 #popupNotifList .popupNotifCard {
   width: 480px !important;
   max-width: 92vw !important;
-  max-height: calc(100vh - 90px) !important;
+  max-height: 65vh !important;
   display: flex !important;
   flex-direction: column !important;
   margin-top: 8px !important;
@@ -5859,8 +5859,8 @@ body:has(#masterDbPage.active) {
 }
 
 #popupNotifList #notifListBody {
-  max-height: calc(100vh - 220px) !important;
-  min-height: 300px !important;
+  max-height: 38vh !important;
+  min-height: 180px !important;
   flex: 1 1 auto !important;
   overflow-y: auto !important;
 }
@@ -5926,12 +5926,12 @@ body:has(#masterDbPage.active) {
   #popupNotif .popupNotifCard,
   #popupNotifCard {
     margin-top: 0 !important;
-    max-height: calc(100vh - 85px) !important;
+    max-height: 62vh !important;
     height: auto !important;
   }
   #popupNotifList #notifListBody {
-    max-height: calc(100vh - 175px) !important;
-    min-height: 320px !important;
+    max-height: 38vh !important;
+    min-height: 180px !important;
     flex: 1 1 auto !important;
   }
 }
@@ -6249,27 +6249,54 @@ html body .cardStat .icon {
   border-radius: 10px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: TABEL DASHBOARD & RIWAYAT DENGAN BATAS BAWAH IDENTIK (JARAK 1MM DI ATAS BOTTOM MENU) */
+/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 1MM (56PX) DI ATAS BOTTOM MENU */
 @media (max-width: 640px) {
-  #detailDashboard,
-  #detailDashboard .tableWrap,
-  #detailDashboard.tableWrap {
-    height: auto !important;
-    max-height: calc(100vh - 315px) !important;
-    min-height: 260px !important;
-    margin-top: 1mm !important;
-    margin-bottom: 56px !important; /* 52px height bottomMenu + 4px (1mm) gap */
+  html body .page.active {
+    height: calc(100vh - 56px) !important; /* 52px height bottomMenu + 4px (1mm) gap */
+    max-height: calc(100vh - 56px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding-bottom: 0 !important;
+    overflow: hidden !important;
     box-sizing: border-box !important;
   }
 
+  #detailDashboard,
+  #detailDashboard .tableWrap,
+  #detailDashboard.tableWrap,
   #riwayatPage .tableWrap,
   #masterDbPage .tableWrap {
-    height: auto !important;
-    max-height: calc(100vh - 235px) !important;
-    min-height: 260px !important;
+    flex: 1 1 auto !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
     margin-top: 1mm !important;
-    margin-bottom: 56px !important; /* 52px height bottomMenu + 4px (1mm) gap */
+    margin-bottom: 0 !important;
     box-sizing: border-box !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+  }
+
+  #popupNotifList,
+  #popupNotif,
+  .popupOverlay {
+    padding-top: 4px !important;
+    padding-bottom: 56px !important; /* 52px height bottomMenu + 4px (1mm) gap */
+    align-items: flex-start !important;
+  }
+
+  #popupNotifList .popupNotifCard,
+  #popupNotif .popupNotifCard,
+  #popupNotifCard {
+    margin-top: 0 !important;
+    max-height: 62vh !important;
+    height: auto !important;
+  }
+
+  #popupNotifList #notifListBody {
+    max-height: 38vh !important;
+    min-height: 180px !important;
+    flex: 1 1 auto !important;
   }
 }
 
