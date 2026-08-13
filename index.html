@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260811_v1360">
-  <script src="app.js?v=20260811_v1360"></script>
+  <link rel="stylesheet" href="styles.css?v=20260813_v1526">
+  <script src="app.js?v=20260813_v1526"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -892,27 +892,27 @@
 
   <!-- 3. POPUP CONFIRMATION MODAL (YES/NO HALF SCREEN COMPACT CARD) -->
   <div id="confirmOverlay" class="popupOverlay" style="z-index: 999999999 !important;">
-    <div class="popupNotifCard" id="confirmBoxCard" style="width: 420px !important; max-width: 90vw !important; margin: auto !important; border-radius: 18px !important; overflow: hidden !important;">
+    <div class="popupNotifCard" id="confirmBoxCard" style="width: 420px !important; max-width: 90vw !important; border-radius: 18px !important; overflow: hidden !important;">
       <div class="popupNotifBody" style="padding: 22px 20px 16px 20px; text-align: center;">
         <span class="material-symbols-rounded" style="font-size: 36px; color: var(--primary); margin-bottom: 8px; display: block;">help</span>
         <p id="confirmMessage" style="font-size: 13.5px; font-weight: 700; line-height: 1.5; color: var(--text-main); margin: 0;">YAKIN INGIN MELANJUTKAN KAN?</p>
       </div>
-      <div class="popupNotifFooter" style="padding: 0 16px 18px 16px; display: flex; gap: 10px;">
-        <button type="button" class="btnBatal" style="flex: 1; height: 38px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer;" onclick="closeConfirm()">BATAL</button>
-        <button type="button" class="btnOkNotif" style="flex: 1; height: 38px; border-radius: 10px; border: none; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer;" onclick="confirmYes()">YA, LANJUT</button>
+      <div class="popupNotifFooter" style="padding: 0 18px 24px 18px; display: flex; gap: 10px;">
+        <button type="button" class="btnBatal" style="flex: 1; height: 40px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer;" onclick="closeConfirm()">BATAL</button>
+        <button type="button" class="btnOkNotif" style="flex: 1; height: 40px; border-radius: 10px; border: none; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer;" onclick="confirmYes()">YA, LANJUT</button>
       </div>
     </div>
   </div>
 
   <!-- 4. CLEAN & ATTRACTIVE NOTIFICATION DIALOG MODAL (OK HALF SCREEN COMPACT CARD) -->
   <div id="popupNotif" class="popupOverlay" style="z-index: 9999999999 !important;">
-    <div class="popupNotifCard" id="popupNotifCard" style="width: 420px !important; max-width: 90vw !important; margin: auto !important; border-radius: 18px !important; overflow: hidden !important;">
-      <div class="popupNotifBody" style="padding: 22px 20px 16px 20px; text-align: center;">
-        <span id="popupNotifIcon" class="material-symbols-rounded" style="font-size: 36px; color: var(--primary); margin-bottom: 8px; display: block;">info</span>
+    <div class="popupNotifCard" id="popupNotifCard" style="width: 420px !important; max-width: 90vw !important; border-radius: 18px !important; overflow: hidden !important;">
+      <div class="popupNotifBody" style="padding: 24px 20px 18px 20px; text-align: center;">
+        <span id="popupNotifIcon" class="material-symbols-rounded" style="font-size: 38px; color: var(--primary); margin-bottom: 8px; display: block;">info</span>
         <p id="popupNotifMessage" style="font-size: 13.5px; font-weight: 700; line-height: 1.5; color: var(--text-main); margin: 0;">MEMPROSES...</p>
       </div>
-      <div class="popupNotifFooter" style="padding: 0 16px 18px 16px; display: flex; justify-content: center;">
-        <button type="button" class="btnOkNotif" id="btnOkNotif" style="width: 100%; height: 38px; border-radius: 10px; border: none; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer;" onclick="closePopup()">OK</button>
+      <div class="popupNotifFooter" style="padding: 0 18px 24px 18px; display: flex; justify-content: center;">
+        <button type="button" class="btnOkNotif" id="btnOkNotif" style="width: 100%; height: 40px; border-radius: 10px; border: none; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer;" onclick="closePopup()">OK</button>
       </div>
     </div>
   </div>

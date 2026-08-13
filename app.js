@@ -1589,9 +1589,17 @@ function getAdminReminderTime() {
 async function simpanAdminReminderTime() {
   const input = document.getElementById('adminReminderTimeInput');
   if (!input) return;
-  const val = input.value.trim() || '09:00';
+  const rawVal = input.value.trim() || '09:00';
+  // Normalisasi pemisah titik ke titik dua (e.g. 15.11 -> 15:11)
+  const val = rawVal.replace(/\./g, ':');
+  input.value = val;
+
   appStorage.setItem(ADMIN_REMINDER_TIME_KEY, val);
   try { localStorage.setItem(ADMIN_REMINDER_TIME_KEY, val); } catch(e) {}
+
+  // RESET RIWAYAT SENT JADWAL AGAR JADWAL BARU DAPAT SEGERA DIEKSEKUSI
+  appStorage.removeItem(LAST_REMINDER_SENT_KEY);
+  try { localStorage.removeItem(LAST_REMINDER_SENT_KEY); } catch(e) {}
 
   // 1. SUPABASE SYNC (LOOKUP & SYSTEM ROW)
   if (typeof supabase !== 'undefined' && supabase) {
@@ -1603,7 +1611,7 @@ async function simpanAdminReminderTime() {
         code: 'ADMIN_REMINDER_TIME',
         type: val,
         updated_at: new Date().toISOString()
-      });
+      }, { onConflict: 'key' });
 
       const sysRow = {
         id: '__SYSTEM_REMINDER_SETTINGS__',
@@ -1620,7 +1628,7 @@ async function simpanAdminReminderTime() {
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(sysRow);
+      await supabase.from('permintaan_toko').upsert(sysRow, { onConflict: 'no_surat' });
     } catch(err) {
       console.warn('[SUPABASE REMINDER TIME ERROR]:', err);
     }
@@ -1638,12 +1646,20 @@ async function simpanAdminReminderTime() {
   if (typeof dbRealtime !== 'undefined' && dbRealtime) {
     try {
       await dbRealtime.ref('settings/adminReminderTime').set(val);
+      await dbRealtime.ref('settings').update({ adminReminderTime: val });
     } catch(e) {}
   }
 
   if (typeof pushCentralCloudDB === 'function') {
     try { pushCentralCloudDB(); } catch(e) {}
   }
+
+  // Langsung cek jadwal seketika jika waktu saat ini cocok
+  setTimeout(() => {
+    if (typeof checkAndTriggerPendingReminders === 'function') {
+      checkAndTriggerPendingReminders(false);
+    }
+  }, 1000);
 
   showNotif(`JADWAL JAM WA REMINDER BERHASIL DISIMPAN: ${val}!`, 'success');
 }
@@ -1704,8 +1720,9 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
     return { success: false, message: 'Token Fonte belum diset.' };
   }
 
-  const scheduledTimeStr = getAdminReminderTime(); // e.g. "09:00" or "08:30, 14:00"
-  const scheduledTimes = scheduledTimeStr.split(/[,;\s]+/).map(t => t.trim()).filter(Boolean);
+  const scheduledTimeStr = getAdminReminderTime(); // e.g. "09:00" or "08:30, 15:11"
+  const normalizedTimeStr = scheduledTimeStr.replace(/\./g, ':');
+  const scheduledTimes = normalizedTimeStr.split(/[,;\s]+/).map(t => t.trim()).filter(Boolean);
   if (scheduledTimes.length === 0) scheduledTimes.push('09:00');
 
   const now = new Date();
@@ -1716,26 +1733,26 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
   const todayDateStr = typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : now.toISOString().split('T')[0];
 
   let matchedTimeSlot = null;
+  let targetSentTag = null;
 
   if (!forceNow) {
-    // Cari slot jadwal hari ini yang sudah mencapai/melewati waktunya dan belum pernah dikirim hari ini
+    // Cari slot jadwal hari ini yang sudah mencapai waktunya dan belum pernah dikirim hari ini
     for (const timeStr of scheduledTimes) {
       const parts = timeStr.split(':');
       if (parts.length >= 2) {
         const slotH = parseInt(parts[0], 10);
         const slotM = parseInt(parts[1], 10);
+        if (isNaN(slotH) || isNaN(slotM)) continue;
         const slotTotalMins = slotH * 60 + slotM;
 
-        if (currentTotalMins >= slotTotalMins) {
+        // Cocok jika waktu saat ini sudah mencapai/melewati menit jadwal tersebut
+        if (currentTotalMins >= slotTotalMins && currentTotalMins <= slotTotalMins + 180) {
           const sentTag = `${todayDateStr}_${timeStr}`;
           const lastSentTag = appStorage.getItem(LAST_REMINDER_SENT_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_REMINDER_SENT_KEY) : '');
           const sentTagsList = lastSentTag ? lastSentTag.split('|') : [];
           if (!sentTagsList.includes(sentTag)) {
             matchedTimeSlot = timeStr;
-            sentTagsList.push(sentTag);
-            const newTagStr = sentTagsList.slice(-20).join('|');
-            appStorage.setItem(LAST_REMINDER_SENT_KEY, newTagStr);
-            try { localStorage.setItem(LAST_REMINDER_SENT_KEY, newTagStr); } catch(e) {}
+            targetSentTag = sentTag;
             break;
           }
         }
@@ -1776,9 +1793,42 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
     allRequests = getRequestsFromDB();
   }
 
-  if (!allRequests.length) {
-    if (forceNow) showNotif('ℹ️ Tidak ada data permintaan di database.', 'info');
-    return { success: false, message: 'Tidak ada data permintaan.', type: 'info' };
+  // Helper evaluasi status dokumen
+  const isIgnored = (r) => {
+    if (!r || !r.noSurat || String(r.noSurat).startsWith('__SYSTEM_')) return true;
+    const st = String(r.status || '').trim().toUpperCase();
+    return st === 'BATAL' || st === 'REJECT' || st === 'DITOLAK';
+  };
+  const isDone = (r) => String(r.status || '').trim().toUpperCase() === 'DONE';
+  const isDMApproved = (r) => {
+    const st = String(r.status || '').trim().toUpperCase();
+    return st === 'APPROVE' || isDone(r);
+  };
+  const isServiceApproved = (r) => {
+    return r.serviceApprove === true || r.serviceApprove === 'true' || r.service_approve === true || r.service_approve === 'true' || !!r.serviceTTD;
+  };
+
+  // PENDING SERVICE: Belum di-approve Service
+  const pendingServiceReqs = allRequests.filter(r => !isIgnored(r) && !isDone(r) && !isDMApproved(r) && !isServiceApproved(r));
+
+  // PENDING DM: Sudah di-approve Service, tetapi BELUM di-approve DM
+  const pendingDMReqs = allRequests.filter(r => !isIgnored(r) && !isDone(r) && !isDMApproved(r) && isServiceApproved(r));
+
+  if (pendingServiceReqs.length === 0 && pendingDMReqs.length === 0) {
+    if (targetSentTag) {
+      try {
+        const lastSentTag = appStorage.getItem(LAST_REMINDER_SENT_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_REMINDER_SENT_KEY) : '');
+        const sentTagsList = lastSentTag ? lastSentTag.split('|') : [];
+        if (!sentTagsList.includes(targetSentTag)) {
+          sentTagsList.push(targetSentTag);
+          const newTagStr = sentTagsList.slice(-20).join('|');
+          appStorage.setItem(LAST_REMINDER_SENT_KEY, newTagStr);
+          try { localStorage.setItem(LAST_REMINDER_SENT_KEY, newTagStr); } catch(e) {}
+        }
+      } catch(e) {}
+    }
+    if (forceNow) showNotif('ℹ️ Tidak ada dokumen dengan status PENDING saat ini (Semua pengajuan telah selesai/di-approve).', 'info');
+    return { success: true, message: 'Tidak ada dokumen status PENDING.', type: 'info' };
   }
 
   // 2. AMBIL SEMUA DATA USER DARI SUPABASE DAN LOKAL (AGAR NOMOR WA SELALU LENGKAP)
@@ -1796,7 +1846,6 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
           area: String(u.area || 'ALL').trim().toUpperCase()
         }));
         
-        // Merge mappedUsers with allUsers
         const userMap = new Map();
         allUsers.forEach(u => {
           if (u && u.username) {
@@ -1815,32 +1864,6 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
         saveUsersToDB(allUsers);
       }
     } catch(e) {}
-  }
-
-  // Helper evaluasi status dokumen
-  const isIgnored = (r) => {
-    if (!r || !r.noSurat || String(r.noSurat).startsWith('__SYSTEM_')) return true;
-    const st = String(r.status || '').trim().toUpperCase();
-    return st === 'BATAL' || st === 'REJECT' || st === 'DITOLAK';
-  };
-  const isDone = (r) => String(r.status || '').trim().toUpperCase() === 'DONE';
-  const isDMApproved = (r) => {
-    const st = String(r.status || '').trim().toUpperCase();
-    return st === 'APPROVE' || isDone(r);
-  };
-  const isServiceApproved = (r) => {
-    return r.serviceApprove === true || r.serviceApprove === 'true' || r.service_approve === true || r.service_approve === 'true' || !!r.serviceTTD;
-  };
-
-  // PENDING SERVICE: Belum di-approve Service (HANYA DINOTIFIKASIKAN KE SERVICE)
-  const pendingServiceReqs = allRequests.filter(r => !isIgnored(r) && !isDone(r) && !isDMApproved(r) && !isServiceApproved(r));
-
-  // PENDING DM: Sudah di-approve Service, tetapi BELUM di-approve DM (HANYA DINOTIFIKASIKAN KE DM)
-  const pendingDMReqs = allRequests.filter(r => !isIgnored(r) && !isDone(r) && !isDMApproved(r) && isServiceApproved(r));
-
-  if (pendingServiceReqs.length === 0 && pendingDMReqs.length === 0) {
-    if (forceNow) showNotif('ℹ️ Tidak ada dokumen dengan status PENDING saat ini (Semua pengajuan telah selesai/di-approve).', 'info');
-    return { success: true, message: 'Tidak ada dokumen status PENDING.', type: 'info' };
   }
 
   const notifs = getSystemNotifications();
@@ -1867,7 +1890,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
     });
 
     if (allServiceUsers.length === 0) {
-      waErrors.push(`Ada ${pendingServiceReqs.length} dokumen menunggu Service, tetapi belum ada akun role SERVICE terdaftar di Manajemen User!`);
+      waErrors.push(`Ada ${pendingServiceReqs.length} dokumen menunggu Service, tetapi belum ada akun role SERVICE di Manajemen User!`);
     } else {
       const serviceUsersWithPhone = allServiceUsers.filter(u => {
         const p = String(u.phone || u.no_hp || u.whatsapp || u.telepon || u.wa || '').trim();
@@ -1882,7 +1905,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
           const srvArea = String(srv.area || 'ALL').trim().toUpperCase();
           const userPendingReqs = pendingServiceReqs.filter(r => {
             const rArea = String(r.area || '').trim().toUpperCase();
-            if (serviceUsersWithPhone.length === 1) return true; // Jika hanya ada 1 akun Service, kirimkan semua area kepadanya
+            if (serviceUsersWithPhone.length === 1) return true;
             if (srvArea === 'ALL' || srvArea === 'SEMUA' || !srvArea || srvArea === '-') return true;
             if (!rArea) return true;
             return typeof isAreaMatch === 'function' ? isAreaMatch(srvArea, rArea) : (srvArea === rArea);
@@ -1891,7 +1914,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
           if (userPendingReqs.length > 0) {
             const srvName = srv.fullName || srv.username || 'Tim Service';
             const itemsListStr = userPendingReqs.map((r, idx) => {
-              return `${idx + 1}. No Surat: ${r.noSurat}`;
+              return `${idx + 1}. No Surat: ${r.noSurat} (Toko: ${r.toko || '-'})`;
             }).join('\n');
 
             const combinedMessage = 
@@ -1901,11 +1924,11 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
               `https://jabargroup.github.io/PermintaanToko/\n\n` +
               `Terima kasih.`;
 
-            const res = await kirimNotifikasiWA(srv.phone, combinedMessage, forceNow);
+            const res = await kirimNotifikasiWA(srv.phone, combinedMessage, true);
             if (res && res.success) {
               srvSentCount += res.sentCount || 1;
             } else if (res && res.error) {
-              waErrors.push(`Service (${srv.username}): ${res.error}`);
+              waErrors.push(`Service (${srv.username} - ${srv.phone}): ${res.error}`);
             }
           }
         }
@@ -1932,7 +1955,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
     });
 
     if (allDMUsers.length === 0) {
-      waErrors.push(`Ada ${pendingDMReqs.length} dokumen menunggu DM, tetapi belum ada akun role DM terdaftar di Manajemen User!`);
+      waErrors.push(`Ada ${pendingDMReqs.length} dokumen menunggu DM, tetapi belum ada akun role DM di Manajemen User!`);
     } else {
       const dmUsersWithPhone = allDMUsers.filter(u => {
         const p = String(u.phone || u.no_hp || u.whatsapp || u.telepon || u.wa || '').trim();
@@ -1947,7 +1970,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
           const dmArea = String(dm.area || 'ALL').trim().toUpperCase();
           const userPendingReqs = pendingDMReqs.filter(r => {
             const rArea = String(r.area || '').trim().toUpperCase();
-            if (dmUsersWithPhone.length === 1) return true; // Jika hanya ada 1 akun DM, kirimkan semua area kepadanya
+            if (dmUsersWithPhone.length === 1) return true;
             if (dmArea === 'ALL' || dmArea === 'SEMUA' || !dmArea || dmArea === '-') return true;
             if (!rArea) return true;
             return typeof isAreaMatch === 'function' ? isAreaMatch(dmArea, rArea) : (dmArea === rArea);
@@ -1956,7 +1979,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
           if (userPendingReqs.length > 0) {
             const dmName = dm.fullName || dm.username || 'DM';
             const itemsListStr = userPendingReqs.map((r, idx) => {
-              return `${idx + 1}. No Surat: ${r.noSurat}`;
+              return `${idx + 1}. No Surat: ${r.noSurat} (Toko: ${r.toko || '-'})`;
             }).join('\n');
 
             const combinedMessage = 
@@ -1966,16 +1989,30 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
               `https://jabargroup.github.io/PermintaanToko/\n\n` +
               `Terima kasih.`;
 
-            const res = await kirimNotifikasiWA(dm.phone, combinedMessage, forceNow);
+            const res = await kirimNotifikasiWA(dm.phone, combinedMessage, true);
             if (res && res.success) {
               dmSentCount += res.sentCount || 1;
             } else if (res && res.error) {
-              waErrors.push(`DM (${dm.username}): ${res.error}`);
+              waErrors.push(`DM (${dm.username} - ${dm.phone}): ${res.error}`);
             }
           }
         }
       }
     }
+  }
+
+  // TANDAI SENT TAG DI DATABASE SETELAH PROSES SELESAI
+  if (targetSentTag && (srvSentCount > 0 || dmSentCount > 0 || waErrors.length === 0)) {
+    try {
+      const lastSentTag = appStorage.getItem(LAST_REMINDER_SENT_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_REMINDER_SENT_KEY) : '');
+      const sentTagsList = lastSentTag ? lastSentTag.split('|') : [];
+      if (!sentTagsList.includes(targetSentTag)) {
+        sentTagsList.push(targetSentTag);
+        const newTagStr = sentTagsList.slice(-20).join('|');
+        appStorage.setItem(LAST_REMINDER_SENT_KEY, newTagStr);
+        try { localStorage.setItem(LAST_REMINDER_SENT_KEY, newTagStr); } catch(e) {}
+      }
+    } catch(e) {}
   }
 
   if (typeof updateNotifBellCounter === 'function') {
@@ -2017,23 +2054,29 @@ function startAdminReminderTimeChecker() {
     clearInterval(adminReminderIntervalId);
     adminReminderIntervalId = null;
   }
+  // Cek setiap 10 detik agar jadwal tepat waktu terpantau
   adminReminderIntervalId = setInterval(() => {
     if (typeof checkAndTriggerPendingReminders === 'function') {
       checkAndTriggerPendingReminders(false);
     }
-  }, 30000);
+  }, 10000);
 
   setTimeout(() => {
     if (typeof checkAndTriggerPendingReminders === 'function') {
       checkAndTriggerPendingReminders(false);
     }
-  }, 3000);
+  }, 2000);
 }
 window.startAdminReminderTimeChecker = startAdminReminderTimeChecker;
 
 if (typeof window !== 'undefined') {
   try {
     startAdminReminderTimeChecker();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && typeof checkAndTriggerPendingReminders === 'function') {
+        checkAndTriggerPendingReminders(false);
+      }
+    });
   } catch(e) {}
 }
 
@@ -10905,6 +10948,23 @@ window.addEventListener('click', function (e) {
   const imageViewer = document.getElementById('imageViewer');
   if (imageViewer && e.target === imageViewer && typeof tutupImageViewer === 'function') {
     tutupImageViewer();
+  }
+
+  // 10. Chat Bantuan Popup (#popupBantuan) - Click outside to close
+  const popupBantuan = document.getElementById('popupBantuan');
+  const helpBtn = document.getElementById('helpButton');
+  if (popupBantuan && (popupBantuan.classList.contains('show') || popupBantuan.style.display === 'block')) {
+    if (!popupBantuan.contains(e.target) && (!helpBtn || !helpBtn.contains(e.target))) {
+      if (typeof tutupBantuan === 'function') {
+        tutupBantuan();
+      }
+    }
+  }
+
+  // 11. Notifikasi Sistem Popup List (#popupNotifList) - Click outside to close
+  const popupNotifList = document.getElementById('popupNotifList');
+  if (popupNotifList && e.target === popupNotifList && typeof tutupNotificationModal === 'function') {
+    tutupNotificationModal();
   }
 });
 

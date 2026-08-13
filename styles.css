@@ -473,7 +473,7 @@ section#masterDbPage.page.active,
 #helpModal,
 #chatWindow {
   position: fixed;
-  bottom: 120px;
+  bottom: 145px;
   right: 12px;
   width: 440px;
   max-width: calc(100vw - 24px);
@@ -501,8 +501,8 @@ section#masterDbPage.page.active,
 .popupBantuan .chatBox {
   width: 100% !important;
   max-width: 100% !important;
-  height: 400px !important;
-  max-height: calc(100vh - 180px) !important;
+  height: 380px !important;
+  max-height: calc(100vh - 205px) !important;
   background: var(--bg-box);
   border-radius: 18px !important;
   box-shadow: 0 20px 50px rgba(0,0,0,0.35);
@@ -527,7 +527,7 @@ section#masterDbPage.page.active,
     top: auto !important;
     left: 50% !important;
     right: auto !important;
-    bottom: 95px !important;
+    bottom: 125px !important;
     transform: translateX(-50%) !important;
     width: calc(100vw - 24px) !important;
     max-width: calc(100vw - 24px) !important;
@@ -543,7 +543,7 @@ section#masterDbPage.page.active,
     display: block !important;
     left: 50% !important;
     right: auto !important;
-    bottom: 95px !important;
+    bottom: 125px !important;
     transform: translateX(-50%) !important;
     width: calc(100vw - 24px) !important;
     max-width: calc(100vw - 24px) !important;
@@ -554,8 +554,8 @@ section#masterDbPage.page.active,
   .popupBantuan .chatBox {
     width: 100% !important;
     max-width: 100% !important;
-    height: 390px !important;
-    max-height: calc(100vh - 165px) !important;
+    height: 370px !important;
+    max-height: calc(100vh - 195px) !important;
     margin: 0 auto !important;
     border-radius: 18px !important;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
@@ -5454,7 +5454,7 @@ body:has(#masterDbPage.active) {
 }
 
 /* ==========================================================================
-   POPUP NOTIFIKASI & DETAIL CENTERING (SLIGHTLY UPWARD / PERSIS DI TENGAH2)
+   POPUP NOTIFIKASI & DETAIL CENTERING (NAIK SEDIKIT LEBIH ATAS / NYAMAN DILIHAT)
    ========================================================================== */
 #popupNotif,
 #popupNotifList,
@@ -5486,22 +5486,81 @@ body:has(#masterDbPage.active) {
 #popupUserForm.show,
 #popupAkun.show,
 #popupTTD.show {
+#popupNotif,
+#popupNotifList,
+#confirmOverlay,
+#rejectOverlay,
+#popupUserForm,
+#popupAkun,
+#popupTTD {
+  display: none;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 16px 12px !important;
+  box-sizing: border-box !important;
+  z-index: 9999999999 !important;
+}
+
+#popupNotif.show,
+#popupNotifList.show,
+#popupDetail.show,
+#popupDetailBarangV2.show,
+#confirmOverlay.show,
+#rejectOverlay.show,
+#popupUserForm.show,
+#popupAkun.show,
+#popupTTD.show {
   display: flex !important;
 }
 
+#popupNotifList .popupNotifCard {
+  width: 500px !important;
+  max-width: 92vw !important;
+  max-height: 84vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: auto !important;
+  transform: none !important;
+  overflow: hidden !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45) !important;
+}
+
+#popupNotifList #notifListBody {
+  max-height: min(48vh, 320px) !important;
+  overflow-y: auto !important;
+}
+
 #popupNotif .popupNotifCard,
-#popupNotifList .popupNotifCard,
+#popupNotifCard,
+.popupNotifCard,
+#confirmOverlay .confirmBox,
+#confirmOverlay .confirmBoxCard,
+#confirmBoxCard,
+.confirmBoxCard {
+  margin: auto !important;
+  transform: none !important;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.popupNotifFooter,
+#popupNotif .popupNotifFooter,
+#confirmOverlay .popupNotifFooter {
+  padding: 0 18px 20px 18px !important;
+}
+
 #popupDetail .popupBoxDetail,
 #popupDetail .popupBox,
 #popupDetailBarangV2 .popupBoxDetailV2,
-#confirmOverlay .confirmBox,
-#confirmOverlay .confirmBoxCard,
 #rejectOverlay .rejectBoxPopup,
 #popupUserForm .popupBox,
 #popupAkun .akunBox,
 #popupTTD .ttdBox {
   margin: auto !important;
-  transform: translateY(-20px) !important;
+  transform: translateY(-25px) !important;
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
