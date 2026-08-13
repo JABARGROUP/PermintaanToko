@@ -5639,14 +5639,8 @@ function updateStoreDropdownOptions(selectedStoreName = '', filterKeyword = '') 
       const area = String(s.area || '').toUpperCase();
       return fn.includes(kw) || code.includes(kw) || area.includes(kw);
     });
-
-    if (infoHasil) {
-      infoHasil.style.display = 'block';
-      infoHasil.textContent = `DITEMUKAN ${areaStores.length} TOKO COCOK`;
-    }
-  } else {
-    if (infoHasil) infoHasil.style.display = 'none';
   }
+  if (infoHasil) infoHasil.style.display = 'none';
 
   if (areaStores.length > 0) {
     areaStores.forEach(s => {
@@ -11924,6 +11918,16 @@ function bukaModalTambahToko() {
   const cariModalInput = document.getElementById('cariTokoModalInput');
   if (cariModalInput) cariModalInput.value = '';
 
+  const uploadBox = document.getElementById('boxUploadExcelTokoModal');
+  if (uploadBox) {
+    const isAdmin = currentUser && (
+      String(currentUser.category || '').toUpperCase() === 'ADMIN' || 
+      String(currentUser.role || '').toUpperCase() === 'ADMIN' || 
+      String(currentUser.username || '').toUpperCase() === 'ADMIN'
+    );
+    uploadBox.style.display = isAdmin ? 'block' : 'none';
+  }
+
   loadDaftarTokoModal('');
   const popup = document.getElementById('popupTambahToko');
   if (popup) {
@@ -12012,14 +12016,8 @@ function loadDaftarTokoModal(filterKeyword = '') {
       const area = String(s.area || '').toUpperCase();
       return fn.includes(kw) || code.includes(kw) || area.includes(kw);
     });
-
-    if (infoHasil) {
-      infoHasil.style.display = 'block';
-      infoHasil.textContent = `DITEMUKAN ${areaStores.length} TOKO COCOK`;
-    }
-  } else {
-    if (infoHasil) infoHasil.style.display = 'none';
   }
+  if (infoHasil) infoHasil.style.display = 'none';
 
   if (areaStores.length === 0) {
     tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">${kw ? 'TIDAK ADA TOKO YANG COCOK DENGAN PENCARIAN.' : 'BELUM ADA TOKO TERDAFTAR DI AREA ANDA.'}</td></tr>`;
