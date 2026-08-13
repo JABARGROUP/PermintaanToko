@@ -2242,8 +2242,8 @@ body.design-mode-3d-isometric .dashboardTable th {
   bottom: 6px !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
-  width: calc(100% - 2mm) !important;
-  max-width: calc(100% - 2mm) !important;
+  width: calc(100% - 0.4mm) !important;
+  max-width: calc(100% - 0.4mm) !important;
   height: 52px !important;
   background: var(--bg-box) !important;
   backdrop-filter: blur(16px) saturate(180%) !important;
@@ -4217,8 +4217,8 @@ button.btnKembali {
   padding-left: 0 !important;
   padding-right: 0 !important;
   padding-bottom: 70px !important;
-  width: calc(100vw - 2mm) !important;
-  max-width: calc(100vw - 2mm) !important;
+  width: calc(100vw - 0.4mm) !important;
+  max-width: calc(100vw - 0.4mm) !important;
   margin-left: auto !important;
   margin-right: auto !important;
   box-sizing: border-box !important;
@@ -4231,8 +4231,8 @@ button.btnKembali {
 .dashboardTableContainer,
 .box,
 .box.box-full {
-  width: calc(100vw - 2mm) !important;
-  max-width: calc(100vw - 2mm) !important;
+  width: calc(100vw - 0.4mm) !important;
+  max-width: calc(100vw - 0.4mm) !important;
   margin-left: auto !important;
   margin-right: auto !important;
   box-sizing: border-box !important;
@@ -6290,7 +6290,7 @@ html body .cardStat .icon {
   border-radius: 5px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: FULL 100% KANAN-KIRI (100VW) & 2CM GAP DI ATAS BOTTOM MENU FOR #detailDashboard */
+/* RESPONSIVE HP / MOBILE: 0.2MM KANAN-KIRI (CALC(100VW - 0.4MM)) & 2.5CM GAP DI ATAS BOTTOM MENU FOR #detailDashboard */
 @media (max-width: 768px) {
   .page,
   .page.active,
@@ -6309,12 +6309,10 @@ html body .cardStat .icon {
   .box,
   .box.box-full,
   #bottomMenu {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    width: calc(100vw - 0.4mm) !important;
+    max-width: calc(100vw - 0.4mm) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 
   html body .page.active,
@@ -6324,8 +6322,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 52px - 2cm) !important; /* 52px height bottomMenu + 2cm gap */
-    max-height: calc(100vh - 52px - 2cm) !important;
+    height: calc(100vh - 52px - 2.5cm) !important; /* 52px height bottomMenu + 2.5cm gap */
+    max-height: calc(100vh - 52px - 2.5cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6343,7 +6341,7 @@ html body .cardStat .icon {
     min-height: 0 !important;
     max-height: 100% !important;
     margin-top: 1mm !important;
-    margin-bottom: 2cm !important;
+    margin-bottom: 2.5cm !important;
     box-sizing: border-box !important;
     overflow-y: auto !important;
     overflow-x: auto !important;
