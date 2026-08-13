@@ -468,19 +468,21 @@ section#masterDbPage.page.active,
   border: 2px solid var(--bg-body);
 }
 
-/* CHAT WIDGET POPUP - POSISI DI BAWAH (SEDIKIT NAIK KE ATAS) */
+/* POPUP CHAT BANTUAN - OUTER CONTAINER (DESKTOP & MOBILE) */
 .popupBantuan,
 #helpModal,
-.chatBox,
 #chatWindow {
   position: fixed;
   bottom: 45px;
-  right: 6px;
+  right: 12px;
+  width: 440px;
+  max-width: calc(100vw - 24px);
   z-index: 9999999 !important;
   display: none;
   animation: none !important;
   transition: none !important;
   transform: none !important;
+  box-sizing: border-box !important;
 }
 
 .popupBantuan.show,
@@ -493,15 +495,17 @@ section#masterDbPage.page.active,
   opacity: 1 !important;
 }
 
+/* CHAT BOX CONTAINER */
 .chatBox,
 #helpModal .chatBox,
 .popupBantuan .chatBox {
-  width: 440px !important;
-  max-width: calc(100vw - 12px) !important;
-  height: 390px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 420px !important;
+  max-height: 78vh !important;
   background: var(--bg-box);
-  border-radius: 18px;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+  border-radius: 18px !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
   border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -510,38 +514,40 @@ section#masterDbPage.page.active,
   animation: none !important;
   transition: none !important;
   transform: none !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
-/* RESPONSIVE HP / MOBILE: POPUP BANTUAN CHAT SEJAJAR DENGAN CARD (LEBIH KE KANAN) */
+/* RESPONSIVE HP / MOBILE: BATAS KIRI & KANAN SAMA PERSIS SEJAJAR DENGAN CARD (8PX DARI TEPI LAYAR) */
 @media (max-width: 640px) {
   .popupBantuan,
   #helpModal,
   #chatWindow {
     position: fixed !important;
     top: auto !important;
-    left: 6px !important;
-    right: 4px !important;
+    left: 8px !important;
+    right: 8px !important;
     bottom: 48px !important;
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
     transform: none !important;
-    width: auto !important;
-    max-width: calc(100vw - 10px) !important;
-    display: none;
     margin: 0 !important;
-    z-index: 9999999 !important;
+    display: none;
     box-sizing: border-box !important;
+    z-index: 9999999 !important;
   }
+  
   .popupBantuan.show,
   #helpModal.show,
   #chatWindow.show {
     display: block !important;
-    top: auto !important;
-    left: 6px !important;
-    right: 4px !important;
+    left: 8px !important;
+    right: 8px !important;
     bottom: 48px !important;
-    transform: none !important;
-    width: auto !important;
-    max-width: calc(100vw - 10px) !important;
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
   }
+
   .chatBox,
   #helpModal .chatBox,
   .popupBantuan .chatBox {
