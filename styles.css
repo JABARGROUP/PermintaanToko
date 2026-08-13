@@ -2526,7 +2526,7 @@ body.design-mode-3d-isometric .dashboardTable th {
 #popupNotifCard {
   width: 420px !important;
   max-width: 90vw !important;
-  margin: auto !important;
+  margin: 0 auto !important;
   background: var(--bg-box) !important;
   border-radius: 18px !important;
   overflow: hidden !important;
@@ -5454,54 +5454,30 @@ body:has(#masterDbPage.active) {
 }
 
 /* ==========================================================================
-   POPUP NOTIFIKASI & DETAIL CENTERING (NAIK SEDIKIT LEBIH ATAS / NYAMAN DILIHAT)
+   POPUP NOTIFIKASI, MODAL & DETAIL CENTERING (ELEVATED POSITION)
    ========================================================================== */
 #popupNotif,
 #popupNotifList,
+#confirmOverlay,
+#rejectOverlay,
+#popupUserForm,
+#popupAkun,
+#popupTTD,
 #popupDetail,
-#popupDetailBarangV2,
-#confirmOverlay,
-#rejectOverlay,
-#popupUserForm,
-#popupAkun,
-#popupTTD {
+#popupDetailBarangV2 {
   display: none;
   position: fixed !important;
   inset: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
   justify-content: center !important;
-  align-items: center !important;
-  padding: 10px 10px 45px 10px !important;
+  align-items: flex-start !important;
+  padding-top: 48px !important;
+  padding-bottom: 90px !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
   box-sizing: border-box !important;
-  z-index: 999999 !important;
-}
-
-#popupNotif.show,
-#popupNotifList.show,
-#popupDetail.show,
-#popupDetailBarangV2.show,
-#confirmOverlay.show,
-#rejectOverlay.show,
-#popupUserForm.show,
-#popupAkun.show,
-#popupTTD.show {
-#popupNotif,
-#popupNotifList,
-#confirmOverlay,
-#rejectOverlay,
-#popupUserForm,
-#popupAkun,
-#popupTTD {
-  display: none;
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  justify-content: center !important;
-  align-items: center !important;
-  padding: 16px 12px !important;
-  box-sizing: border-box !important;
+  overflow-y: auto !important;
   z-index: 9999999999 !important;
 }
 
@@ -5520,17 +5496,20 @@ body:has(#masterDbPage.active) {
 #popupNotifList .popupNotifCard {
   width: 500px !important;
   max-width: 92vw !important;
-  max-height: 84vh !important;
+  max-height: 82vh !important;
   display: flex !important;
   flex-direction: column !important;
-  margin: auto !important;
+  margin-top: 25px !important;
+  margin-bottom: auto !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   transform: none !important;
   overflow: hidden !important;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45) !important;
 }
 
 #popupNotifList #notifListBody {
-  max-height: min(48vh, 320px) !important;
+  max-height: min(54vh, 380px) !important;
   overflow-y: auto !important;
 }
 
@@ -5541,9 +5520,53 @@ body:has(#masterDbPage.active) {
 #confirmOverlay .confirmBoxCard,
 #confirmBoxCard,
 .confirmBoxCard {
-  margin: auto !important;
+  margin-top: 30px !important;
+  margin-bottom: auto !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   transform: none !important;
   transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+@media (min-width: 641px) {
+  #popupNotif,
+  #popupNotifList,
+  #confirmOverlay {
+    padding-top: 25px !important;
+    align-items: flex-start !important;
+  }
+  #popupNotifList .popupNotifCard {
+    margin-top: 25px !important;
+  }
+  #popupNotif .popupNotifCard,
+  #popupNotifCard,
+  .popupNotifCard,
+  #confirmBoxCard {
+    margin-top: 30px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  #popupNotif,
+  #popupNotifList,
+  #confirmOverlay {
+    padding-top: 20px !important;
+    padding-bottom: 95px !important;
+    align-items: flex-start !important;
+  }
+  #popupNotifList .popupNotifCard {
+    margin-top: 20px !important;
+    max-height: 78vh !important;
+  }
+  #popupNotif .popupNotifCard,
+  #popupNotifCard,
+  .popupNotifCard,
+  #confirmBoxCard {
+    margin-top: 25px !important;
+  }
+  #popupNotifList #notifListBody {
+    max-height: 48vh !important;
+  }
 }
 
 .popupNotifFooter,

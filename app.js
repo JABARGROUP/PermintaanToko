@@ -1805,6 +1805,8 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
     return st === 'APPROVE' || isDone(r);
   };
   const isServiceApproved = (r) => {
+    const st = String(r.status || '').trim().toUpperCase();
+    if (st.includes('DM') || st === 'APPROVE' || st === 'DONE') return true;
     return r.serviceApprove === true || r.serviceApprove === 'true' || r.service_approve === true || r.service_approve === 'true' || !!r.serviceTTD;
   };
 
@@ -1907,7 +1909,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
             const rArea = String(r.area || '').trim().toUpperCase();
             if (serviceUsersWithPhone.length === 1) return true;
             if (srvArea === 'ALL' || srvArea === 'SEMUA' || !srvArea || srvArea === '-') return true;
-            if (!rArea) return true;
+            if (!rArea || rArea === 'ALL' || rArea === 'SEMUA' || rArea === '-') return true;
             return typeof isAreaMatch === 'function' ? isAreaMatch(srvArea, rArea) : (srvArea === rArea);
           });
 
@@ -1951,7 +1953,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
     const allDMUsers = allUsers.filter(u => {
       if (!u) return false;
       const cat = String(u.category || u.role || '').trim().toUpperCase();
-      return cat === 'DM' || cat.includes('DM');
+      return cat === 'DM' || cat.includes('DM') || cat.includes('DISTRICT');
     });
 
     if (allDMUsers.length === 0) {
@@ -1972,7 +1974,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
             const rArea = String(r.area || '').trim().toUpperCase();
             if (dmUsersWithPhone.length === 1) return true;
             if (dmArea === 'ALL' || dmArea === 'SEMUA' || !dmArea || dmArea === '-') return true;
-            if (!rArea) return true;
+            if (!rArea || rArea === 'ALL' || rArea === 'SEMUA' || rArea === '-') return true;
             return typeof isAreaMatch === 'function' ? isAreaMatch(dmArea, rArea) : (dmArea === rArea);
           });
 
@@ -2074,6 +2076,11 @@ if (typeof window !== 'undefined') {
     startAdminReminderTimeChecker();
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && typeof checkAndTriggerPendingReminders === 'function') {
+        checkAndTriggerPendingReminders(false);
+      }
+    });
+    window.addEventListener('focus', () => {
+      if (typeof checkAndTriggerPendingReminders === 'function') {
         checkAndTriggerPendingReminders(false);
       }
     });
