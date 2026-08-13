@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260813_v1610">
-  <script src="app.js?v=20260813_v1610"></script>
+  <link rel="stylesheet" href="styles.css?v=20260813_v1717">
+  <script src="app.js?v=20260813_v1717"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -28,10 +28,19 @@
 </head>
 <body class="dark-mode">
 
+  <!-- AESTHETIC SUBTLE AMBIENT SCENERY BACKGROUND (SAMAR-SAMAR) -->
+  <div class="aesthetic-bg-container" aria-hidden="true">
+    <div class="aesthetic-bg-image"></div>
+    <div class="aesthetic-bg-grid"></div>
+    <div class="aesthetic-orb aesthetic-orb-1"></div>
+    <div class="aesthetic-orb aesthetic-orb-2"></div>
+    <div class="aesthetic-orb aesthetic-orb-3"></div>
+  </div>
+
   <!-- TOP-RIGHT HEADER ACTIONS CONTAINER (ALIGNED FLUSH TO RIGHT CARD BOUNDARY) -->
   <div id="topHeaderActions" class="top-header-actions">
-    <!-- BULAT KECIL INDIKATOR STATUS ONLINE (KONEK / DISKONEK) -->
-    <div id="firebaseOnlineDot" title="STATUS SERVER ONLINE: TERHUBUNG (KLIK UNTUK LIHAT KUOTA & PENGGUNAAN)" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; cursor: pointer; transition: all 0.3s; align-self: flex-start; margin-top: 4px; pointer-events: auto !important;" onclick="bukaModalCloudUsage()"></div>
+    <!-- BULAT KECIL INDIKATOR STATUS ONLINE (KONEK / DISKONEK) - RATA ATAS -->
+    <div id="firebaseOnlineDot" title="STATUS SERVER ONLINE: TERHUBUNG (KLIK UNTUK LIHAT KUOTA & PENGGUNAAN)" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; cursor: pointer; transition: all 0.3s; align-self: flex-start !important; margin-top: 2px !important; transform: none !important; pointer-events: auto !important;" onclick="bukaModalCloudUsage()"></div>
 
     <button id="helpButton" class="helpButton" onclick="bukaBantuan()" title="PUSAT BANTUAN & CHAT" style="display: none;">
       <span class="material-symbols-rounded">support_agent</span>
@@ -241,21 +250,21 @@
       </div>
 
       <!-- TITLE DATA DASHBOARD DI LUAR KOTAK (DI ATAS TABEL) -->
-      <h3 id="dashboardRecentTitle" style="margin: 6px 0 8px 2px !important; font-size: 13.5px !important; font-weight: 700 !important; color: var(--text-main); text-align: left !important; display: flex; align-items: center; gap: 8px; letter-spacing: 0.5px;">
+      <h3 id="dashboardRecentTitle" style="margin: 1mm 0 1mm 2px !important; font-size: 13.5px !important; font-weight: 700 !important; color: var(--text-main); text-align: left !important; display: flex; align-items: center; gap: 8px; letter-spacing: 0.5px;">
         <span class="material-symbols-rounded" style="color: var(--primary); font-size: 18px;">format_list_bulleted</span>
         PERMINTAAN PENDING
       </h3>
 
-      <!-- TABEL DASHBOARD TANPA CARD (LANGSUNG TERHUBUNG KE HALAMAN) -->
-      <div id="detailDashboard" style="background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 0 22px 0 !important;">
-        <div class="tableWrap">
-          <table class="dashboardTable">
+      <!-- TABEL DASHBOARD (SUDUT UJUNG 110 DERAJAT / 11PX BORDER-RADIUS) -->
+      <div id="detailDashboard" style="margin: 1mm 0 1mm 0 !important; padding: 0 !important; border-radius: 11px !important; border: 0 !important; background: var(--bg-box) !important; max-height: 420px !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important;">
+        <div class="tableWrap" style="border-radius: 11px !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important; margin: 0 !important; border: 0 !important; max-height: 420px !important;">
+          <table class="dashboardTable" style="border-radius: 11px !important; border-collapse: separate !important; border-spacing: 0 !important; border: 0 !important; min-width: 650px !important;">
             <thead>
               <tr>
-                <th style="width: 18%; text-align: left;">TANGGAL</th>
-                <th style="width: 32%; text-align: left;">NO SURAT</th>
-                <th style="width: 30%; text-align: left;">NAMA TOKO</th>
-                <th style="width: 20%; text-align: left !important;">STATUS</th>
+                <th style="width: 18%; text-align: left; border-radius: 11px 0 0 0 !important; position: sticky; top: 0; z-index: 20;">TANGGAL</th>
+                <th style="width: 32%; text-align: left; border-radius: 0 !important; position: sticky; top: 0; z-index: 20;">NO SURAT</th>
+                <th style="width: 30%; text-align: left; border-radius: 0 !important; position: sticky; top: 0; z-index: 20;">NAMA TOKO</th>
+                <th style="width: 20%; text-align: left !important; border-radius: 0 11px 0 0 !important; position: sticky; top: 0; z-index: 20;">STATUS</th>
               </tr>
             </thead>
             <tbody id="lastData">
@@ -780,10 +789,10 @@
         </button>
       </div>
 
-      <!-- 2 EQUAL BUTTONS: REFRESH WEB & GANTI TEMA -->
+      <!-- 2 EQUAL BUTTONS: GANTI BG & GANTI TEMA -->
       <div style="margin-top: 8px; margin-bottom: 8px; display: flex; gap: 8px; width: 100%;">
-        <button type="button" class="refresh-icon-btn" onclick="window.location.reload()" title="REFRESH / MUAT ULANG APLIKASI WEB" style="flex: 1; height: 35px; padding: 6px; border-radius: 8px; border: 1px solid var(--border-color); background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">
-          <span class="material-symbols-rounded" style="font-size: 18px;">refresh</span> REFRESH WEB
+        <button type="button" class="bg-icon-btn" onclick="gantiBackgroundApp()" title="GANTI GAMBAR LATAR BELAKANG" style="flex: 1; height: 35px; padding: 6px; border-radius: 8px; border: 1px solid var(--border-color); background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+          <span class="material-symbols-rounded" style="font-size: 18px;">wallpaper</span> GANTI BG
         </button>
         <button type="button" class="theme-icon-btn" onclick="toggleTheme()" title="GANTI TEMA TAMPILAN" style="flex: 1; height: 35px; padding: 6px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">
           <span class="material-symbols-rounded" style="font-size: 18px;">palette</span> GANTI TEMA
@@ -890,9 +899,9 @@
     </div>
   </div>
 
-  <!-- 3. POPUP CONFIRMATION MODAL (YES/NO HALF SCREEN COMPACT CARD) -->
-  <div id="confirmOverlay" class="popupOverlay" style="z-index: 999999999 !important;">
-    <div class="popupNotifCard" id="confirmBoxCard" style="width: 400px !important; max-width: 90vw !important; border-radius: 16px !important; overflow: hidden !important; margin-top: 8px !important; margin-bottom: auto !important; margin-left: auto !important; margin-right: auto !important;">
+  <!-- 3. POPUP CONFIRMATION MODAL (YES/NO CENTERED SCREEN CARD) -->
+  <div id="confirmOverlay" class="popupOverlay" style="z-index: 999999999 !important; align-items: center !important; justify-content: center !important;">
+    <div class="popupNotifCard" id="confirmBoxCard" style="width: 400px !important; max-width: 90vw !important; border-radius: 16px !important; overflow: hidden !important; margin: auto !important;">
       <div class="popupNotifBody" style="padding: 16px 18px 12px 18px; text-align: center;">
         <span class="material-symbols-rounded" style="font-size: 32px; color: var(--primary); margin-bottom: 4px; display: block;">help</span>
         <p id="confirmMessage" style="font-size: 13px; font-weight: 700; line-height: 1.45; color: var(--text-main); margin: 0;">YAKIN INGIN MELANJUTKAN KAN?</p>
@@ -904,9 +913,9 @@
     </div>
   </div>
 
-  <!-- 4. CLEAN & ATTRACTIVE NOTIFICATION DIALOG MODAL (OK HALF SCREEN COMPACT CARD) -->
-  <div id="popupNotif" class="popupOverlay" style="z-index: 9999999999 !important;">
-    <div class="popupNotifCard" id="popupNotifCard" style="width: 400px !important; max-width: 90vw !important; border-radius: 16px !important; overflow: hidden !important; margin-top: 8px !important; margin-bottom: auto !important; margin-left: auto !important; margin-right: auto !important;">
+  <!-- 4. CLEAN & ATTRACTIVE NOTIFICATION DIALOG MODAL (OK CENTERED SCREEN CARD) -->
+  <div id="popupNotif" class="popupOverlay" style="z-index: 9999999999 !important; align-items: center !important; justify-content: center !important;">
+    <div class="popupNotifCard" id="popupNotifCard" style="width: 400px !important; max-width: 90vw !important; border-radius: 16px !important; overflow: hidden !important; margin: auto !important;">
       <div class="popupNotifBody" style="padding: 16px 18px 12px 18px; text-align: center;">
         <span id="popupNotifIcon" class="material-symbols-rounded" style="font-size: 32px; color: var(--primary); margin-bottom: 4px; display: block;">info</span>
         <p id="popupNotifMessage" style="font-size: 13px; font-weight: 700; line-height: 1.45; color: var(--text-main); margin: 0;">MEMPROSES...</p>
@@ -972,10 +981,10 @@
     </div>
   </div>
 
-  <div id="popupDetailBarangV2" class="popupOverlay" onclick="if(event.target === this) tutupDetailBarangV2();" style="display:none; padding: 10px 0 !important; width: 100vw !important;">
-    <div class="popupBoxDetailV2" style="width: calc(100vw - 2mm) !important; min-width: calc(100vw - 2mm) !important; max-width: calc(100vw - 2mm) !important; margin: auto 1mm !important; box-sizing: border-box !important;">
-      <div class="popupHeaderV2" style="background: var(--primary) !important; color: #ffffff !important; padding: 14px 18px !important; border-bottom: 1px solid rgba(255,255,255,0.2) !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important; border-radius: 18px 18px 0 0 !important;">
-        <span id="popupTitleV2" style="font-weight: 800 !important; text-align: center !important; font-size: 16px !important; letter-spacing: 0.5px !important; text-transform: uppercase !important; color: #ffffff !important; margin: 0 auto !important;">DETAIL PERMINTAAN</span>
+  <div id="popupDetailBarangV2" class="popupOverlay" onclick="if(event.target === this) tutupDetailBarangV2();" style="display:none; padding: 8px 4px !important; width: 100vw !important; max-width: 100vw !important;">
+    <div class="popupBoxDetailV2" style="width: calc(100vw - 8px) !important; min-width: calc(100vw - 8px) !important; max-width: calc(100vw - 8px) !important; margin: auto !important; border-radius: 10px !important; overflow: hidden !important; box-sizing: border-box !important;">
+      <div class="popupHeaderV2" style="background: var(--primary) !important; color: #ffffff !important; padding: 14px 18px !important; border-bottom: 1px solid rgba(255,255,255,0.2) !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; border-radius: 10px 10px 0 0 !important;">
+        <span id="popupTitleV2" style="font-weight: 800 !important; text-align: center !important; font-size: 16px !important; letter-spacing: 0.5px !important; text-transform: uppercase !important; color: #ffffff !important; margin: 0 auto !important; width: 100% !important; display: block !important;">DETAIL PERMINTAAN</span>
         <button type="button" class="popupCloseV2" onclick="tutupDetailBarangV2()" title="TUTUP" style="position: absolute !important; right: 14px !important; top: 50% !important; transform: translateY(-50%) !important; font-size: 28px !important; font-weight: 900 !important; color: #ffffff !important; background: transparent !important; border: none !important; cursor: pointer !important; line-height: 1 !important;">&times;</button>
       </div>
       <div id="popupBodyV2">

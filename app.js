@@ -300,12 +300,80 @@ function updateBodyClasses(specificTheme) {
   if (typeof updateThemeIcon === 'function') {
     updateThemeIcon();
   }
+  if (typeof applyAppBackground === 'function') {
+    applyAppBackground(null, false);
+  }
 }
 window.updateBodyClasses = updateBodyClasses;
 window.applyThemeToDocument = updateBodyClasses;
 
+// ==========================================================================
+// BACKGROUND SCENERY CHANGER (DISIMPAN DI LOKAL STORAGE PERANGKAT)
+// ==========================================================
+const BG_STORAGE_KEY = 'STORE_BG_IMAGE_CHOICE_V2';
+
+function applyAppBackground(bgChoice, saveToLocal = true) {
+  if (!bgChoice) {
+    try {
+      bgChoice = localStorage.getItem(BG_STORAGE_KEY) || 'bg-scenery-2.jpg';
+    } catch(e) {
+      bgChoice = 'bg-scenery-2.jpg';
+    }
+  }
+
+  if (saveToLocal) {
+    try {
+      localStorage.setItem(BG_STORAGE_KEY, bgChoice);
+    } catch(e) {}
+  }
+
+  const bgEl = document.querySelector('.aesthetic-bg-image');
+  if (bgEl) {
+    if (bgChoice === 'none' || !bgChoice) {
+      bgEl.style.backgroundImage = 'none';
+      bgEl.style.display = 'none';
+    } else {
+      bgEl.style.display = 'block';
+      bgEl.style.backgroundImage = `url('${bgChoice}')`;
+    }
+  }
+
+  document.documentElement.style.setProperty('--app-bg-image', bgChoice === 'none' || !bgChoice ? 'none' : `url('${bgChoice}')`);
+}
+
+function gantiBackgroundApp() {
+  let currentBg = 'bg-scenery-2.jpg';
+  try {
+    currentBg = localStorage.getItem(BG_STORAGE_KEY) || 'bg-scenery-2.jpg';
+  } catch(e) {}
+
+  let nextBg = 'bg-scenery-2.jpg';
+  let nextName = 'Malam Bulan Fantasi';
+
+  if (currentBg === 'bg-scenery-2.jpg') {
+    nextBg = 'bg-scenery.jpg';
+    nextName = 'Danau & Pegunungan';
+  } else if (currentBg === 'bg-scenery.jpg') {
+    nextBg = 'none';
+    nextName = 'Polos / Tanpa Gambar';
+  } else {
+    nextBg = 'bg-scenery-2.jpg';
+    nextName = 'Malam Bulan Fantasi';
+  }
+
+  applyAppBackground(nextBg, true);
+}
+window.applyAppBackground = applyAppBackground;
+window.gantiBackgroundApp = gantiBackgroundApp;
+
+// Auto init background immediately
+try {
+  applyAppBackground(null, false);
+} catch(e) {}
+
 function loadSavedDesignMode() {
   updateBodyClasses();
+  applyAppBackground(null, false);
 }
 
 function toggleDesignMode() {
@@ -4796,7 +4864,6 @@ function toggleTheme() {
       supabase.from('permintaan_toko').upsert(themePayload).then(({ error }) => {
         if (!error) {
           console.log('⚡ [SUPABASE GLOBAL THEME SYNC SUCCESS]: Tema disebar ke semua perangkat!', t.id);
-          showNotif(`TEMA '${t.name.toUpperCase()}' BERHASIL DITERAPKAN!`, 'info');
         }
       }).catch(e => console.warn('[SUPABASE GLOBAL THEME EXCEPTION]:', e));
     }
@@ -5659,7 +5726,7 @@ function loadDashboard() {
   const filteredData = data.filter(r => r.status === dashboardFilterStatus);
 
   if (filteredData.length === 0) {
-    lastDataContainer.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">TIDAK ADA DATA PERMINTAAN DENGAN STATUS ${dashboardFilterStatus}.</td></tr>`;
+    lastDataContainer.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:32px 16px; color:var(--text-muted); border-bottom-left-radius:13px; border-bottom-right-radius:13px;">TIDAK ADA DATA PERMINTAAN DENGAN STATUS ${dashboardFilterStatus}.</td></tr>`;
     return;
   }
 
@@ -6674,7 +6741,7 @@ function filterRiwayat() {
   tbody.innerHTML = '';
 
   if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">BELUM ADA DATA PERMINTAAN.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted); border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">BELUM ADA DATA PERMINTAAN.</td></tr>`;
     return;
   }
 
@@ -7973,8 +8040,8 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   if (!bodyBox) return;
 
   let headerInfoHtml = `
-    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; align-items: center !important; width: 100% !important; padding: 6px 12px !important; box-sizing: border-box !important; background: transparent !important;">
-      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; text-align: left !important; white-space: nowrap !important; flex: 0 0 auto !important; background: transparent !important;">
+    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: center !important; align-items: center !important; width: 100% !important; padding: 6px 12px !important; text-align: center !important; box-sizing: border-box !important; background: transparent !important;">
+      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; white-space: nowrap !important; flex: 0 0 auto !important; margin: 0 auto !important; background: transparent !important;">
         <span style="opacity: 0.85; font-weight: 500; color: var(--text-main);">NO SURAT : </span>
         <span class="noSuratValV2" style="color: var(--primary) !important; font-weight: 700 !important; margin-left: 4px; background: transparent !important;">${req.noSurat || '-'}</span>
       </div>
@@ -7991,7 +8058,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
   const thBase = "background: var(--primary) !important; color: #ffffff !important; padding: 8px 12px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.3px !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important; box-shadow: none !important; text-shadow: none !important;";
   const thStyleAutofit = `${thBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
-  const thStyleLeft = `${thBase} text-align: left !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
+  const thStyleLeft = `${thBase} text-align: center !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
 
   const tdBase = "padding: 8px 12px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;";
   const tdStyleAutofit = `${tdBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
@@ -8278,11 +8345,11 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   `;
 
   bodyBox.innerHTML = `
-    <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 8px 0px 12px 0px !important; display: flex !important; flex-direction: column !important; gap: 6px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 18px 18px !important; overflow: hidden !important;">
+    <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 6px 0 12px 0 !important; display: flex !important; flex-direction: column !important; gap: 6px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 10px 10px !important; overflow: hidden !important;">
       ${headerInfoHtml}
       
-      <div class="tableCardV2 tableWrap" style="display: block !important; border-top: 1px solid var(--border-color) !important; border-bottom: 1px solid var(--border-color) !important; border-left: none !important; border-right: none !important; border-radius: 0 !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: auto !important; overscroll-behavior: contain !important; max-height: 55vh !important; background: var(--bg-box) !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 0 !important; position: relative !important;">
-        <table class="detailTableV2" style="width: 100% !important; min-width: 100% !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
+      <div class="tableCardV2 tableWrap" style="display: block !important; border: 0 !important; border-radius: 11px !important; -webkit-clip-path: inset(0 round 11px) !important; clip-path: inset(0 round 11px) !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important; overscroll-behavior: contain !important; max-height: 55vh !important; min-height: 140px !important; background: var(--bg-box) !important; width: 100% !important; min-width: 100% !important; max-width: 100% !important; margin: 2px 0 6px 0 !important; padding: 0 !important; position: relative !important;">
+        <table class="detailTableV2" style="width: 100% !important; min-width: 100% !important; border-radius: 11px !important; border: 0 !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
           ${tableHeaderHtml}
           <tbody>
             ${itemsHtml}
@@ -11580,7 +11647,7 @@ function loadMasterDbTable() {
   tbody.innerHTML = '';
 
   if (requests.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);">BELUM ADA DATA PERMINTAAN TERDAFTAR.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted); border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">BELUM ADA DATA PERMINTAAN TERDAFTAR.</td></tr>`;
     updateMultiMasterDbBtnState();
     return;
   }

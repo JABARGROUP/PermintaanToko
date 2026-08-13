@@ -220,6 +220,129 @@ body {
   color: var(--text-main);
   font-size: 14px;
   transition: background 0.3s, color 0.3s;
+  position: relative;
+}
+
+/* ==========================================================================
+   AESTHETIC SUBTLE AMBIENT BACKGROUND & MESH GLOW (SAMAR-SAMAR ELEGAN)
+   ========================================================================== */
+.aesthetic-bg-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  overflow: hidden !important;
+  opacity: 1 !important;
+  transition: opacity 0.5s ease;
+}
+
+/* 1. Scenic Landscape Image (Pemandangan Bulan, Gunung & Danau Lebih Jelas & Elegan) */
+.aesthetic-bg-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-image: var(--app-bg-image, url('bg-scenery-2.jpg'));
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: 0.38 !important;
+  filter: saturate(1.3) contrast(1.1);
+  transition: opacity 0.5s ease, background-image 0.3s ease;
+  will-change: opacity, background-image;
+}
+
+body.light-mode .aesthetic-bg-image,
+body.classic-mode .aesthetic-bg-image,
+body.forest-mode .aesthetic-bg-image,
+body.sunset-mode .aesthetic-bg-image {
+  opacity: 0.30 !important;
+  filter: saturate(1.1) contrast(1.05);
+}
+
+/* 2. Subtle Micro Dot Grid Pattern (Samar-samar & Bersih) */
+.aesthetic-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.06) 1px, transparent 0);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.3) 100%);
+  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.3) 100%);
+}
+
+body.light-mode .aesthetic-bg-grid,
+body.classic-mode .aesthetic-bg-grid,
+body.forest-mode .aesthetic-bg-grid,
+body.sunset-mode .aesthetic-bg-grid {
+  background-image: radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.04) 1px, transparent 0);
+}
+
+/* 2. Floating Ambient Glow Orbs (Samar-samar Mewah) */
+.aesthetic-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+.aesthetic-orb-1 {
+  width: 440px;
+  height: 440px;
+  top: -80px;
+  left: -80px;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.18) 0%, rgba(59, 130, 246, 0.08) 70%, transparent 100%);
+  animation: floatOrb1 20s ease-in-out infinite alternate;
+}
+
+.aesthetic-orb-2 {
+  width: 520px;
+  height: 520px;
+  bottom: -100px;
+  right: -100px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.16) 0%, rgba(59, 130, 246, 0.06) 70%, transparent 100%);
+  animation: floatOrb2 24s ease-in-out infinite alternate;
+}
+
+.aesthetic-orb-3 {
+  width: 380px;
+  height: 380px;
+  top: 40%;
+  left: 60%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, rgba(99, 102, 241, 0.05) 70%, transparent 100%);
+  animation: floatOrb3 22s ease-in-out infinite alternate;
+}
+
+/* Adapt for Light Mode */
+body.light-mode .aesthetic-orb-1 {
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, rgba(14, 165, 233, 0.05) 70%, transparent 100%);
+}
+body.light-mode .aesthetic-orb-2 {
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.10) 0%, rgba(37, 99, 235, 0.04) 70%, transparent 100%);
+}
+body.light-mode .aesthetic-orb-3 {
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, rgba(124, 58, 237, 0.03) 70%, transparent 100%);
+}
+
+@keyframes floatOrb1 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 80px) scale(1.1); }
+  100% { transform: translate(30px, 40px) scale(0.95); }
+}
+
+@keyframes floatOrb2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-70px, -60px) scale(1.08); }
+  100% { transform: translate(-30px, -40px) scale(0.92); }
+}
+
+@keyframes floatOrb3 {
+  0% { transform: translate(0, 0) scale(0.9); }
+  50% { transform: translate(-50px, 40px) scale(1.15); }
+  100% { transform: translate(40px, -50px) scale(1); }
 }
 
 #app {
@@ -229,6 +352,8 @@ body {
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: auto !important;
+  position: relative;
+  z-index: 1;
 }
 
 /* UTILITY CLASSES */
@@ -236,6 +361,21 @@ body {
 .text-muted { color: var(--text-muted) !important; }
 
 /* PAGE CONTAINERS & FADE ANIMATIONS - ALL PAGES WIDE & FULL WIDTH */
+.page,
+.page.active,
+#dashboardPage,
+#riwayatPage,
+#inputPage,
+#masterDbPage,
+#userManagementPage,
+.dashboardTop,
+.dashboardTop .header,
+.header,
+.stats,
+.top-header-actions {
+  background: transparent !important;
+}
+
 .page {
   display: none !important;
   padding: 16px 8px !important;
@@ -297,7 +437,7 @@ section#masterDbPage.page.active,
 /* FLEX TOP-RIGHT HEADER ACTIONS CONTAINER - ALIGNED FLUSH TO RIGHTMOST CARD BORDER EDGE */
 .top-header-actions {
   position: fixed !important;
-  top: 14px !important;
+  top: 8px !important;
   right: 8px !important;
   z-index: 99999 !important;
   display: flex !important;
@@ -306,11 +446,13 @@ section#masterDbPage.page.active,
   justify-content: flex-end !important;
   gap: 8px !important;
   pointer-events: none !important;
+  transform: translateY(-2px) !important;
 }
 
 #firebaseOnlineDot {
   align-self: flex-start !important;
-  margin-top: 5px !important;
+  margin-top: 2px !important;
+  transform: none !important;
   pointer-events: auto !important;
 }
 
@@ -473,7 +615,7 @@ section#masterDbPage.page.active,
 #helpModal,
 #chatWindow {
   position: fixed;
-  bottom: 145px;
+  bottom: 175px !important;
   right: 12px;
   width: 440px;
   max-width: calc(100vw - 24px);
@@ -527,7 +669,7 @@ section#masterDbPage.page.active,
     top: auto !important;
     left: 50% !important;
     right: auto !important;
-    bottom: 125px !important;
+    bottom: 155px !important;
     transform: translateX(-50%) !important;
     width: calc(100vw - 24px) !important;
     max-width: calc(100vw - 24px) !important;
@@ -969,24 +1111,32 @@ input:focus, select:focus, textarea:focus {
 #dashboardPage {
   display: none;
   flex-direction: column !important;
-  height: calc(100vh - 65px) !important;
+  height: calc(100vh - 60px - 0.5mm) !important;
+  max-height: calc(100vh - 60px - 0.5mm) !important;
   overflow: hidden !important;
-  padding-bottom: 12px !important;
+  padding-top: 4px !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
   box-sizing: border-box !important;
 }
 
 #dashboardPage.active {
   display: flex !important;
+  height: calc(100vh - 60px - 0.5mm) !important;
+  max-height: calc(100vh - 60px - 0.5mm) !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .dashboardTop {
   position: relative !important;
   top: auto !important;
   z-index: 10 !important;
-  background: var(--bg-body) !important;
+  background: transparent !important;
   margin-top: 0 !important;
   padding-top: 0 !important;
-  padding-bottom: 10px !important;
+  padding-bottom: 0.5mm !important;
+  margin-bottom: 0 !important;
   flex-shrink: 0 !important;
 }
 
@@ -1022,7 +1172,7 @@ input:focus, select:focus, textarea:focus {
   display: grid !important;
   grid-template-columns: repeat(2, 1fr) !important;
   gap: 8px !important;
-  margin: 6px 0 6px 0 !important;
+  margin: 5px 0 0.5mm 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
@@ -1191,73 +1341,79 @@ input:focus, select:focus, textarea:focus {
 }
 
 #detailDashboard {
-  height: auto !important;
-  min-height: auto !important;
-  max-height: none !important;
-  flex: 0 0 auto !important;
-  display: block !important;
-  overflow: visible !important;
-  margin-bottom: 22px !important;
+  height: calc(100vh - 195px) !important;
+  max-height: calc(100vh - 195px) !important;
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  margin-top: 1mm !important;
+  margin-bottom: 1mm !important;
   padding: 0 !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  border-radius: 16px !important;
+  -webkit-clip-path: inset(0 round 16px) !important;
+  clip-path: inset(0 round 16px) !important;
+  background: var(--bg-box) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
   box-sizing: border-box !important;
   width: 100% !important;
   max-width: 100% !important;
 }
 
 #detailDashboard #dashboardRecentTitle {
-  margin-bottom: 12px !important;
+  margin: 1mm 0 1mm 0 !important;
   font-size: 14px !important;
   font-weight: 700 !important;
-  text-align: center !important;
+  text-align: left !important;
   color: var(--text-main) !important;
 }
 
 /* RECENT DATA LIST ON DASHBOARD - FIXED FULL HEIGHT DOWNWARDS WITH STICKY HEADER & SCROLL */
 #detailDashboard .tableWrap {
   width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
   display: block !important;
   position: relative !important;
-  max-height: 52vh !important;
-  min-height: 220px !important;
-  height: auto !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  touch-action: auto !important;
+  touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
   border: none !important;
-  border-radius: 8px !important;
+  border-radius: 16px !important;
+  -webkit-clip-path: inset(0 round 16px) !important;
+  clip-path: inset(0 round 16px) !important;
   background: transparent !important;
   box-shadow: none !important;
-  margin: 0 0 1mm 0 !important;
+  margin: 0 !important;
   padding: 0 !important;
   box-sizing: border-box !important;
 }
 
-/* STRENGTHENED STYLING FOR DASHBOARD TABLE (HTML TABLE WITH THEAD & TBODY) WITH FIXED STICKY HEADER */
-/* DASHBOARD RECENT TABLE STYLING - STICKY TOP HEADER, SCROLL HORIZONTAL LEFT-RIGHT ONLY FOR HEADER */
-#detailDashboard .tableWrap,
+/* DASHBOARD RECENT TABLE STYLING - FULL 2D TOUCH SCROLL (KANAN, KIRI, ATAS, BAWAH) */
 .dashboardTableContainer {
   width: 100% !important;
+  height: 100% !important;
   display: block !important;
   position: relative !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
-  max-height: 480px !important;
   -webkit-overflow-scrolling: touch !important;
-  touch-action: auto !important;
+  touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
   border: 1px solid var(--border-color) !important;
-  border-radius: 10px !important;
+  border-radius: 16px !important;
+  -webkit-clip-path: inset(0 round 16px) !important;
+  clip-path: inset(0 round 16px) !important;
   background: var(--bg-box) !important;
 }
 
 .dashboardTable {
   width: 100% !important;
-  min-width: 580px !important;
+  min-width: 680px !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
   font-size: 12.5px !important;
@@ -1265,6 +1421,7 @@ input:focus, select:focus, textarea:focus {
   background: var(--bg-box) !important;
   table-layout: auto !important;
   margin: 0 !important;
+  touch-action: pan-x pan-y !important;
 }
 
 .dashboardTable thead,
@@ -1329,28 +1486,28 @@ input:focus, select:focus, textarea:focus {
   background: var(--table-hover) !important;
 }
 
-/* GUARANTEE LAST ROW IN ALL TABLES IS UNCOVERED */
+/* TABLE SPACING CLEAN */
 #riwayatData::after,
 #masterDbTableBody::after,
 .historyTable tbody::after,
 #tableMasterDb tbody::after {
-  content: "" !important;
-  display: block !important;
-  height: 90px !important;
+  content: none !important;
+  display: none !important;
+  height: 0 !important;
 }
 
 .dashboardTable,
 .dashboardTable tr:last-child td,
 #lastData tr:last-child td,
 #lastData .lastItem:last-child {
-  padding-bottom: 1.5cm !important;
-  margin-bottom: 1.5cm !important;
+  padding-bottom: 8px !important;
+  margin-bottom: 0 !important;
   border-bottom: none !important;
 }
 
 #userTableBody tr:last-child td,
 #tableUserMgmt tr:last-child td {
-  padding-bottom: 2mm !important;
+  padding-bottom: 8px !important;
   border-bottom: none !important;
 }
 
@@ -1359,22 +1516,18 @@ input:focus, select:focus, textarea:focus {
 #masterDbTableBody tr:last-child td,
 .masterDbTable tr:last-child td,
 .detailTable2 tr:last-child td {
-  padding-bottom: 90px !important;
+  padding-bottom: 8px !important;
   border-bottom: none !important;
 }
 
 #lastData {
   background: var(--bg-box) !important;
   color: var(--text-main) !important;
-  padding-bottom: 1.5cm !important;
-  margin-bottom: 1.5cm !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
-#detailDashboard,
-#detailDashboard .tableWrap {
-  padding-bottom: 1.5cm !important;
-  margin-bottom: 1.5cm !important;
-}
+
 
 /* SHIFT FORM SIMPAN PERMINTAAN BUTTON HIGHER UP ON MOBILE (HP) & ALL DEVICES */
 #inputPage #btnSimpan,
@@ -1418,23 +1571,22 @@ input:focus, select:focus, textarea:focus {
 #riwayatData {
   background: var(--bg-box) !important;
   color: var(--text-main) !important;
-  padding-bottom: 90px !important;
-  margin-bottom: 90px !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 #riwayatPage,
 #riwayatPage .riwayatContent,
 #masterDbPage {
-  padding-bottom: 100px !important;
-  margin-bottom: 100px !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .tableWrap,
 #riwayatPage .tableWrap,
 #masterDbPage .tableWrap {
-  padding-bottom: 40px !important;
-  margin-bottom: 95px !important;
-  max-height: calc(100vh - 280px) !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .lastHeader {
@@ -1883,22 +2035,25 @@ section#masterDbPage.page.active {
 
 #riwayatPage .tableWrap,
 #masterDbPage .tableWrap {
-  flex: 1 !important;
+  flex: 1 1 auto !important;
   display: block !important;
   width: 100% !important;
-  height: calc(100vh - 120px) !important;
-  min-height: calc(100vh - 120px) !important;
-  max-height: calc(100vh - 120px) !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
   overflow-y: auto !important;
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y !important;
   border: 1px solid var(--border-color) !important;
-  border-radius: 10px !important;
+  border-radius: 16px !important;
+  -webkit-clip-path: inset(0 round 16px) !important;
+  clip-path: inset(0 round 16px) !important;
   position: relative !important;
   box-sizing: border-box !important;
   background: var(--bg-box) !important;
-  margin-bottom: 1mm !important;
+  margin-top: 0.5mm !important;
+  margin-bottom: 0 !important;
   padding-bottom: 0 !important;
 }
 
@@ -2183,7 +2338,9 @@ body.design-mode-3d-isometric .dashboardTable th {
   display: none;
   justify-content: center;
   align-items: center;
-  background: rgba(0,0,0,.65);
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
   z-index: 99999;
   padding: 16px;
 }
@@ -3386,10 +3543,10 @@ table th,
     overflow-y: scroll !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y !important;
-    border-radius: 10px !important;
+    border-radius: 16px !important;
     box-sizing: border-box !important;
-    margin-bottom: 1cm !important;
-    padding-bottom: 1cm !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
   }
 
   .tableWrap,
@@ -3397,12 +3554,18 @@ table th,
   #masterDbPage .tableWrap {
     overflow-x: auto !important;
     overflow-y: auto !important;
-    max-height: calc(100vh - 280px) !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
     -webkit-overflow-scrolling: touch !important;
-    touch-action: auto !important;
-    border-radius: 10px !important;
-    margin-bottom: 95px !important;
-    padding-bottom: 40px !important;
+    touch-action: pan-x pan-y !important;
+    border-radius: 16px !important;
+    -webkit-clip-path: inset(0 round 16px) !important;
+    clip-path: inset(0 round 16px) !important;
+    margin-top: 1mm !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
   }
 
   #userManagementPage .tableWrap {
@@ -3444,15 +3607,17 @@ table th,
     max-height: 90vh !important;
     padding: 14px !important;
     box-sizing: border-box;
+    border-radius: 16px !important;
   }
 
   #popupDetail .popupBoxDetail,
   .popupBoxDetail,
   .popupBoxDetailV2,
   #detailContentContainer {
-    padding: 0 0 1cm 0 !important;
-    padding-bottom: 1cm !important;
+    padding: 0 0 4px 0 !important;
+    padding-bottom: 4px !important;
     box-sizing: border-box !important;
+    border-radius: 18px !important;
   }
 
   #bottomMenu {
@@ -3497,10 +3662,11 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 60px) !important;
-    max-height: calc(100vh - 60px) !important;
+    height: calc(100vh - 60px - 1mm) !important;
+    max-height: calc(100vh - 60px - 1mm) !important;
     overflow: hidden !important;
-    padding: 8px 8px 0 8px !important;
+    padding: 4px 6px 0 6px !important;
+    margin-bottom: 0 !important;
     box-sizing: border-box !important;
     touch-action: auto !important;
   }
@@ -3515,8 +3681,8 @@ table th,
 
   .stats {
     grid-template-columns: 1fr 1fr;
-    gap: 8px !important;
-    margin: 8px 0 8px 0 !important;
+    gap: 6px !important;
+    margin: 2px 0 1mm 0 !important;
   }
 
   .cardStat {
@@ -3809,10 +3975,10 @@ button.btnKembali {
     box-sizing: border-box !important;
   }
 
-  #dashboardPage, #riwayatPage, #masterDbPage, section#dashboardPage.page.active, section#riwayatPage.page.active, section#masterDbPage.page.active {
+  #dashboardPage, section#dashboardPage.page.active {
     display: flex !important;
     flex-direction: column !important;
-    padding-top: 10px !important;
+    padding-top: 4px !important;
     padding-bottom: 0 !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
@@ -3820,9 +3986,27 @@ button.btnKembali {
     max-width: 100% !important;
     overflow: hidden !important;
     overflow-y: hidden !important;
-    height: calc(100vh - 65px) !important;
-    max-height: calc(100vh - 65px) !important;
+    height: calc(100vh - 60px - 0.5mm) !important;
+    max-height: calc(100vh - 60px - 0.5mm) !important;
     box-sizing: border-box !important;
+    margin-bottom: 0 !important;
+  }
+
+  #riwayatPage, #masterDbPage, section#riwayatPage.page.active, section#masterDbPage.page.active {
+    display: flex !important;
+    flex-direction: column !important;
+    padding-top: 4px !important;
+    padding-bottom: 0 !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    overflow-y: hidden !important;
+    height: calc(100vh - 60px - 0.5mm) !important;
+    max-height: calc(100vh - 60px - 0.5mm) !important;
+    box-sizing: border-box !important;
+    margin-bottom: 0 !important;
   }
 
   .dashboardTop {
@@ -3833,20 +4017,13 @@ button.btnKembali {
     .stats {
       display: flex !important;
       flex-wrap: wrap !important;
-      gap: 10px !important;
-      margin: 4px 0 6px 0 !important;
+      gap: 8px !important;
+      margin: 1px 0 0.5mm 0 !important;
     }
 
     .cardStat {
       flex: 1 1 calc(50% - 6px) !important;
       min-width: 140px !important;
-    }
-
-    #detailDashboard {
-      height: auto !important;
-      min-height: auto !important;
-      max-height: none !important;
-      overflow: visible !important;
     }
   }
 
@@ -3854,14 +4031,17 @@ button.btnKembali {
     flex: 1 1 auto !important;
     min-height: 0 !important;
     height: 100% !important;
+    max-height: 100% !important;
     overflow: hidden !important;
     padding: 0 !important;
-    border-radius: 0 !important;
+    border-radius: 16px !important;
+    -webkit-clip-path: inset(0 round 16px) !important;
+    clip-path: inset(0 round 16px) !important;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    margin-top: 0 !important;
-    margin-bottom: 6px !important;
+    margin-top: 0.5mm !important;
+    margin-bottom: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     box-sizing: border-box !important;
@@ -3869,7 +4049,7 @@ button.btnKembali {
 
   #dashboardRecentTitle {
     flex: 0 0 auto !important;
-    margin: 6px 0 8px 2px !important;
+    margin: 1mm 0 1mm 2px !important;
     font-size: 13.5px !important;
     font-weight: 700 !important;
     color: var(--text-main) !important;
@@ -3883,16 +4063,19 @@ button.btnKembali {
     width: 100% !important;
     display: block !important;
     position: relative !important;
-    height: calc(100vh - 310px) !important;
-    max-height: calc(100vh - 310px) !important;
-    min-height: 240px !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 100% !important;
     margin: 0 !important;
-    border: none !important;
-    border-radius: 8px !important;
-    background: transparent !important;
-    box-shadow: none !important;
+    margin-bottom: 1mm !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 16px !important;
+    -webkit-clip-path: inset(0 round 16px) !important;
+    clip-path: inset(0 round 16px) !important;
+    background: var(--bg-box) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
     box-sizing: border-box !important;
-    overflow-y: scroll !important;
+    overflow-y: auto !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y !important;
@@ -4038,7 +4221,6 @@ button.btnKembali {
   }
 }
 
-/* STRICT 100% FULL LAYAR (0 MARGIN/PADDING KIRI-KANAN) FOR DASHBOARD & ALL CONTAINERS */
 /* STRICT 100% SYMMETRICAL & BALANCED MARGINS (12PX EQUAL LEFT & RIGHT PADDING) FOR ALL PAGES & DASHBOARD */
 .page,
 .page.active,
@@ -4046,7 +4228,7 @@ button.btnKembali {
 #userManagementPage {
   padding-left: 12px !important;
   padding-right: 12px !important;
-  padding-bottom: 160px !important;
+  padding-bottom: 61px !important;
   width: 100% !important;
   max-width: 100% !important;
   margin-left: auto !important;
@@ -4060,7 +4242,7 @@ button.btnKembali {
 #masterDbPage.active {
   padding-left: 12px !important;
   padding-right: 12px !important;
-  padding-bottom: 0 !important;
+  padding-bottom: 61px !important;
   width: 100% !important;
   max-width: 100% !important;
   margin-left: auto !important;
@@ -4081,8 +4263,12 @@ button.btnKembali {
 }
 
 #detailDashboard {
-  padding: 14px 14px !important;
-  border-radius: 14px !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin-bottom: 1mm !important;
 }
 
 .popupBoxDetail,
@@ -4860,10 +5046,17 @@ div.rowHighlightOrange {
   #popupDetail .tableWrap {
     overflow-x: auto !important;
     overflow-y: auto !important;
-    max-height: 52vh !important;
-    min-height: 220px !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    margin-top: 1mm !important;
+    margin-bottom: 0 !important;
+    border-radius: 16px !important;
+    -webkit-clip-path: inset(0 round 16px) !important;
+    clip-path: inset(0 round 16px) !important;
     -webkit-overflow-scrolling: touch !important;
-    touch-action: auto !important;
+    touch-action: pan-x pan-y !important;
     position: relative !important;
   }
 
@@ -4871,17 +5064,26 @@ div.rowHighlightOrange {
     width: 100% !important;
     display: block !important;
     position: relative !important;
-    height: calc(100vh - 310px) !important;
-    max-height: calc(100vh - 310px) !important;
-    min-height: 240px !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 100% !important;
+    border-radius: 16px !important;
+    -webkit-clip-path: inset(0 round 16px) !important;
+    clip-path: inset(0 round 16px) !important;
     overflow-x: auto !important;
-    overflow-y: scroll !important;
+    overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y !important;
+    margin: 0 !important;
   }
 
   #popupDetailBarangV2 .tableCardV2 {
-    max-height: 58vh !important;
+    max-height: calc(100vh - 160px) !important;
+    margin-top: 1mm !important;
+    margin-bottom: 1mm !important;
+    border-radius: 16px !important;
+    -webkit-clip-path: inset(0 round 16px) !important;
+    clip-path: inset(0 round 16px) !important;
   }
 
   .dashboardTable,
@@ -5106,9 +5308,31 @@ html body.design-mode-normal .confirmBox {
 }
 
 /* =============================================================================
-   UNIVERSAL FLAT SEAMLESS TABLE HEADER (EXACTLY MATCHING ACTIVE THEME)
-   APPLIES TO DASHBOARD TABLE, RIWAYAT TABLE, MASTER DB TABLE, USER MGMT TABLE
+   UNIVERSAL ROUNDED CORNER TABLES (ANTI SUDUT 90 DERAJAT TAJAM)
+   APPLIES TO DASHBOARD TABLE, RIWAYAT TABLE, MASTER DB, DETAIL & INPUT TABLES
    ============================================================================= */
+.tableWrap,
+.dashboardTableContainer,
+#detailDashboard,
+#detailDashboard .tableWrap,
+#riwayatPage .tableWrap,
+#masterDbPage .tableWrap,
+#popupDetail .tableWrap,
+#popupDetailBarangV2 .tableWrap,
+.tableCardV2,
+.tableCardV2.tableWrap {
+  border-radius: 11.5px !important;
+  -webkit-clip-path: inset(0 round 11.5px) !important;
+  clip-path: inset(0 round 11.5px) !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+  border: 0 !important;
+  border-style: none !important;
+  box-shadow: none !important;
+}
+
 html body table th,
 html body .dashboardTable th,
 html body .dashboardTable thead th,
@@ -5141,6 +5365,89 @@ html body .lastHeader > div {
   filter: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* Header & Table 90 Degree Sharp Square Corners */
+table thead tr:first-child th:first-child,
+.dashboardTable thead tr:first-child th:first-child,
+.historyTable thead tr:first-child th:first-child,
+.detailTableV2 thead tr:first-child th:first-child,
+table thead tr:first-child th:last-child,
+.dashboardTable thead tr:first-child th:last-child,
+.historyTable thead tr:first-child th:last-child,
+.detailTableV2 thead tr:first-child th:last-child,
+table tbody tr:last-child td:first-child,
+.dashboardTable tbody tr:last-child td:first-child,
+.historyTable tbody tr:last-child td:first-child,
+#riwayatData tr:last-child td:first-child,
+#masterDbTableBody tr:last-child td:first-child,
+#lastData tr:last-child td:first-child,
+.detailTableV2 tbody tr:last-child td:first-child,
+table tbody tr:last-child td:last-child,
+.dashboardTable tbody tr:last-child td:last-child,
+.historyTable tbody tr:last-child td:last-child,
+#riwayatData tr:last-child td:last-child,
+#masterDbTableBody tr:last-child td:last-child,
+#lastData tr:last-child td:last-child,
+.detailTableV2 tbody tr:last-child td:last-child {
+  border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* =============================================================================
+   FULL 2D TOUCH SCROLL (KANAN, KIRI, ATAS, BAWAH) ON MOBILE (HP) & ALL SCREENS
+   ============================================================================= */
+.dashboardTable,
+.historyTable,
+.masterDbTable,
+.detailTableV2,
+table.historyTable,
+table.dashboardTable,
+table.detailTableV2 {
+  width: 100% !important;
+  min-width: 680px !important;
+  table-layout: auto !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  touch-action: pan-x pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.dashboardTable th,
+.dashboardTable td,
+.historyTable th,
+.historyTable td,
+.detailTableV2 th,
+.detailTableV2 td,
+.masterDbTable th,
+.masterDbTable td {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+/* Dashboard Table Grid Rounded Corners */
+#detailDashboard .lastHeader,
+.lastHeader {
+  border-radius: 13px 13px 0 0 !important;
+}
+
+#detailDashboard .lastHeader > div:first-child,
+.lastHeader > div:first-child {
+  border-top-left-radius: 13px !important;
+}
+
+#detailDashboard .lastHeader > div:last-child,
+.lastHeader > div:last-child {
+  border-top-right-radius: 13px !important;
+}
+
+#detailDashboard #lastData .lastItem:last-child,
+.lastItem:last-child {
+  border-radius: 0 0 13px 13px !important;
 }
 
 html body thead,
@@ -5208,9 +5515,13 @@ html body .dashboardTable thead tr {
 
 #riwayatPage .tableWrap {
   border: 1px solid var(--border-color) !important;
-  border-radius: 8px !important;
+  border-radius: 16px !important;
+  -webkit-clip-path: inset(0 round 16px) !important;
+  clip-path: inset(0 round 16px) !important;
   box-shadow: none !important;
   background: var(--bg-box) !important;
+  margin-top: 0.5mm !important;
+  margin-bottom: 0 !important;
 }
 
 #riwayatPage .historyTable th,
@@ -5276,20 +5587,20 @@ html body .dashboardTable thead tr {
 @media (max-width: 768px) {
   html body #inputPage,
   html body .page#inputPage {
-    padding-bottom: 100px !important;
-    margin-bottom: 20px !important;
+    padding-bottom: calc(60px + 1mm) !important;
+    margin-bottom: 0 !important;
   }
 
   html body #inputPage .box {
-    padding-bottom: 80px !important;
-    margin-bottom: 16px !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 0 !important;
   }
 
   html body #inputPage #btnSimpan,
   html body #btnSimpan,
   html body .btn-primary#btnSimpan {
     margin-top: 14px !important;
-    margin-bottom: 85px !important;
+    margin-bottom: 1mm !important;
     position: relative !important;
     z-index: 10 !important;
   }
@@ -5342,7 +5653,7 @@ body:has(#pdfModal[style*="display: flex"]) {
 }
 
 /* =============================================================================
-   ABSOLUTE FIXED UNTOUCHABLE SCROLL LOCK FOR RIWAYAT & MASTER DB PAGE
+   FULL 2D TOUCH SCROLL (KANAN, KIRI, ATAS, BAWAH) FOR RIWAYAT & MASTER DB PAGE
    ============================================================================= */
 html:has(#riwayatPage.active),
 body:has(#riwayatPage.active),
@@ -5350,7 +5661,7 @@ html:has(#masterDbPage.active),
 body:has(#masterDbPage.active) {
   overflow: hidden !important;
   height: 100vh !important;
-  touch-action: none !important;
+  touch-action: auto !important;
 }
 
 #riwayatPage.active,
@@ -5359,12 +5670,12 @@ body:has(#masterDbPage.active) {
 #masterDbPage.page.active {
   display: flex !important;
   flex-direction: column !important;
-  height: calc(100vh - 65px) !important;
-  max-height: calc(100vh - 65px) !important;
+  height: calc(100vh - 60px - 1mm) !important;
+  max-height: calc(100vh - 60px - 1mm) !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
-  touch-action: none !important;
-  padding: 8px 4px 0 4px !important;
+  touch-action: auto !important;
+  padding: 4px 6px 0 6px !important;
   margin: 0 !important;
   box-sizing: border-box !important;
 }
@@ -5375,11 +5686,16 @@ body:has(#masterDbPage.active) {
   flex-direction: column !important;
   height: 100% !important;
   max-height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
-  touch-action: none !important;
-  padding-bottom: 0 !important;
-  margin-bottom: 0 !important;
+  touch-action: pan-x pan-y !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   box-sizing: border-box !important;
 }
 
@@ -5388,22 +5704,30 @@ body:has(#masterDbPage.active) {
 #riwayatPage .searchToolbar,
 #masterDbPage .searchToolbar {
   flex-shrink: 0 !important;
-  touch-action: none !important;
+  touch-action: auto !important;
   user-select: none !important;
 }
 
 #riwayatPage .tableWrap,
 #masterDbPage .tableWrap {
-  flex: 1 !important;
+  flex: 1 1 auto !important;
   height: 100% !important;
-  max-height: calc(100vh - 195px) !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
   overflow-y: auto !important;
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
   position: relative !important;
-  margin-bottom: 75px !important;
+  border-radius: 11.5px !important;
+  -webkit-clip-path: inset(0 round 11.5px) !important;
+  clip-path: inset(0 round 11.5px) !important;
+  border: 0 !important;
+  background: var(--bg-box) !important;
+  box-shadow: none !important;
+  margin-top: 1mm !important;
+  margin-bottom: 0 !important;
 }
 
 #riwayatPage .historyTable thead th,
@@ -5416,28 +5740,39 @@ body:has(#masterDbPage.active) {
 }
 
 /* FIXED MODAL OVERLAY & SCROLLABLE TABLE BODY FOR DETAIL DATA POPUP V2 */
-#popupDetailBarangV2.popupOverlay {
+#popupDetailBarangV2.popupOverlay,
+#popupDetail.popupOverlay {
   overflow: hidden !important;
-  touch-action: none !important;
+  touch-action: auto !important;
 }
 
-#popupDetailBarangV2 .popupBoxDetailV2 {
+#popupDetailBarangV2 .popupBoxDetailV2,
+#popupDetail .popupBoxDetail,
+.popupBoxDetail,
+.popupBoxDetailV2 {
   max-height: calc(100vh - 20px) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  touch-action: none !important;
+  touch-action: auto !important;
+  border-radius: 11.5px !important;
+  -webkit-clip-path: inset(0 round 11.5px) !important;
+  clip-path: inset(0 round 11.5px) !important;
+  box-sizing: border-box !important;
 }
 
-#popupDetailBarangV2 #popupBodyV2 {
+#popupDetailBarangV2 #popupBodyV2,
+#popupDetail #popupBody {
   flex: 1 !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  touch-action: none !important;
+  touch-action: pan-x pan-y !important;
 }
 
-#popupDetailBarangV2 .tableCardV2.tableWrap {
+#popupDetailBarangV2 .tableCardV2.tableWrap,
+#popupDetail .tableWrap,
+.tableCardV2.tableWrap {
   flex: 1 !important;
   max-height: calc(100vh - 160px) !important;
   overflow-y: auto !important;
@@ -5445,9 +5780,16 @@ body:has(#masterDbPage.active) {
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
+  border-radius: 0 !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+  margin-top: 1mm !important;
+  margin-bottom: 1mm !important;
+  border: 0 !important;
 }
 
-#popupDetailBarangV2 .detailTableV2 thead th {
+#popupDetailBarangV2 .detailTableV2 thead th,
+#popupDetail table thead th {
   position: sticky !important;
   top: 0 !important;
   z-index: 100 !important;
@@ -5464,7 +5806,8 @@ body:has(#masterDbPage.active) {
 #popupAkun,
 #popupTTD,
 #popupDetail,
-#popupDetailBarangV2 {
+#popupDetailBarangV2,
+.popupOverlay {
   display: none;
   position: fixed !important;
   inset: 0 !important;
@@ -5472,6 +5815,9 @@ body:has(#masterDbPage.active) {
   height: 100vh !important;
   justify-content: center !important;
   align-items: flex-start !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
   padding-top: 8px !important;
   padding-bottom: 75px !important;
   padding-left: 12px !important;
@@ -5513,56 +5859,67 @@ body:has(#masterDbPage.active) {
   overflow-y: auto !important;
 }
 
+#popupNotif,
+#popupNotifList {
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding-top: 6vh !important;
+  padding-bottom: 20px !important;
+}
+
 #popupNotif .popupNotifCard,
 #popupNotifCard,
-.popupNotifCard,
-#confirmOverlay .confirmBox,
-#confirmOverlay .confirmBoxCard,
-#confirmBoxCard,
-.confirmBoxCard {
-  margin-top: 8px !important;
+#popupNotifList .popupNotifCard {
+  margin-top: 0 !important;
   margin-bottom: auto !important;
   margin-left: auto !important;
   margin-right: auto !important;
-  transform: none !important;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+#confirmOverlay {
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#confirmOverlay .confirmBox,
+#confirmOverlay .confirmBoxCard,
+#confirmBoxCard {
+  margin: auto !important;
 }
 
 @media (min-width: 641px) {
-  #popupNotif,
   #popupNotifList,
-  #confirmOverlay {
-    padding-top: 8px !important;
+  #popupNotif {
+    padding-top: 6vh !important;
     align-items: flex-start !important;
   }
-  #popupNotifList .popupNotifCard {
-    margin-top: 8px !important;
+  #confirmOverlay {
+    align-items: center !important;
+    justify-content: center !important;
   }
+  #popupNotifList .popupNotifCard,
   #popupNotif .popupNotifCard,
-  #popupNotifCard,
-  .popupNotifCard,
-  #confirmBoxCard {
-    margin-top: 8px !important;
+  #popupNotifCard {
+    margin-top: 0 !important;
   }
 }
 
 @media (max-width: 640px) {
-  #popupNotif,
   #popupNotifList,
-  #confirmOverlay {
-    padding-top: 6px !important;
-    padding-bottom: 85px !important;
+  #popupNotif {
+    padding-top: 4vh !important;
+    padding-bottom: 75px !important;
     align-items: flex-start !important;
   }
-  #popupNotifList .popupNotifCard {
-    margin-top: 6px !important;
-    max-height: 78vh !important;
+  #confirmOverlay {
+    align-items: center !important;
+    justify-content: center !important;
   }
+  #popupNotifList .popupNotifCard,
   #popupNotif .popupNotifCard,
-  #popupNotifCard,
-  .popupNotifCard,
-  #confirmBoxCard {
-    margin-top: 6px !important;
+  #popupNotifCard {
+    margin-top: 0 !important;
+    max-height: 78vh !important;
   }
   #popupNotifList #notifListBody {
     max-height: 48vh !important;
@@ -5621,7 +5978,264 @@ body:has(#masterDbPage.active) {
 #popupDetail table,
 #popupDetailBarangV2 table,
 .detailTableV2 {
-  width: max-content !important;
+  width: 100% !important;
   min-width: 100% !important;
   table-layout: auto !important;
 }
+
+/* =============================================================================
+   FULL 2D SCROLLING SYSTEM (HORIZONTAL & VERTICAL / KANAN, KIRI, ATAS, BAWAH)
+   APPLIES TO DASHBOARD TABLE, RIWAYAT TABLE, MASTER DB & DETAIL DATA POPUP V2
+   ============================================================================= */
+
+/* 1. Ensure Table Containers permit both horizontal & vertical scrolling */
+#detailDashboard,
+#detailDashboard .tableWrap,
+#riwayatPage .tableWrap,
+#masterDbPage .tableWrap,
+#popupDetail .tableWrap,
+#popupDetailBarangV2 .tableWrap,
+.tableCardV2,
+.tableCardV2.tableWrap {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+  overscroll-behavior: contain !important;
+}
+
+/* 2. Container Max-Heights for Vertical Scrolling (Atas - Bawah) */
+#detailDashboard,
+#detailDashboard .tableWrap {
+  max-height: 420px !important;
+}
+
+#riwayatPage .tableWrap,
+#masterDbPage .tableWrap {
+  max-height: calc(100vh - 220px) !important;
+  min-height: 250px !important;
+}
+
+#popupDetailBarangV2 .tableWrap,
+#popupDetail .tableWrap,
+.tableCardV2.tableWrap {
+  max-height: 55vh !important;
+  min-height: 140px !important;
+}
+
+/* 3. Table Min-Widths & Cell White-Space for Horizontal Scrolling (Kanan - Kiri) */
+.dashboardTable {
+  min-width: 680px !important;
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+#riwayatPage .historyTable,
+.historyTable {
+  min-width: 850px !important;
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+#masterDbPage .historyTable,
+.masterDbTable {
+  min-width: 950px !important;
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+#popupDetailBarangV2 .detailTableV2,
+.detailTableV2 {
+  min-width: 100% !important;
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+.dashboardTable th, .dashboardTable td,
+.historyTable th, .historyTable td,
+.masterDbTable th, .masterDbTable td,
+.detailTableV2 th, .detailTableV2 td {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+
+/* 4. Sticky Header Fix so Headers stay on top during Vertical Scroll */
+.dashboardTable thead th,
+.historyTable thead th,
+.masterDbTable thead th,
+.detailTableV2 thead th,
+html body .tableWrap table th,
+html body .tableWrap th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+/* 5. Custom 2D Scrollbar Styling (Clean & Modern Scrollbars for Both Axes) */
+.tableWrap::-webkit-scrollbar,
+#detailDashboard::-webkit-scrollbar,
+#detailDashboard .tableWrap::-webkit-scrollbar,
+.tableCardV2::-webkit-scrollbar,
+#riwayatPage .tableWrap::-webkit-scrollbar,
+#masterDbPage .tableWrap::-webkit-scrollbar,
+#popupDetailBarangV2 .tableWrap::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  display: block !important;
+}
+
+.tableWrap::-webkit-scrollbar-track,
+#detailDashboard::-webkit-scrollbar-track,
+#detailDashboard .tableWrap::-webkit-scrollbar-track,
+.tableCardV2::-webkit-scrollbar-track,
+#riwayatPage .tableWrap::-webkit-scrollbar-track,
+#masterDbPage .tableWrap::-webkit-scrollbar-track,
+#popupDetailBarangV2 .tableWrap::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-radius: 4px !important;
+}
+
+.tableWrap::-webkit-scrollbar-thumb,
+#detailDashboard::-webkit-scrollbar-thumb,
+#detailDashboard .tableWrap::-webkit-scrollbar-thumb,
+.tableCardV2::-webkit-scrollbar-thumb,
+#riwayatPage .tableWrap::-webkit-scrollbar-thumb,
+#masterDbPage .tableWrap::-webkit-scrollbar-thumb,
+#popupDetailBarangV2 .tableWrap::-webkit-scrollbar-thumb {
+  background: var(--primary, #0284c7) !important;
+  border-radius: 4px !important;
+}
+
+.tableWrap::-webkit-scrollbar-thumb:hover,
+#detailDashboard::-webkit-scrollbar-thumb:hover,
+#detailDashboard .tableWrap::-webkit-scrollbar-thumb:hover,
+.tableCardV2::-webkit-scrollbar-thumb:hover,
+#riwayatPage .tableWrap::-webkit-scrollbar-thumb:hover,
+#masterDbPage .tableWrap::-webkit-scrollbar-thumb:hover,
+#popupDetailBarangV2 .tableWrap::-webkit-scrollbar-thumb:hover {
+  background: #0369a1 !important;
+}
+
+/* =============================================================================
+   UNIVERSAL 100 DERAJAT (10PX BORDER-RADIUS) UNTUK POPUP, CARD, TOMBOL & ICON
+   ============================================================================= */
+
+/* 1. SELURUH CARD & KONTAINER UTAMA APLIKASI */
+html body .card,
+html body .cardStat,
+html body .login-card,
+html body .formCard,
+html body .formBox,
+html body .formContainer,
+html body .statCard,
+html body .quickAccessCard,
+html body .quickCard,
+html body .filterCard,
+html body .historyCard,
+html body .masterDbCard,
+html body .dashboardCard,
+html body .searchToolbar,
+html body .toolbar,
+html body .mainBox,
+html body .boxCard,
+html body [class*="card"],
+html body [class*="Card"] {
+  border-radius: 10px !important;
+  -webkit-clip-path: inset(0 round 10px) !important;
+  clip-path: inset(0 round 10px) !important;
+}
+
+/* 2. SELURUH TABEL, WRAPPER TABEL, CELL & CONTAINER TABEL (SUDUT UJUNG 110 DERAJAT / 11PX) */
+html body table,
+html body table tr,
+html body table th,
+html body table td,
+html body .tableWrap,
+html body .dashboardTableContainer,
+html body #detailDashboard,
+html body #detailDashboard .tableWrap,
+html body #riwayatPage .tableWrap,
+html body #masterDbPage .tableWrap,
+html body #popupDetail .tableWrap,
+html body #popupDetailBarangV2 .tableWrap,
+html body .tableCardV2,
+html body .tableCardV2.tableWrap,
+html body .dashboardTable,
+html body .historyTable,
+html body .masterDbTable,
+html body .detailTableV2,
+html body .detailTable2,
+html body #detailContainer,
+html body .detailRow {
+  border-radius: 11px !important;
+  -webkit-clip-path: inset(0 round 11px) !important;
+  clip-path: inset(0 round 11px) !important;
+}
+
+/* 3. SELURUH POPUP, MODAL, OVERLAY CARDS & DIALOG BOXES */
+html body .popupBox,
+html body .popupBoxDetail,
+html body .popupBoxDetailV2,
+html body #popupDetailBarangV2 .popupBoxDetailV2,
+html body #popupDetail .popupBoxDetail,
+html body #popupNotif .popupNotifCard,
+html body #popupNotifCard,
+html body #confirmOverlay .confirmBoxCard,
+html body #confirmBoxCard,
+html body #rejectOverlay .rejectBoxPopup,
+html body #artemisOverlay .artemisBoxPopup,
+html body #popupUserForm .popupBox,
+html body #popupAkun .akunBox,
+html body #popupTTD .ttdBox,
+html body [class*="popupBox"],
+html body [class*="Popup"] {
+  border-radius: 10px !important;
+  -webkit-clip-path: inset(0 round 10px) !important;
+  clip-path: inset(0 round 10px) !important;
+}
+
+/* 4. POPUP & CARD HEADERS & TABLE HEADERS (TOP CORNERS & CENTER ALIGNMENT) */
+html body .popupHeader,
+html body .popupHeaderV2,
+html body .rejectHeaderPopup,
+html body .artemisHeaderPopup,
+html body .cardHeader,
+html body .dashboardTable th,
+html body .historyTable th,
+html body .masterDbTable th,
+html body .detailTableV2 th {
+  border-radius: 10px 10px 0 0 !important;
+  text-align: center !important;
+}
+
+/* 5. POPUP BODIES & BOTTOM CORNERS */
+html body .popupCardBodyContainerV2,
+html body .popupContent,
+html body .rejectBodyPopup,
+html body .artemisBodyPopup {
+  border-radius: 0 0 10px 10px !important;
+}
+
+/* 6. FORM INPUTS, TOMBOL & ICON */
+html body input,
+html body select,
+html body textarea,
+html body .form-control,
+html body .inputField,
+html body button,
+html body .btn,
+html body .btnIcon,
+html body .btnIconOnly,
+html body .btnAction,
+html body .btnPrimary,
+html body .btnDanger,
+html body .btnSuccess,
+html body .btnWarning,
+html body .iconWrap,
+html body .cardStat .icon {
+  border-radius: 10px !important;
+}
+
