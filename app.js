@@ -9246,7 +9246,7 @@ function bukaPdfModal(noSurat) {
   }
 
   pdfContainer.innerHTML = `
-    <div class="pdf-paper" style="min-height: 680px; display: flex; flex-direction: column; justify-content: space-between; padding: 22px; color: #0f172a; background: #ffffff; font-family: 'Poppins', sans-serif; box-sizing: border-box;">
+    <div class="pdf-paper" style="min-height: 680px; height: auto !important; display: flex; flex-direction: column; justify-content: space-between; padding: 22px 22px 36px 22px; color: #0f172a; background: #ffffff; font-family: 'Poppins', sans-serif; box-sizing: border-box;">
       <div>
         ${headerTitleHtml}
 
@@ -9341,13 +9341,13 @@ function bukaPdfModal(noSurat) {
           </div>
         </div>
 
-        <div style="margin-top: 36px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #475569; letter-spacing: 0.2px;">
+        <div style="margin-top: 36px; padding-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #475569; letter-spacing: 0.2px;">
           ${hasUnfulfilledItem ? `
             <div style="font-weight: 800; color: #b91c1c; font-style: normal; display: flex; align-items: center; gap: 4px;">
               <span style="text-decoration: line-through; text-decoration-thickness: 3px; font-weight: 900; color: #b91c1c; font-size: 11px;">---</span> = Tidak dipenuhi
             </div>
           ` : '<div></div>'}
-          <div style="font-style: italic; opacity: 0.85;">
+          <div style="font-style: italic; opacity: 0.85; font-weight: 600;">
             ${timestampStr}
           </div>
         </div>
