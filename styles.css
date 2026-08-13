@@ -3669,8 +3669,8 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 58px - 0.5cm) !important;
-    max-height: calc(100vh - 58px - 0.5cm) !important;
+    height: calc(100vh - 58px - 1cm) !important;
+    max-height: calc(100vh - 58px - 1cm) !important;
     overflow: hidden !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -5732,8 +5732,8 @@ body:has(#masterDbPage.active) {
 #masterDbPage.page.active {
   display: flex !important;
   flex-direction: column !important;
-  height: calc(100vh - 58px - 0.5cm) !important;
-  max-height: calc(100vh - 58px - 0.5cm) !important;
+  height: calc(100vh - 58px - 1cm) !important;
+  max-height: calc(100vh - 58px - 1cm) !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
   touch-action: auto !important;
@@ -6354,8 +6354,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 58px - 0.5cm) !important; /* 52px height bottomMenu + 6px bottom offset + 0.5cm gap */
-    max-height: calc(100vh - 58px - 0.5cm) !important;
+    height: calc(100vh - 58px - 1cm) !important; /* 52px height bottomMenu + 6px bottom offset + 1cm gap */
+    max-height: calc(100vh - 58px - 1cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6367,7 +6367,7 @@ html body .cardStat .icon {
   html body .page#inputPage {
     height: auto !important;
     max-height: none !important;
-    padding-bottom: calc(58px + 0.5cm) !important; /* Safe 0.5cm gap above bottomMenu */
+    padding-bottom: calc(58px + 1cm) !important; /* Safe 1cm gap above bottomMenu */
     box-sizing: border-box !important;
     overflow-y: auto !important;
   }
