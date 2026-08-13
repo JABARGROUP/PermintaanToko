@@ -3669,8 +3669,8 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 58px - 1mm) !important;
-    max-height: calc(100vh - 58px - 1mm) !important;
+    height: calc(100vh - 58px - 0.5cm) !important;
+    max-height: calc(100vh - 58px - 0.5cm) !important;
     overflow: hidden !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -4690,7 +4690,7 @@ div.rowHighlightOrange {
   min-width: calc(100vw - 2mm) !important;
   max-width: calc(100vw - 2mm) !important;
   height: auto !important;
-  max-height: 90vh !important;
+  max-height: 96vh !important;
   margin: auto 1mm !important;
   padding: 0 !important;
   border-radius: 5px !important;
@@ -4708,7 +4708,7 @@ div.rowHighlightOrange {
   color: #ffffff !important;
   font-weight: 800 !important;
   font-size: 16px !important;
-  padding: 14px 18px !important;
+  padding: 16px 18px !important;
   margin: 0 !important;
   border-radius: 5px !important;
   position: relative !important;
@@ -4757,7 +4757,7 @@ div.rowHighlightOrange {
 .popupCardBodyContainerV2 {
   width: 100% !important;
   min-width: 100% !important;
-  padding: 0 !important;
+  padding: 0 0 14px 0 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
   background: var(--bg-box) !important;
@@ -4769,7 +4769,7 @@ div.rowHighlightOrange {
   flex: 0 1 auto !important;
   height: auto !important;
   min-height: 0 !important;
-  max-height: calc(85vh - 55px) !important;
+  max-height: calc(92vh - 50px) !important;
 }
 
 .detailHeaderInfoV2 {
@@ -4778,7 +4778,7 @@ div.rowHighlightOrange {
   flex-wrap: nowrap !important;
   justify-content: flex-start !important;
   align-items: center !important;
-  padding: 10px 18px !important;
+  padding: 12px 18px !important;
   margin-top: 2mm !important;
   margin-bottom: 0 !important;
   border-bottom: 1px solid var(--border-color, #e2e8f0) !important;
@@ -4846,7 +4846,7 @@ div.rowHighlightOrange {
   font-weight: 600 !important;
   font-size: 12px !important;
   letter-spacing: 0.3px !important;
-  padding: 6px 14px !important;
+  padding: 10px 14px !important;
   height: auto !important;
   line-height: 1.2 !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
@@ -4873,7 +4873,7 @@ div.rowHighlightOrange {
 }
 
 .detailTableV2 td {
-  padding: 6px 14px !important;
+  padding: 10px 14px !important;
   height: auto !important;
   line-height: 1.2 !important;
   font-size: 12px !important;
@@ -5732,8 +5732,8 @@ body:has(#masterDbPage.active) {
 #masterDbPage.page.active {
   display: flex !important;
   flex-direction: column !important;
-  height: calc(100vh - 58px - 1mm) !important;
-  max-height: calc(100vh - 58px - 1mm) !important;
+  height: calc(100vh - 58px - 0.5cm) !important;
+  max-height: calc(100vh - 58px - 0.5cm) !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
   touch-action: auto !important;
@@ -6354,8 +6354,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 58px - 1mm) !important; /* 52px height bottomMenu + 6px bottom offset + 1mm gap */
-    max-height: calc(100vh - 58px - 1mm) !important;
+    height: calc(100vh - 58px - 0.5cm) !important; /* 52px height bottomMenu + 6px bottom offset + 0.5cm gap */
+    max-height: calc(100vh - 58px - 0.5cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6367,7 +6367,7 @@ html body .cardStat .icon {
   html body .page#inputPage {
     height: auto !important;
     max-height: none !important;
-    padding-bottom: calc(58px + 1mm) !important; /* Safe 1mm gap above bottomMenu */
+    padding-bottom: calc(58px + 0.5cm) !important; /* Safe 0.5cm gap above bottomMenu */
     box-sizing: border-box !important;
     overflow-y: auto !important;
   }
