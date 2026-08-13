@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260813_v1610">
-  <script src="app.js?v=20260813_v1610"></script>
+  <link rel="stylesheet" href="styles.css?v=20260813_v1704">
+  <script src="app.js?v=20260813_v1704"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -27,6 +27,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
 <body class="dark-mode">
+
+  <!-- AESTHETIC SUBTLE AMBIENT SCENERY BACKGROUND (SAMAR-SAMAR) -->
+  <div class="aesthetic-bg-container" aria-hidden="true">
+    <div class="aesthetic-bg-image"></div>
+    <div class="aesthetic-bg-grid"></div>
+    <div class="aesthetic-orb aesthetic-orb-1"></div>
+    <div class="aesthetic-orb aesthetic-orb-2"></div>
+    <div class="aesthetic-orb aesthetic-orb-3"></div>
+  </div>
 
   <!-- TOP-RIGHT HEADER ACTIONS CONTAINER (ALIGNED FLUSH TO RIGHT CARD BOUNDARY) -->
   <div id="topHeaderActions" class="top-header-actions">
@@ -241,21 +250,21 @@
       </div>
 
       <!-- TITLE DATA DASHBOARD DI LUAR KOTAK (DI ATAS TABEL) -->
-      <h3 id="dashboardRecentTitle" style="margin: 6px 0 8px 2px !important; font-size: 13.5px !important; font-weight: 700 !important; color: var(--text-main); text-align: left !important; display: flex; align-items: center; gap: 8px; letter-spacing: 0.5px;">
+      <h3 id="dashboardRecentTitle" style="margin: 1mm 0 1mm 2px !important; font-size: 13.5px !important; font-weight: 700 !important; color: var(--text-main); text-align: left !important; display: flex; align-items: center; gap: 8px; letter-spacing: 0.5px;">
         <span class="material-symbols-rounded" style="color: var(--primary); font-size: 18px;">format_list_bulleted</span>
         PERMINTAAN PENDING
       </h3>
 
-      <!-- TABEL DASHBOARD TANPA CARD (LANGSUNG TERHUBUNG KE HALAMAN) -->
-      <div id="detailDashboard" style="background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 0 22px 0 !important;">
-        <div class="tableWrap">
-          <table class="dashboardTable">
+      <!-- TABEL DASHBOARD (ROUNDED CORNERS & 1MM GAP) -->
+      <div id="detailDashboard" style="margin: 1mm 0 1mm 0 !important; padding: 0 !important; border-radius: 16px !important; overflow: hidden !important; -webkit-clip-path: inset(0 round 16px) !important; clip-path: inset(0 round 16px) !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important;">
+        <div class="tableWrap" style="border-radius: 16px !important; overflow: hidden !important; -webkit-clip-path: inset(0 round 16px) !important; clip-path: inset(0 round 16px) !important; margin: 0 !important; border: none !important;">
+          <table class="dashboardTable" style="border-radius: 16px !important; border-collapse: separate !important; border-spacing: 0 !important; overflow: hidden !important;">
             <thead>
               <tr>
-                <th style="width: 18%; text-align: left;">TANGGAL</th>
+                <th style="width: 18%; text-align: left; border-top-left-radius: 15px !important;">TANGGAL</th>
                 <th style="width: 32%; text-align: left;">NO SURAT</th>
                 <th style="width: 30%; text-align: left;">NAMA TOKO</th>
-                <th style="width: 20%; text-align: left !important;">STATUS</th>
+                <th style="width: 20%; text-align: left !important; border-top-right-radius: 15px !important;">STATUS</th>
               </tr>
             </thead>
             <tbody id="lastData">
@@ -780,10 +789,10 @@
         </button>
       </div>
 
-      <!-- 2 EQUAL BUTTONS: REFRESH WEB & GANTI TEMA -->
+      <!-- 2 EQUAL BUTTONS: GANTI BG & GANTI TEMA -->
       <div style="margin-top: 8px; margin-bottom: 8px; display: flex; gap: 8px; width: 100%;">
-        <button type="button" class="refresh-icon-btn" onclick="window.location.reload()" title="REFRESH / MUAT ULANG APLIKASI WEB" style="flex: 1; height: 35px; padding: 6px; border-radius: 8px; border: 1px solid var(--border-color); background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">
-          <span class="material-symbols-rounded" style="font-size: 18px;">refresh</span> REFRESH WEB
+        <button type="button" class="bg-icon-btn" onclick="gantiBackgroundApp()" title="GANTI GAMBAR LATAR BELAKANG" style="flex: 1; height: 35px; padding: 6px; border-radius: 8px; border: 1px solid var(--border-color); background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+          <span class="material-symbols-rounded" style="font-size: 18px;">wallpaper</span> GANTI BG
         </button>
         <button type="button" class="theme-icon-btn" onclick="toggleTheme()" title="GANTI TEMA TAMPILAN" style="flex: 1; height: 35px; padding: 6px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">
           <span class="material-symbols-rounded" style="font-size: 18px;">palette</span> GANTI TEMA
