@@ -8050,16 +8050,11 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   const bodyBox = document.getElementById('popupBodyV2');
   if (!bodyBox) return;
 
-  const statusBadgePopupHtml = getBadgeStatusHtml(req);
   let headerInfoHtml = `
-    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: center !important; align-items: center !important; gap: 12px !important; width: 100% !important; padding: 6px 12px !important; text-align: center !important; box-sizing: border-box !important; background: transparent !important;">
-      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; white-space: nowrap !important; background: transparent !important;">
+    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-start !important; align-items: center !important; gap: 12px !important; width: 100% !important; padding: 8px 14px !important; text-align: left !important; box-sizing: border-box !important; background: transparent !important;">
+      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; justify-content: flex-start !important; text-align: left !important; white-space: nowrap !important; background: transparent !important;">
         <span style="opacity: 0.85; font-weight: 500; color: var(--text-main);">NO SURAT : </span>
         <span class="noSuratValV2" style="color: var(--primary) !important; font-weight: 700 !important; margin-left: 4px; background: transparent !important;">${req.noSurat || '-'}</span>
-      </div>
-      <div style="display: inline-flex !important; align-items: center !important; justify-content: center !important;">
-        <span style="opacity: 0.85; font-weight: 500; color: var(--text-main); margin-right: 4px;">STATUS : </span>
-        ${statusBadgePopupHtml}
       </div>
     </div>
   `;

@@ -4756,7 +4756,7 @@ div.rowHighlightOrange {
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
-  justify-content: space-between !important;
+  justify-content: flex-start !important;
   align-items: center !important;
   padding: 10px 18px !important;
   margin-top: 2mm !important;
@@ -4889,7 +4889,7 @@ div.rowHighlightOrange {
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
-  justify-content: space-between !important;
+  justify-content: flex-start !important;
   align-items: center !important;
   width: 100% !important;
   padding: 8px 14px !important;
@@ -6290,8 +6290,31 @@ html body .cardStat .icon {
   border-radius: 5px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 1CM DI ATAS BOTTOM MENU */
-@media (max-width: 640px) {
+/* RESPONSIVE HP / MOBILE: 0.1MM KANAN-KIRI (CALC(100VW - 0.2MM)) & 1CM GAP DI ATAS BOTTOM MENU FOR #detailDashboard */
+@media (max-width: 768px) {
+  .page,
+  .page.active,
+  #dashboardPage,
+  #inputPage,
+  #userManagementPage,
+  #riwayatPage,
+  #masterDbPage,
+  #riwayatPage.active,
+  #masterDbPage.active,
+  .dashboardTop,
+  .stats,
+  #detailDashboard,
+  #detailDashboard .tableWrap,
+  .dashboardTableContainer,
+  .box,
+  .box.box-full,
+  #bottomMenu {
+    width: calc(100vw - 0.2mm) !important;
+    max-width: calc(100vw - 0.2mm) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
   html body .page.active,
   html body #dashboardPage.active,
   html body #riwayatPage.active,
@@ -6299,8 +6322,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 52px - 1cm - 10px) !important; /* 52px height bottomMenu + 1cm gap + 10px extra gap */
-    max-height: calc(100vh - 52px - 1cm - 10px) !important;
+    height: calc(100vh - 52px - 1cm) !important; /* 52px height bottomMenu + 1cm gap */
+    max-height: calc(100vh - 52px - 1cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6318,7 +6341,7 @@ html body .cardStat .icon {
     min-height: 0 !important;
     max-height: 100% !important;
     margin-top: 1mm !important;
-    margin-bottom: 10px !important;
+    margin-bottom: 1cm !important;
     box-sizing: border-box !important;
     overflow-y: auto !important;
     overflow-x: auto !important;
