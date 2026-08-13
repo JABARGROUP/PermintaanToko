@@ -3666,8 +3666,8 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 60px - 1mm) !important;
-    max-height: calc(100vh - 60px - 1mm) !important;
+    height: calc(100vh - 52px - 3cm) !important;
+    max-height: calc(100vh - 52px - 3cm) !important;
     overflow: hidden !important;
     padding: 4px 6px 0 6px !important;
     margin-bottom: 0 !important;
@@ -3991,8 +3991,8 @@ button.btnKembali {
     max-width: 100% !important;
     overflow: hidden !important;
     overflow-y: hidden !important;
-    height: calc(100vh - 3cm) !important;
-    max-height: calc(100vh - 3cm) !important;
+    height: calc(100vh - 52px - 3cm) !important;
+    max-height: calc(100vh - 52px - 3cm) !important;
     box-sizing: border-box !important;
     margin-bottom: 0 !important;
   }
@@ -6224,11 +6224,17 @@ html body .cardStat .icon {
   border-radius: 10px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 3CM DARI LAYAR BAGIAN BAWAH */
+/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 3CM DI ATAS BOTTOM MENU */
 @media (max-width: 640px) {
-  html body .page.active {
-    height: calc(100vh - 3cm) !important; /* Batas bawah 3cm dari layar bagian bawah */
-    max-height: calc(100vh - 3cm) !important;
+  html body .page.active,
+  html body #dashboardPage.active,
+  html body #riwayatPage.active,
+  html body #masterDbPage.active,
+  html body section#dashboardPage.page.active,
+  html body section#riwayatPage.page.active,
+  html body section#masterDbPage.page.active {
+    height: calc(100vh - 52px - 3cm) !important; /* 52px height bottomMenu + 3cm gap */
+    max-height: calc(100vh - 52px - 3cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
