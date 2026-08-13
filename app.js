@@ -2337,6 +2337,23 @@ function initSupabaseRealtimeEngine() {
     supabaseRealtimeChannel = supabase
       .channel('public_realtime_sync')
       .on(
+        'broadcast',
+        { event: 'config_change' },
+        (event) => {
+          if (event && event.payload) {
+            if (event.payload.featurePhotos !== undefined) {
+              const valStr = String(event.payload.featurePhotos);
+              appStorage.setItem(FEATURE_PHOTOS_KEY, valStr);
+              try { localStorage.setItem(FEATURE_PHOTOS_KEY, valStr); } catch(e) {}
+              if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
+            }
+            if (event.payload.theme) {
+              if (typeof applyGlobalThemeToApp === 'function') applyGlobalThemeToApp(event.payload.theme);
+            }
+          }
+        }
+      )
+      .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'permintaan_toko' },
         (payload) => {
@@ -3681,7 +3698,18 @@ async function setFeaturePhotosEnabled(enabled) {
   try { localStorage.setItem(FEATURE_PHOTOS_KEY, valStr); } catch(e) {}
   updatePhotoSectionVisibility();
 
-  // 1. BROADCAST KE SUPABASE LEWAT SYSTEM ROW permintaan_toko (MEMICU REALTIME POSTGRES CHANGES DI SEMUA PERANGKAT)
+  // 1. BROADCAST INSTAN VIA WEBSOCKET REALTIME CHANNEL SUPABASE KE SEMUA DEVICE
+  if (typeof supabase !== 'undefined' && supabase && supabaseRealtimeChannel) {
+    try {
+      supabaseRealtimeChannel.send({
+        type: 'broadcast',
+        event: 'config_change',
+        payload: { featurePhotos: valStr, enabled: !!enabled, timestamp: Date.now() }
+      });
+    } catch(e) {}
+  }
+
+  // 2. BROADCAST KE SUPABASE LEWAT SYSTEM ROW permintaan_toko & LOOKUP
   if (typeof supabase !== 'undefined' && supabase) {
     try {
       const photoSystemRow = {
@@ -3699,24 +3727,24 @@ async function setFeaturePhotosEnabled(enabled) {
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(photoSystemRow);
+      await supabase.from('permintaan_toko').upsert(photoSystemRow, { onConflict: 'no_surat' });
 
       // SIMPAN JUGA KE TABEL LOOKUP
       try {
         await supabase.from('lookup').upsert({
           key: 'FEATURE_PHOTOS',
-          value: { enabled: valStr, updatedAt: new Date().toISOString() },
+          value: JSON.stringify({ enabled: valStr, updatedAt: new Date().toISOString() }),
           code: 'FEATURE_PHOTOS',
           type: valStr,
           updated_at: new Date().toISOString()
-        });
+        }, { onConflict: 'key' });
       } catch(e) {}
     } catch(err) {
       console.warn('[SUPABASE PHOTO FEATURE BROADCAST ERROR]:', err);
     }
   }
 
-  // 2. FIRESTORE REALTIME SYNC
+  // 3. FIRESTORE REALTIME SYNC
   if (typeof dbFirestore !== 'undefined' && dbFirestore) {
     try {
       await dbFirestore.collection('app_settings').doc('config').set({
@@ -3726,10 +3754,11 @@ async function setFeaturePhotosEnabled(enabled) {
     } catch(e) {}
   }
 
-  // 3. FIREBASE REALTIME DATABASE SYNC
+  // 4. FIREBASE REALTIME DATABASE SYNC
   if (typeof dbRealtime !== 'undefined' && dbRealtime) {
     try {
       await dbRealtime.ref('settings/featurePhotos').set(valStr);
+      await dbRealtime.ref('settings').update({ featurePhotos: valStr });
     } catch(e) {}
   }
 
