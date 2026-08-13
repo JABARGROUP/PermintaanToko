@@ -6490,9 +6490,15 @@ function bukaRiwayat(status) {
 function isPdfButtonAllowed(req) {
   if (!req || !currentUser) return false;
   const role = String(currentUser.category || '').toUpperCase();
+  const isAdmin = typeof checkIsAdminUser === 'function' ? checkIsAdminUser() : (role === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
   
   // TOMBOL PDF TIDAK DIBERIKAN UNTUK ROLE TOKO DAN SALES
   if (role === 'TOKO' || role === 'SALES') {
+    return false;
+  }
+
+  // UNTUK LOGIN SELAIN ADMIN, APABILA STATUS SUDAH DONE MAKA TOMBOL PDF DIHILANGKAN (HANYA TOMBOL MATA & FOTO ARTEMIS YANG TAMPIL)
+  if (!isAdmin && req.status === 'DONE') {
     return false;
   }
 
