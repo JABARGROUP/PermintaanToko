@@ -473,7 +473,7 @@ section#masterDbPage.page.active,
 #helpModal,
 #chatWindow {
   position: fixed;
-  bottom: 45px;
+  bottom: 85px;
   right: 12px;
   width: 440px;
   max-width: calc(100vw - 24px);
@@ -518,20 +518,20 @@ section#masterDbPage.page.active,
   margin: 0 !important;
 }
 
-/* RESPONSIVE HP / MOBILE: BATAS KIRI & KANAN SAMA PERSIS SEJAJAR DENGAN CARD (8PX DARI TEPI LAYAR) */
+/* RESPONSIVE HP / MOBILE: BATAS KIRI & KANAN 100% SAMA SIMETRIS (12PX DARI KEDUA SISI LAYAR) */
 @media (max-width: 640px) {
   .popupBantuan,
   #helpModal,
   #chatWindow {
     position: fixed !important;
     top: auto !important;
-    left: 8px !important;
-    right: 8px !important;
-    bottom: 48px !important;
-    width: calc(100vw - 16px) !important;
-    max-width: calc(100vw - 16px) !important;
-    transform: none !important;
-    margin: 0 !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 52px !important;
+    transform: translateX(-50%) !important;
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    margin: 0 auto !important;
     display: none;
     box-sizing: border-box !important;
     z-index: 9999999 !important;
@@ -541,11 +541,12 @@ section#masterDbPage.page.active,
   #helpModal.show,
   #chatWindow.show {
     display: block !important;
-    left: 8px !important;
-    right: 8px !important;
-    bottom: 48px !important;
-    width: calc(100vw - 16px) !important;
-    max-width: calc(100vw - 16px) !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 52px !important;
+    transform: translateX(-50%) !important;
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
   }
 
   .chatBox,
@@ -555,7 +556,7 @@ section#masterDbPage.page.active,
     max-width: 100% !important;
     height: 420px !important;
     max-height: 75vh !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     border-radius: 18px !important;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
     box-sizing: border-box !important;
