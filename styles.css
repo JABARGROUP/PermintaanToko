@@ -1391,27 +1391,27 @@ input:focus, select:focus, textarea:focus {
   box-sizing: border-box !important;
 }
 
-/* STRENGTHENED STYLING FOR DASHBOARD TABLE (HTML TABLE WITH THEAD & TBODY) WITH FIXED STICKY HEADER */
-/* DASHBOARD RECENT TABLE STYLING - STICKY TOP HEADER, SCROLL HORIZONTAL LEFT-RIGHT ONLY FOR HEADER */
-#detailDashboard .tableWrap,
+/* DASHBOARD RECENT TABLE STYLING - FULL 2D TOUCH SCROLL (KANAN, KIRI, ATAS, BAWAH) */
 .dashboardTableContainer {
   width: 100% !important;
+  height: 100% !important;
   display: block !important;
   position: relative !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
-  max-height: 480px !important;
   -webkit-overflow-scrolling: touch !important;
-  touch-action: auto !important;
+  touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
   border: 1px solid var(--border-color) !important;
-  border-radius: 10px !important;
+  border-radius: 16px !important;
+  -webkit-clip-path: inset(0 round 16px) !important;
+  clip-path: inset(0 round 16px) !important;
   background: var(--bg-box) !important;
 }
 
 .dashboardTable {
   width: 100% !important;
-  min-width: 580px !important;
+  min-width: 680px !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
   font-size: 12.5px !important;
@@ -1419,6 +1419,7 @@ input:focus, select:focus, textarea:focus {
   background: var(--bg-box) !important;
   table-layout: auto !important;
   margin: 0 !important;
+  touch-action: pan-x pan-y !important;
 }
 
 .dashboardTable thead,
@@ -5392,6 +5393,38 @@ table tbody tr:last-child td:last-child,
   border-bottom-right-radius: 16px !important;
 }
 
+/* =============================================================================
+   FULL 2D TOUCH SCROLL (KANAN, KIRI, ATAS, BAWAH) ON MOBILE (HP) & ALL SCREENS
+   ============================================================================= */
+.dashboardTable,
+.historyTable,
+.masterDbTable,
+.detailTableV2,
+table.historyTable,
+table.dashboardTable,
+table.detailTableV2 {
+  width: 100% !important;
+  min-width: 680px !important;
+  table-layout: auto !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  touch-action: pan-x pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.dashboardTable th,
+.dashboardTable td,
+.historyTable th,
+.historyTable td,
+.detailTableV2 th,
+.detailTableV2 td,
+.masterDbTable th,
+.masterDbTable td {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
 /* Dashboard Table Grid Rounded Corners */
 #detailDashboard .lastHeader,
 .lastHeader {
@@ -5616,7 +5649,7 @@ body:has(#pdfModal[style*="display: flex"]) {
 }
 
 /* =============================================================================
-   ABSOLUTE FIXED UNTOUCHABLE SCROLL LOCK FOR RIWAYAT & MASTER DB PAGE
+   FULL 2D TOUCH SCROLL (KANAN, KIRI, ATAS, BAWAH) FOR RIWAYAT & MASTER DB PAGE
    ============================================================================= */
 html:has(#riwayatPage.active),
 body:has(#riwayatPage.active),
@@ -5624,7 +5657,7 @@ html:has(#masterDbPage.active),
 body:has(#masterDbPage.active) {
   overflow: hidden !important;
   height: 100vh !important;
-  touch-action: none !important;
+  touch-action: auto !important;
 }
 
 #riwayatPage.active,
@@ -5633,11 +5666,11 @@ body:has(#masterDbPage.active) {
 #masterDbPage.page.active {
   display: flex !important;
   flex-direction: column !important;
-  height: calc(100vh - 60px - 0.5mm) !important;
-  max-height: calc(100vh - 60px - 0.5mm) !important;
+  height: calc(100vh - 60px - 1mm) !important;
+  max-height: calc(100vh - 60px - 1mm) !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
-  touch-action: none !important;
+  touch-action: auto !important;
   padding: 4px 6px 0 6px !important;
   margin: 0 !important;
   box-sizing: border-box !important;
@@ -5653,7 +5686,7 @@ body:has(#masterDbPage.active) {
   flex: 1 1 auto !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
-  touch-action: none !important;
+  touch-action: pan-x pan-y !important;
   padding: 0 !important;
   margin: 0 !important;
   background: transparent !important;
@@ -5667,7 +5700,7 @@ body:has(#masterDbPage.active) {
 #riwayatPage .searchToolbar,
 #masterDbPage .searchToolbar {
   flex-shrink: 0 !important;
-  touch-action: none !important;
+  touch-action: auto !important;
   user-select: none !important;
 }
 
@@ -5689,7 +5722,7 @@ body:has(#masterDbPage.active) {
   border: 1px solid var(--border-color) !important;
   background: var(--bg-box) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
-  margin-top: 0.5mm !important;
+  margin-top: 1mm !important;
   margin-bottom: 0 !important;
 }
 
@@ -5706,7 +5739,7 @@ body:has(#masterDbPage.active) {
 #popupDetailBarangV2.popupOverlay,
 #popupDetail.popupOverlay {
   overflow: hidden !important;
-  touch-action: none !important;
+  touch-action: auto !important;
 }
 
 #popupDetailBarangV2 .popupBoxDetailV2,
@@ -5717,7 +5750,7 @@ body:has(#masterDbPage.active) {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  touch-action: none !important;
+  touch-action: auto !important;
   border-radius: 18px !important;
   -webkit-clip-path: inset(0 round 18px) !important;
   clip-path: inset(0 round 18px) !important;
@@ -5729,7 +5762,7 @@ body:has(#masterDbPage.active) {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  touch-action: none !important;
+  touch-action: pan-x pan-y !important;
 }
 
 #popupDetailBarangV2 .tableCardV2.tableWrap,
