@@ -6245,14 +6245,19 @@ html body .cardStat .icon {
   border-radius: 10px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: TABEL DETAIL DASHBOARD DIPANJANGKAN KE BAWAH DAN TIDAK TERTUTUP BOTTOM MENU */
+/* RESPONSIVE HP / MOBILE: TABEL DETAIL DASHBOARD & RIWAYAT DISERAGAMKAN SAMA UKURAN DENGAN JARAK 1MM DI ATAS BOTTOM MENU */
 @media (max-width: 640px) {
   #detailDashboard,
   #detailDashboard .tableWrap,
-  #detailDashboard.tableWrap {
-    max-height: calc(100vh - 280px) !important;
-    min-height: 300px !important;
-    margin-bottom: 20px !important;
+  #detailDashboard.tableWrap,
+  #riwayatPage .tableWrap,
+  #masterDbPage .tableWrap {
+    height: auto !important;
+    max-height: calc(100vh - 195px) !important;
+    min-height: 320px !important;
+    margin-top: 1mm !important;
+    margin-bottom: 56px !important; /* 52px height bottomMenu + 4px (1mm) gap */
+    box-sizing: border-box !important;
   }
 }
 
