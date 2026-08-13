@@ -3979,23 +3979,7 @@ button.btnKembali {
     box-sizing: border-box !important;
   }
 
-  #dashboardPage, section#dashboardPage.page.active {
-    display: flex !important;
-    flex-direction: column !important;
-    padding-top: 4px !important;
-    padding-bottom: 0 !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-    overflow-y: hidden !important;
-    height: calc(100vh - 60px - 0.5mm) !important;
-    max-height: calc(100vh - 60px - 0.5mm) !important;
-    box-sizing: border-box !important;
-    margin-bottom: 0 !important;
-  }
-
+  #dashboardPage, section#dashboardPage.page.active,
   #riwayatPage, #masterDbPage, section#riwayatPage.page.active, section#masterDbPage.page.active {
     display: flex !important;
     flex-direction: column !important;
@@ -4007,8 +3991,8 @@ button.btnKembali {
     max-width: 100% !important;
     overflow: hidden !important;
     overflow-y: hidden !important;
-    height: calc(100vh - 60px - 0.5mm) !important;
-    max-height: calc(100vh - 60px - 0.5mm) !important;
+    height: calc(100vh - 3cm) !important;
+    max-height: calc(100vh - 3cm) !important;
     box-sizing: border-box !important;
     margin-bottom: 0 !important;
   }
@@ -6010,14 +5994,11 @@ body:has(#masterDbPage.active) {
 
 /* 2. Container Max-Heights for Vertical Scrolling (Atas - Bawah) */
 #detailDashboard,
-#detailDashboard .tableWrap {
-  max-height: 420px !important;
-}
-
+#detailDashboard .tableWrap,
 #riwayatPage .tableWrap,
 #masterDbPage .tableWrap {
-  max-height: calc(100vh - 220px) !important;
-  min-height: 250px !important;
+  flex: 1 1 auto !important;
+  max-height: 100% !important;
 }
 
 #popupDetailBarangV2 .tableWrap,
