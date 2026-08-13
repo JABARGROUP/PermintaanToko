@@ -6233,8 +6233,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 52px - 1cm) !important; /* 52px height bottomMenu + 1cm gap */
-    max-height: calc(100vh - 52px - 1cm) !important;
+    height: calc(100vh - 52px - 5mm) !important; /* 52px height bottomMenu + 5mm gap */
+    max-height: calc(100vh - 52px - 5mm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6263,7 +6263,7 @@ html body .cardStat .icon {
     align-items: center !important;
     justify-content: center !important;
     padding: 12px !important;
-    padding-bottom: 1cm !important;
+    padding-bottom: 1mm !important;
   }
 
   #popupNotifList .popupNotifCard,
