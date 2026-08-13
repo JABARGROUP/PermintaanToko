@@ -3666,8 +3666,8 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 52px -1cm) !important;
-    max-height: calc(100vh - 52px - 1cm) !important;
+    height: calc(100vh - 52px - 3cm) !important;
+    max-height: calc(100vh - 52px - 3cm) !important;
     overflow: hidden !important;
     padding: 4px 6px 0 6px !important;
     margin-bottom: 0 !important;
@@ -3991,8 +3991,8 @@ button.btnKembali {
     max-width: 100% !important;
     overflow: hidden !important;
     overflow-y: hidden !important;
-    height: calc(100vh - 52px - 1cm) !important;
-    max-height: calc(100vh - 52px - 1cm) !important;
+    height: calc(100vh - 52px - 3cm) !important;
+    max-height: calc(100vh - 52px - 3cm) !important;
     box-sizing: border-box !important;
     margin-bottom: 0 !important;
   }
@@ -5309,9 +5309,9 @@ html body.design-mode-normal .confirmBox {
 #popupDetailBarangV2 .tableWrap,
 .tableCardV2,
 .tableCardV2.tableWrap {
-  border-radius: 11.5px !important;
-  -webkit-clip-path: inset(0 round 11.5px) !important;
-  clip-path: inset(0 round 11.5px) !important;
+  border-radius: 10px !important;
+  -webkit-clip-path: inset(0 round 10px) !important;
+  clip-path: inset(0 round 10px) !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
@@ -5708,9 +5708,9 @@ body:has(#masterDbPage.active) {
   touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
   position: relative !important;
-  border-radius: 11.5px !important;
-  -webkit-clip-path: inset(0 round 11.5px) !important;
-  clip-path: inset(0 round 11.5px) !important;
+  border-radius: 10px !important;
+  -webkit-clip-path: inset(0 round 10px) !important;
+  clip-path: inset(0 round 10px) !important;
   border: 0 !important;
   background: var(--bg-box) !important;
   box-shadow: none !important;
@@ -5895,7 +5895,7 @@ body:has(#masterDbPage.active) {
     align-items: center !important;
     justify-content: center !important;
     padding: 12px !important;
-    padding-bottom: calc(52px + 1cm) !important;
+    padding-bottom: calc(52px + 2cm) !important;
   }
   #confirmOverlay {
     align-items: center !important;
@@ -6128,12 +6128,12 @@ html body .mainBox,
 html body .boxCard,
 html body [class*="card"],
 html body [class*="Card"] {
-  border-radius: 10px !important;
-  -webkit-clip-path: inset(0 round 10px) !important;
-  clip-path: inset(0 round 10px) !important;
+  border-radius: 9.5px !important;
+  -webkit-clip-path: inset(0 round 9.5px) !important;
+  clip-path: inset(0 round 9.5px) !important;
 }
 
-/* 2. SELURUH TABEL, WRAPPER TABEL, CELL & CONTAINER TABEL (SUDUT UJUNG 110 DERAJAT / 11PX) */
+/* 2. SELURUH TABEL, WRAPPER TABEL, CELL & CONTAINER TABEL (SUDUT UJUNG 95 DERAJAT / 9.5PX) */
 html body table,
 html body table tr,
 html body table th,
@@ -6155,9 +6155,9 @@ html body .detailTableV2,
 html body .detailTable2,
 html body #detailContainer,
 html body .detailRow {
-  border-radius: 11px !important;
-  -webkit-clip-path: inset(0 round 11px) !important;
-  clip-path: inset(0 round 11px) !important;
+  border-radius: 9.5px !important;
+  -webkit-clip-path: inset(0 round 9.5px) !important;
+  clip-path: inset(0 round 9.5px) !important;
 }
 
 /* 3. SELURUH POPUP, MODAL, OVERLAY CARDS & DIALOG BOXES */
@@ -6177,9 +6177,9 @@ html body #popupAkun .akunBox,
 html body #popupTTD .ttdBox,
 html body [class*="popupBox"],
 html body [class*="Popup"] {
-  border-radius: 10px !important;
-  -webkit-clip-path: inset(0 round 10px) !important;
-  clip-path: inset(0 round 10px) !important;
+  border-radius: 9.5px !important;
+  -webkit-clip-path: inset(0 round 9.5px) !important;
+  clip-path: inset(0 round 9.5px) !important;
 }
 
 /* 4. POPUP & CARD HEADERS & TABLE HEADERS (TOP CORNERS & CENTER ALIGNMENT) */
@@ -6192,7 +6192,7 @@ html body .dashboardTable th,
 html body .historyTable th,
 html body .masterDbTable th,
 html body .detailTableV2 th {
-  border-radius: 10px 10px 0 0 !important;
+  border-radius: 9.5px 9.5px 0 0 !important;
   text-align: center !important;
 }
 
@@ -6201,7 +6201,7 @@ html body .popupCardBodyContainerV2,
 html body .popupContent,
 html body .rejectBodyPopup,
 html body .artemisBodyPopup {
-  border-radius: 0 0 10px 10px !important;
+  border-radius: 0 0 9.5px 9.5px !important;
 }
 
 /* 6. FORM INPUTS, TOMBOL & ICON */
@@ -6221,10 +6221,10 @@ html body .btnSuccess,
 html body .btnWarning,
 html body .iconWrap,
 html body .cardStat .icon {
-  border-radius: 10px !important;
+  border-radius: 9.5px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 3CM DI ATAS BOTTOM MENU */
+/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 2CM DI ATAS BOTTOM MENU */
 @media (max-width: 640px) {
   html body .page.active,
   html body #dashboardPage.active,
@@ -6233,8 +6233,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 52px - 1cm) !important; /* 52px height bottomMenu + 1cm gap */
-    max-height: calc(100vh - 52px - 1cm) !important;
+    height: calc(100vh - 52px - 2cm) !important; /* 52px height bottomMenu + 2cm gap */
+    max-height: calc(100vh - 52px - 2cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6263,7 +6263,7 @@ html body .cardStat .icon {
     align-items: center !important;
     justify-content: center !important;
     padding: 12px !important;
-    padding-bottom: 1mm !important;
+    padding-bottom: calc(52px + 2cm) !important;
   }
 
   #popupNotifList .popupNotifCard,
