@@ -3666,8 +3666,8 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 52px - 3cm) !important;
-    max-height: calc(100vh - 52px - 3cm) !important;
+    height: calc(100vh - 52px -2cm) !important;
+    max-height: calc(100vh - 52px - 2cm) !important;
     overflow: hidden !important;
     padding: 4px 6px 0 6px !important;
     margin-bottom: 0 !important;
@@ -3991,8 +3991,8 @@ button.btnKembali {
     max-width: 100% !important;
     overflow: hidden !important;
     overflow-y: hidden !important;
-    height: calc(100vh - 52px - 3cm) !important;
-    max-height: calc(100vh - 52px - 3cm) !important;
+    height: calc(100vh - 52px - 2cm) !important;
+    max-height: calc(100vh - 52px - 2cm) !important;
     box-sizing: border-box !important;
     margin-bottom: 0 !important;
   }
@@ -6233,8 +6233,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 52px - 3cm) !important; /* 52px height bottomMenu + 3cm gap */
-    max-height: calc(100vh - 52px - 3cm) !important;
+    height: calc(100vh - 52px - 2cm) !important; /* 52px height bottomMenu + 2cm gap */
+    max-height: calc(100vh - 52px - 2cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6263,7 +6263,7 @@ html body .cardStat .icon {
     align-items: center !important;
     justify-content: center !important;
     padding: 12px !important;
-    padding-bottom: 3cm !important;
+    padding-bottom: 2cm !important;
   }
 
   #popupNotifList .popupNotifCard,
