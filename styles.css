@@ -381,8 +381,8 @@ body.light-mode .aesthetic-orb-3 {
   padding: 16px 0 !important;
   animation: fade .25s ease-out;
   padding-bottom: 95px;
-  width: calc(100vw - 2mm) !important;
-  max-width: calc(100vw - 2mm) !important;
+  width: calc(100vw - 1mm) !important;
+  max-width: calc(100vw - 1mm) !important;
   margin: 0 auto !important;
 }
 
@@ -423,10 +423,12 @@ section#masterDbPage.page.active,
 }
 
 #riwayatPage {
-  padding-left: 4px !important;
-  padding-right: 4px !important;
-  max-width: 100% !important;
-  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  max-width: calc(100vw - 1mm) !important;
+  width: calc(100vw - 1mm) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 @keyframes fade {
@@ -1701,24 +1703,24 @@ input:focus, select:focus, textarea:focus {
   text-align: left !important;
 }
 
-/* FORM INPUT FULL KANAN KIRI DENGAN MARGIN / PADDING 1MM */
+/* FORM INPUT FULL KANAN KIRI DENGAN MARGIN / PADDING 0.5MM (CALC(100VW - 1MM)) */
 #inputPage,
 .page#inputPage,
 html body #inputPage {
-  width: 100% !important;
-  max-width: 100% !important;
-  padding-left: 1mm !important;
-  padding-right: 1mm !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+  width: calc(100vw - 1mm) !important;
+  max-width: calc(100vw - 1mm) !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   box-sizing: border-box !important;
 }
 
 #inputPage .box {
-  width: calc(100vw - 2mm) !important;
-  max-width: calc(100vw - 2mm) !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+  width: calc(100vw - 1mm) !important;
+  max-width: calc(100vw - 1mm) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   padding-left: 10px !important;
   padding-right: 10px !important;
   box-sizing: border-box !important;
@@ -1755,20 +1757,32 @@ html body #inputPage {
   #inputPage,
   .page#inputPage,
   html body #inputPage {
-    padding-bottom: 100px !important;
-    margin-bottom: 20px !important;
+    width: calc(100vw - 1mm) !important;
+    max-width: calc(100vw - 1mm) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: calc(58px + 1mm) !important;
+    margin-bottom: 0 !important;
   }
 
   #inputPage .box {
-    padding-bottom: 80px !important;
-    margin-bottom: 16px !important;
+    width: calc(100vw - 1mm) !important;
+    max-width: calc(100vw - 1mm) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 1mm !important;
   }
 
   #inputPage #btnSimpan,
   #btnSimpan,
   .btn-primary#btnSimpan {
     margin-top: 14px !important;
-    margin-bottom: 85px !important;
+    margin-bottom: 1mm !important;
     position: relative !important;
     z-index: 10 !important;
   }
@@ -2242,8 +2256,8 @@ body.design-mode-3d-isometric .dashboardTable th {
   bottom: 6px !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
-  width: calc(100% - 0.4mm) !important;
-  max-width: calc(100% - 0.4mm) !important;
+  width: calc(100% - 1mm) !important;
+  max-width: calc(100% - 1mm) !important;
   height: 52px !important;
   background: var(--bg-box) !important;
   backdrop-filter: blur(16px) saturate(180%) !important;
@@ -2601,8 +2615,8 @@ body.design-mode-3d-isometric .dashboardTable th {
 #popupDetail .popupBoxDetail,
 #pdfModal .popupBox,
 .box-full {
-  width: calc(100vw - 2mm) !important;
-  max-width: calc(100vw - 2mm) !important;
+  width: calc(100vw - 1mm) !important;
+  max-width: calc(100vw - 1mm) !important;
   background: var(--bg-box);
   border-radius: 5px !important;
   box-shadow: 0 16px 40px rgba(0,0,0,.35);
@@ -2610,8 +2624,8 @@ body.design-mode-3d-isometric .dashboardTable th {
   color: var(--text-main);
   border: 1px solid var(--border-color);
   animation: fade .25s ease-out;
-  margin-left: 1mm !important;
-  margin-right: 1mm !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 /* COMPACT HALF-SCREEN POPUPS (POPUP TOLAKAN, POPUP TAMBAH TOKO, NOTIF KONFIRMASI YES/NO) */
@@ -3464,7 +3478,10 @@ table th,
 /* RESPONSIVE & PRINT MEDIA QUERY */
 @media(max-width: 768px) {
   .page {
-    padding: 12px 6px 95px 6px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 12px !important;
+    padding-bottom: 95px !important;
   }
 
   #inputPage,
@@ -3652,10 +3669,13 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 52px - 1cm) !important;
-    max-height: calc(100vh - 52px - 1cm) !important;
+    height: calc(100vh - 58px - 1mm) !important;
+    max-height: calc(100vh - 58px - 1mm) !important;
     overflow: hidden !important;
-    padding: 4px 6px 0 6px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 4px !important;
+    padding-bottom: 0 !important;
     margin-bottom: 0 !important;
     box-sizing: border-box !important;
     touch-action: auto !important;
@@ -3958,8 +3978,8 @@ button.btnKembali {
     padding-bottom: 56px !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
+    width: calc(100vw - 1mm) !important;
+    max-width: calc(100vw - 1mm) !important;
     margin-left: auto !important;
     margin-right: auto !important;
     box-sizing: border-box !important;
@@ -4217,8 +4237,8 @@ button.btnKembali {
   padding-left: 0 !important;
   padding-right: 0 !important;
   padding-bottom: 70px !important;
-  width: calc(100vw - 0.4mm) !important;
-  max-width: calc(100vw - 0.4mm) !important;
+  width: calc(100vw - 1mm) !important;
+  max-width: calc(100vw - 1mm) !important;
   margin-left: auto !important;
   margin-right: auto !important;
   box-sizing: border-box !important;
@@ -4231,8 +4251,8 @@ button.btnKembali {
 .dashboardTableContainer,
 .box,
 .box.box-full {
-  width: calc(100vw - 0.4mm) !important;
-  max-width: calc(100vw - 0.4mm) !important;
+  width: calc(100vw - 1mm) !important;
+  max-width: calc(100vw - 1mm) !important;
   margin-left: auto !important;
   margin-right: auto !important;
   box-sizing: border-box !important;
@@ -5617,13 +5637,13 @@ html body .dashboardTable thead tr {
 @media (max-width: 768px) {
   html body #inputPage,
   html body .page#inputPage {
-    padding-bottom: calc(60px + 1mm) !important;
+    padding-bottom: calc(58px + 1mm) !important;
     margin-bottom: 0 !important;
   }
 
   html body #inputPage .box {
     padding-bottom: 12px !important;
-    margin-bottom: 0 !important;
+    margin-bottom: 1mm !important;
   }
 
   html body #inputPage #btnSimpan,
@@ -5712,12 +5732,15 @@ body:has(#masterDbPage.active) {
 #masterDbPage.page.active {
   display: flex !important;
   flex-direction: column !important;
-  height: calc(100vh - 60px - 1mm) !important;
-  max-height: calc(100vh - 60px - 1mm) !important;
+  height: calc(100vh - 58px - 1mm) !important;
+  max-height: calc(100vh - 58px - 1mm) !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
   touch-action: auto !important;
-  padding: 4px 6px 0 6px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-top: 4px !important;
+  padding-bottom: 0 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
 }
@@ -6290,15 +6313,24 @@ html body .cardStat .icon {
   border-radius: 5px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: 0.2MM KANAN-KIRI (CALC(100VW - 0.4MM)) & 2.5CM GAP DI ATAS BOTTOM MENU FOR #detailDashboard */
+/* RESPONSIVE HP / MOBILE: 0.5MM KANAN-KIRI (CALC(100VW - 1MM)) & 1MM GAP DI ATAS BOTTOM MENU FOR ALL PAGES (JANGAN TERTUTUP BOTTOM MENU) */
 @media (max-width: 768px) {
-  .page,
-  .page.active,
   #dashboardPage,
   #inputPage,
-  #userManagementPage,
+  #inputPage .box,
+  #inputPage.page,
   #riwayatPage,
+  #riwayatPage.page,
+  #riwayatPage .riwayatContent,
+  #riwayatPage .tableWrap,
+  #riwayatPage .searchToolbar,
   #masterDbPage,
+  #masterDbPage .tableWrap,
+  #userManagementPage,
+  .page,
+  .page.active,
+  #dashboardPage.active,
+  #inputPage.active,
   #riwayatPage.active,
   #masterDbPage.active,
   .dashboardTop,
@@ -6309,8 +6341,8 @@ html body .cardStat .icon {
   .box,
   .box.box-full,
   #bottomMenu {
-    width: calc(100vw - 0.4mm) !important;
-    max-width: calc(100vw - 0.4mm) !important;
+    width: calc(100vw - 1mm) !important;
+    max-width: calc(100vw - 1mm) !important;
     margin-left: auto !important;
     margin-right: auto !important;
   }
@@ -6322,13 +6354,22 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 52px - 2.5cm) !important; /* 52px height bottomMenu + 2.5cm gap */
-    max-height: calc(100vh - 52px - 2.5cm) !important;
+    height: calc(100vh - 58px - 1mm) !important; /* 52px height bottomMenu + 6px bottom offset + 1mm gap */
+    max-height: calc(100vh - 58px - 1mm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
     overflow: hidden !important;
     box-sizing: border-box !important;
+  }
+
+  html body #inputPage,
+  html body .page#inputPage {
+    height: auto !important;
+    max-height: none !important;
+    padding-bottom: calc(58px + 1mm) !important; /* Safe 1mm gap above bottomMenu */
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
   }
 
   #detailDashboard,
@@ -6341,7 +6382,7 @@ html body .cardStat .icon {
     min-height: 0 !important;
     max-height: 100% !important;
     margin-top: 1mm !important;
-    margin-bottom: 2.5cm !important;
+    margin-bottom: 1mm !important;
     box-sizing: border-box !important;
     overflow-y: auto !important;
     overflow-x: auto !important;
