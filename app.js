@@ -2368,7 +2368,10 @@ function initSupabaseRealtimeEngine() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'lookup' },
         (payload) => {
-          if (payload.new && (payload.new.key === 'chat_messages' || payload.new.code === 'CHAT_MESSAGES')) {
+          if (!payload.new) return;
+          const k = payload.new.key || payload.new.code || '';
+          
+          if (k === 'chat_messages' || k === 'CHAT_MESSAGES') {
             try {
               const val = typeof payload.new.value === 'string' ? JSON.parse(payload.new.value) : payload.new.value;
               if (Array.isArray(val)) {
@@ -2378,6 +2381,35 @@ function initSupabaseRealtimeEngine() {
                 if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
                 if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
               }
+            } catch(e) {}
+          } else if (k === 'FEATURE_PHOTOS') {
+            try {
+              let val = 'true';
+              if (payload.new.value !== undefined && payload.new.value !== null) {
+                if (typeof payload.new.value === 'object') {
+                  val = payload.new.value.enabled !== undefined ? String(payload.new.value.enabled) : String(payload.new.value.featurePhotos || 'true');
+                } else {
+                  val = String(payload.new.value);
+                }
+              } else if (payload.new.type) {
+                val = String(payload.new.type);
+              }
+              appStorage.setItem(FEATURE_PHOTOS_KEY, val);
+              try { localStorage.setItem(FEATURE_PHOTOS_KEY, val); } catch(e) {}
+              if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
+            } catch(e) {}
+          } else if (k === 'global_theme' || k === 'GLOBAL_THEME') {
+            try {
+              const cloudTheme = payload.new.value ? (typeof payload.new.value === 'object' ? payload.new.value.theme : String(payload.new.value)) : (payload.new.type || 'dark-mode');
+              if (cloudTheme && typeof applyGlobalThemeToApp === 'function') {
+                applyGlobalThemeToApp(cloudTheme);
+              }
+            } catch(e) {}
+          } else if (k === 'KODE_UNIT_MAP') {
+            try {
+              const val = typeof payload.new.value === 'string' ? payload.new.value : JSON.stringify(payload.new.value);
+              appStorage.setItem(KODE_UNIT_MAP_KEY, val);
+              try { localStorage.setItem(KODE_UNIT_MAP_KEY, val); } catch(e) {}
             } catch(e) {}
           }
         }
@@ -6707,10 +6739,6 @@ function filterRiwayat() {
 }
 
 function lihatFotoByNoSurat(noSurat) {
-  if (!getFeaturePhotosEnabled()) {
-    showNotif('FITUR UPLOAD & LIHAT FOTO SEDANG DINOAKTIFKAN OLEH ADMIN!', 'warning');
-    return;
-  }
   const requests = getRequestsFromDB();
   const req = requests.find(r => r && (r.noSurat === noSurat || String(r.noSurat) === String(noSurat) || r.id === noSurat));
   
@@ -6720,6 +6748,13 @@ function lihatFotoByNoSurat(noSurat) {
     const artP = parsePhotosArray(req.artemisPhotos);
     photos = [...regP, ...artP];
     photos = Array.from(new Set(photos.filter(Boolean)));
+  }
+
+  // FOTO BUKTI PROSES ARTEMIS (STATUS DONE) SELALU DIIZINKAN DILIHAT DI SEMUA PERANGKAT!
+  const isDoneOrHasArtemis = req && (req.status === 'DONE' || (req.artemisPhotos && req.artemisPhotos.length > 0));
+  if (!isDoneOrHasArtemis && !getFeaturePhotosEnabled()) {
+    showNotif('FITUR UPLOAD FOTO FORM PERMINTAAN SEDANG DINONAKTIFKAN OLEH ADMIN!', 'warning');
+    return;
   }
 
   if (photos && photos.length > 0) {
