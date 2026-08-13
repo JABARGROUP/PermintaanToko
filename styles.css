@@ -615,7 +615,7 @@ section#masterDbPage.page.active,
 #helpModal,
 #chatWindow {
   position: fixed;
-  bottom: 175px !important;
+  bottom: 85px !important;
   right: 12px;
   width: 440px;
   max-width: calc(100vw - 24px);
@@ -637,16 +637,18 @@ section#masterDbPage.page.active,
   opacity: 1 !important;
 }
 
-/* CHAT BOX CONTAINER */
+/* CHAT BOX CONTAINER - EXTENDED DOWNWARDS (PANJANG KE BAWAH) */
 .chatBox,
 #helpModal .chatBox,
 .popupBantuan .chatBox {
   width: 100% !important;
   max-width: 100% !important;
-  height: 380px !important;
-  max-height: calc(100vh - 205px) !important;
+  height: 500px !important;
+  max-height: calc(100vh - 110px) !important;
   background: var(--bg-box);
-  border-radius: 18px !important;
+  border-radius: 10px !important;
+  -webkit-clip-path: inset(0 round 10px) !important;
+  clip-path: inset(0 round 10px) !important;
   box-shadow: 0 20px 50px rgba(0,0,0,0.35);
   border: 1px solid var(--border-color);
   display: flex;
@@ -669,7 +671,7 @@ section#masterDbPage.page.active,
     top: auto !important;
     left: 50% !important;
     right: auto !important;
-    bottom: 155px !important;
+    bottom: 75px !important;
     transform: translateX(-50%) !important;
     width: calc(100vw - 24px) !important;
     max-width: calc(100vw - 24px) !important;
@@ -685,7 +687,7 @@ section#masterDbPage.page.active,
     display: block !important;
     left: 50% !important;
     right: auto !important;
-    bottom: 125px !important;
+    bottom: 75px !important;
     transform: translateX(-50%) !important;
     width: calc(100vw - 24px) !important;
     max-width: calc(100vw - 24px) !important;
@@ -696,10 +698,12 @@ section#masterDbPage.page.active,
   .popupBantuan .chatBox {
     width: 100% !important;
     max-width: 100% !important;
-    height: 370px !important;
-    max-height: calc(100vh - 195px) !important;
+    height: 480px !important;
+    max-height: calc(100vh - 90px) !important;
     margin: 0 auto !important;
-    border-radius: 18px !important;
+    border-radius: 10px !important;
+    -webkit-clip-path: inset(0 round 10px) !important;
+    clip-path: inset(0 round 10px) !important;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
     box-sizing: border-box !important;
   }
@@ -5906,8 +5910,9 @@ body:has(#masterDbPage.active) {
 
 @media (max-width: 640px) {
   #popupNotifList,
-  #popupNotif {
-    padding-top: 4vh !important;
+  #popupNotif,
+  .popupOverlay {
+    padding-top: 8px !important;
     padding-bottom: 75px !important;
     align-items: flex-start !important;
   }
@@ -5919,10 +5924,11 @@ body:has(#masterDbPage.active) {
   #popupNotif .popupNotifCard,
   #popupNotifCard {
     margin-top: 0 !important;
-    max-height: 78vh !important;
+    max-height: calc(100vh - 90px) !important;
+    height: auto !important;
   }
   #popupNotifList #notifListBody {
-    max-height: 48vh !important;
+    max-height: calc(100vh - 200px) !important;
   }
 }
 
@@ -6238,4 +6244,16 @@ html body .iconWrap,
 html body .cardStat .icon {
   border-radius: 10px !important;
 }
+
+/* RESPONSIVE HP / MOBILE: TABEL DETAIL DASHBOARD DIPANJANGKAN KE BAWAH DAN TIDAK TERTUTUP BOTTOM MENU */
+@media (max-width: 640px) {
+  #detailDashboard,
+  #detailDashboard .tableWrap,
+  #detailDashboard.tableWrap {
+    max-height: calc(100vh - 280px) !important;
+    min-height: 300px !important;
+    margin-bottom: 20px !important;
+  }
+}
+
 
