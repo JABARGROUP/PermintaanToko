@@ -473,7 +473,7 @@ section#masterDbPage.page.active,
 #helpModal,
 #chatWindow {
   position: fixed;
-  bottom: 85px;
+  bottom: 105px;
   right: 12px;
   width: 440px;
   max-width: calc(100vw - 24px);
@@ -527,7 +527,7 @@ section#masterDbPage.page.active,
     top: auto !important;
     left: 50% !important;
     right: auto !important;
-    bottom: 52px !important;
+    bottom: 78px !important;
     transform: translateX(-50%) !important;
     width: calc(100vw - 24px) !important;
     max-width: calc(100vw - 24px) !important;
@@ -543,7 +543,7 @@ section#masterDbPage.page.active,
     display: block !important;
     left: 50% !important;
     right: auto !important;
-    bottom: 52px !important;
+    bottom: 78px !important;
     transform: translateX(-50%) !important;
     width: calc(100vw - 24px) !important;
     max-width: calc(100vw - 24px) !important;
