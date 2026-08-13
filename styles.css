@@ -5454,7 +5454,7 @@ body:has(#masterDbPage.active) {
 }
 
 /* ==========================================================================
-   POPUP NOTIFIKASI, MODAL & DETAIL CENTERING (ELEVATED POSITION)
+   POPUP NOTIFIKASI, MODAL & DETAIL CENTERING (TOP-ALIGNED COMPACT POSITION)
    ========================================================================== */
 #popupNotif,
 #popupNotifList,
@@ -5472,10 +5472,10 @@ body:has(#masterDbPage.active) {
   height: 100vh !important;
   justify-content: center !important;
   align-items: flex-start !important;
-  padding-top: 48px !important;
-  padding-bottom: 90px !important;
-  padding-left: 14px !important;
-  padding-right: 14px !important;
+  padding-top: 8px !important;
+  padding-bottom: 75px !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
   box-sizing: border-box !important;
   overflow-y: auto !important;
   z-index: 9999999999 !important;
@@ -5494,22 +5494,22 @@ body:has(#masterDbPage.active) {
 }
 
 #popupNotifList .popupNotifCard {
-  width: 500px !important;
+  width: 480px !important;
   max-width: 92vw !important;
-  max-height: 82vh !important;
+  max-height: 80vh !important;
   display: flex !important;
   flex-direction: column !important;
-  margin-top: 25px !important;
+  margin-top: 8px !important;
   margin-bottom: auto !important;
   margin-left: auto !important;
   margin-right: auto !important;
   transform: none !important;
   overflow: hidden !important;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
 }
 
 #popupNotifList #notifListBody {
-  max-height: min(54vh, 380px) !important;
+  max-height: min(54vh, 370px) !important;
   overflow-y: auto !important;
 }
 
@@ -5520,7 +5520,7 @@ body:has(#masterDbPage.active) {
 #confirmOverlay .confirmBoxCard,
 #confirmBoxCard,
 .confirmBoxCard {
-  margin-top: 30px !important;
+  margin-top: 8px !important;
   margin-bottom: auto !important;
   margin-left: auto !important;
   margin-right: auto !important;
@@ -5532,17 +5532,17 @@ body:has(#masterDbPage.active) {
   #popupNotif,
   #popupNotifList,
   #confirmOverlay {
-    padding-top: 25px !important;
+    padding-top: 8px !important;
     align-items: flex-start !important;
   }
   #popupNotifList .popupNotifCard {
-    margin-top: 25px !important;
+    margin-top: 8px !important;
   }
   #popupNotif .popupNotifCard,
   #popupNotifCard,
   .popupNotifCard,
   #confirmBoxCard {
-    margin-top: 30px !important;
+    margin-top: 8px !important;
   }
 }
 
@@ -5550,19 +5550,19 @@ body:has(#masterDbPage.active) {
   #popupNotif,
   #popupNotifList,
   #confirmOverlay {
-    padding-top: 20px !important;
-    padding-bottom: 95px !important;
+    padding-top: 6px !important;
+    padding-bottom: 85px !important;
     align-items: flex-start !important;
   }
   #popupNotifList .popupNotifCard {
-    margin-top: 20px !important;
+    margin-top: 6px !important;
     max-height: 78vh !important;
   }
   #popupNotif .popupNotifCard,
   #popupNotifCard,
   .popupNotifCard,
   #confirmBoxCard {
-    margin-top: 25px !important;
+    margin-top: 6px !important;
   }
   #popupNotifList #notifListBody {
     max-height: 48vh !important;
@@ -5572,7 +5572,7 @@ body:has(#masterDbPage.active) {
 .popupNotifFooter,
 #popupNotif .popupNotifFooter,
 #confirmOverlay .popupNotifFooter {
-  padding: 0 18px 20px 18px !important;
+  padding: 0 14px 14px 14px !important;
 }
 
 #popupDetail .popupBoxDetail,
