@@ -468,14 +468,14 @@ section#masterDbPage.page.active,
   border: 2px solid var(--bg-body);
 }
 
-/* CHAT WIDGET POPUP - PENDEKKAN TINGGI POPUP BANTUAN SAJA (380PX) */
+/* CHAT WIDGET POPUP - POSISI DI BAWAH (SEDIKIT NAIK KE ATAS) */
 .popupBantuan,
 #helpModal,
 .chatBox,
 #chatWindow {
   position: fixed;
-  bottom: 90px;
-  right: 20px;
+  bottom: 45px;
+  right: 6px;
   z-index: 9999999 !important;
   display: none;
   animation: none !important;
@@ -497,7 +497,7 @@ section#masterDbPage.page.active,
 #helpModal .chatBox,
 .popupBantuan .chatBox {
   width: 440px !important;
-  max-width: calc(100vw - 24px) !important;
+  max-width: calc(100vw - 12px) !important;
   height: 390px !important;
   background: var(--bg-box);
   border-radius: 18px;
@@ -512,45 +512,47 @@ section#masterDbPage.page.active,
   transform: none !important;
 }
 
-/* RESPONSIVE HP / MOBILE: POPUP BANTUAN CHAT PAS DI TENGAH-TENGAH LAYAR (HORIZONTAL & VERTIKAL) */
+/* RESPONSIVE HP / MOBILE: POPUP BANTUAN CHAT SEJAJAR KIRI & KANAN DENGAN CARD */
 @media (max-width: 640px) {
   .popupBantuan,
   #helpModal,
   #chatWindow {
     position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    bottom: auto !important;
-    right: auto !important;
-    transform: translate(-50%, -50%) !important;
-    width: 92vw !important;
-    max-width: 400px !important;
+    top: auto !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 48px !important;
+    transform: none !important;
+    width: auto !important;
+    max-width: calc(100vw - 16px) !important;
     display: none;
     margin: 0 !important;
     z-index: 9999999 !important;
+    box-sizing: border-box !important;
   }
   .popupBantuan.show,
   #helpModal.show,
   #chatWindow.show {
-    display: flex !important;
-    top: 50% !important;
-    left: 50% !important;
-    bottom: auto !important;
-    right: auto !important;
-    transform: translate(-50%, -50%) !important;
-    justify-content: center !important;
-    align-items: center !important;
+    display: block !important;
+    top: auto !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 48px !important;
+    transform: none !important;
+    width: auto !important;
+    max-width: calc(100vw - 16px) !important;
   }
   .chatBox,
   #helpModal .chatBox,
   .popupBantuan .chatBox {
     width: 100% !important;
-    max-width: 400px !important;
-    height: 440px !important;
-    max-height: 80vh !important;
-    margin: 0 auto !important;
+    max-width: 100% !important;
+    height: 420px !important;
+    max-height: 75vh !important;
+    margin: 0 !important;
     border-radius: 18px !important;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+    box-sizing: border-box !important;
   }
 }
 

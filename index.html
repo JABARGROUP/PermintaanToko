@@ -275,30 +275,26 @@
 
         <label>TANGGAL</label>
         <input id="tanggal" readonly>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; width: 100%;">
           <label style="margin-bottom: 0;">NAMA TOKO</label>
           
           <!-- Bungkus dengan ID containerTambahToko -->
           <div id="containerTambahToko">
-            <button type="button" style="background: none; border: none; color: var(--primary); font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px;" onclick="bukaModalTambahToko()">
+            <button type="button" style="background: none; border: none; color: var(--primary); font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0;" onclick="bukaModalTambahToko()">
               <span class="material-symbols-rounded" style="font-size: 16px;">add_circle</span> TAMBAH TOKO
             </button>
           </div>
         </div>
 
-        <!-- Baris Pilihan Toko & Kolom Pencarian Toko Cepat di Sebelah Kanan (1/4 Lebar) -->
-        <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap;">
-          <div style="flex: 1; min-width: 200px;">
-            <select id="toko" style="width: 100%; height: 44px; margin-bottom: 0; border-radius: 10px; box-sizing: border-box;"></select>
-          </div>
-          <div id="wrapperCariToko" style="width: 25%; min-width: 130px; max-width: 220px; flex-shrink: 0; position: relative;">
-            <div style="position: relative; display: flex; align-items: center; height: 44px;">
-              <span class="material-symbols-rounded" style="position: absolute; left: 10px; font-size: 18px; color: var(--text-muted); pointer-events: none;">search</span>
-              <input type="text" id="cariTokoInput" placeholder="CARI TOKO..." style="width: 100%; height: 44px; padding: 0 28px 0 34px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 12px; text-transform: uppercase; box-sizing: border-box; margin: 0;" oninput="filterDropdownToko(this.value)">
-              <button type="button" id="btnHapusCariToko" onclick="resetCariToko()" title="Hapus Pencarian" style="position: absolute; right: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; padding: 2px; align-items: center;">
-                <span class="material-symbols-rounded" style="font-size: 16px;">cancel</span>
-              </button>
-            </div>
+        <!-- Baris Pilihan Toko & Kolom Pencarian Toko Cepat (Rata Kanan Sempurna 100% Lebar) -->
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px; width: 100%; box-sizing: border-box;">
+          <select id="toko" style="flex: 3; min-width: 0; height: 44px; margin: 0; border-radius: 10px; box-sizing: border-box;"></select>
+          <div id="wrapperCariToko" style="flex: 1; min-width: 120px; max-width: 25%; position: relative; height: 44px; box-sizing: border-box; margin: 0;">
+            <span class="material-symbols-rounded" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--text-muted); pointer-events: none;">search</span>
+            <input type="text" id="cariTokoInput" placeholder="CARI TOKO..." style="width: 100%; height: 44px; padding: 0 28px 0 34px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 12px; text-transform: uppercase; box-sizing: border-box; margin: 0;" oninput="filterDropdownToko(this.value)">
+            <button type="button" id="btnHapusCariToko" onclick="resetCariToko()" title="Hapus Pencarian" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; padding: 2px; align-items: center;">
+              <span class="material-symbols-rounded" style="font-size: 16px;">cancel</span>
+            </button>
           </div>
         </div>
 
