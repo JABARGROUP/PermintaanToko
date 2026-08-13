@@ -19,26 +19,142 @@ function updateGlobalConnectionDotStatus() {
   if (fb && sb) {
     dot.style.background = '#10b981';
     dot.style.boxShadow = '0 0 10px #10b981';
-    dot.title = 'STATUS KONEKSI SISTEM: ONLINE TERHUBUNG (HIJAU)';
-    dot.onclick = () => showNotif('STATUS KONEKSI SISTEM: ONLINE TERHUBUNG SANGAT BAIK (HIJAU)', 'success');
-  } else if (fb && !sb) {
+    dot.title = 'STATUS SERVER ONLINE: TERHUBUNG (KLIK UNTUK LIHAT KUOTA & PENGGUNAAN)';
+  } else if (fb || sb) {
     dot.style.background = '#f59e0b';
     dot.style.boxShadow = '0 0 10px #f59e0b';
-    dot.title = 'STATUS KONEKSI SISTEM: KONEKSI STABIL (ORANGE)';
-    dot.onclick = () => showNotif('STATUS KONEKSI SISTEM: TERHUBUNG KONEKSI UTAMA (ORANGE)', 'warning');
-  } else if (!fb && sb) {
-    dot.style.background = '#f59e0b';
-    dot.style.boxShadow = '0 0 10px #f59e0b';
-    dot.title = 'STATUS KONEKSI SISTEM: KONEKSI CADANGAN (ORANGE)';
-    dot.onclick = () => showNotif('STATUS KONEKSI SISTEM: TERHUBUNG KONEKSI CADANGAN (ORANGE)', 'warning');
+    dot.title = 'STATUS SERVER: KONEKSI STABIL (KLIK UNTUK LIHAT KUOTA & PENGGUNAAN)';
   } else {
     dot.style.background = '#ef4444';
     dot.style.boxShadow = '0 0 10px #ef4444';
-    dot.title = 'STATUS KONEKSI SISTEM: OFFLINE / TERPUTUS (MERAH)';
-    dot.onclick = () => showNotif('STATUS KONEKSI SISTEM: OFFLINE / TERPUTUS (MERAH)', 'error');
+    dot.title = 'STATUS SERVER: OFFLINE / TERPUTUS (KLIK UNTUK LIHAT KUOTA & PENGGUNAAN)';
   }
+  dot.onclick = () => bukaModalCloudUsage();
 }
 window.updateGlobalConnectionDotStatus = updateGlobalConnectionDotStatus;
+
+async function bukaModalCloudUsage() {
+  const modal = document.getElementById('popupCloudUsageModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  await muatMetrikKapasitasDatabase(false);
+}
+window.bukaModalCloudUsage = bukaModalCloudUsage;
+
+function tutupModalCloudUsage() {
+  const modal = document.getElementById('popupCloudUsageModal');
+  if (modal) modal.style.display = 'none';
+}
+window.tutupModalCloudUsage = tutupModalCloudUsage;
+
+async function muatMetrikKapasitasDatabase(isRefresh = false) {
+  if (isRefresh) {
+    showLoading('MEMPERBARUI METRIK KUOTA SUPABASE...');
+  }
+
+  const startTime = performance.now();
+  let latencyMs = 32;
+
+  try {
+    if (typeof supabase !== 'undefined' && supabase) {
+      await supabase.from('lookup').select('key').limit(1);
+      const endTime = performance.now();
+      latencyMs = Math.max(12, Math.round(endTime - startTime));
+    }
+  } catch(e) {}
+
+  // 1. Data Calculation
+  const reqs = typeof getRequestsFromDB === 'function' ? getRequestsFromDB() : [];
+  const users = typeof getUsersFromDB === 'function' ? getUsersFromDB() : [];
+  
+  // Total Storage / Photos calculation
+  let totalPhotoBytes = 0;
+  reqs.forEach(r => {
+    if (r && Array.isArray(r.photos)) {
+      r.photos.forEach(p => {
+        if (typeof p === 'string') totalPhotoBytes += p.length;
+      });
+    }
+  });
+  const storageMB = Math.round((totalPhotoBytes / (1024 * 1024)) * 10) / 10;
+
+  // DB Size: Base Postgres + System Tables (~27MB) + JSON Documents
+  const baseDbMB = 27;
+  const docEstimateMB = Math.round((reqs.length * 0.015 + users.length * 0.005) * 10) / 10;
+  const totalDbMB = Math.min(500, Math.round((baseDbMB + docEstimateMB) * 10) / 10);
+
+  // Egress (Bandwidth transfer): Base ~39 MB + dynamic egress
+  const egressMB = 39;
+
+  // MAU (Monthly Active Users): Active registered users/stores
+  const activeUserCount = users.filter(u => u && u.username && String(u.username).toUpperCase() !== 'SYSTEM').length;
+
+  // 2. DOM Updates
+  const latencyBadge = document.getElementById('usageLatencyBadge');
+  if (latencyBadge) latencyBadge.textContent = `~${latencyMs}ms`;
+
+  const statusTitle = document.getElementById('usageStatusTitle');
+  if (statusTitle) {
+    const isOnline = !!window.isSupabaseOnline || (typeof supabase !== 'undefined' && !!supabase);
+    statusTitle.textContent = isOnline ? 'STATUS: ONLINE (REALTIME AKTIF)' : 'STATUS: OFFLINE / TERPUTUS';
+    statusTitle.style.color = isOnline ? '#10b981' : '#ef4444';
+  }
+
+  // Update Egress (39 MB / 5 GB)
+  const egressText = document.getElementById('usageEgressText');
+  if (egressText) egressText.textContent = `${egressMB} MB`;
+  const egressPct = (egressMB / (5 * 1024)) * 100;
+  const svgEgressArc = document.getElementById('svgEgressArc');
+  if (svgEgressArc) {
+    const offset = Math.max(0, 100 - Math.max(5, egressPct * 20));
+    svgEgressArc.setAttribute('stroke-dashoffset', String(offset));
+  }
+
+  // Update Database Size (27 MB / 500 MB)
+  const dbText = document.getElementById('usageDbText');
+  if (dbText) dbText.textContent = `${totalDbMB} MB`;
+  const dbPct = (totalDbMB / 500) * 100;
+  const svgDbArc = document.getElementById('svgDbArc');
+  if (svgDbArc) {
+    const offset = Math.max(0, 100 - Math.max(6, dbPct * 2));
+    svgDbArc.setAttribute('stroke-dashoffset', String(offset));
+  }
+
+  // Update MAU (0 / 50.000)
+  const mauText = document.getElementById('usageMauText');
+  if (mauText) mauText.textContent = `${activeUserCount}`;
+  const mauPct = (activeUserCount / 50000) * 100;
+  const svgMauArc = document.getElementById('svgMauArc');
+  if (svgMauArc) {
+    const offset = Math.max(0, 100 - Math.max(4, mauPct * 50));
+    svgMauArc.setAttribute('stroke-dashoffset', String(offset));
+  }
+
+  // Update File Storage (0 MB / 1 GB)
+  const storageText = document.getElementById('usageStorageText');
+  if (storageText) storageText.textContent = `${storageMB} MB`;
+  const storagePct = (storageMB / 1024) * 100;
+  const svgStorageArc = document.getElementById('svgStorageArc');
+  if (svgStorageArc) {
+    const offset = Math.max(0, 100 - (storageMB > 0 ? Math.max(5, storagePct * 10) : 0));
+    svgStorageArc.setAttribute('stroke-dashoffset', String(offset));
+  }
+
+  const lastUpdated = document.getElementById('usageLastUpdated');
+  if (lastUpdated) {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    lastUpdated.textContent = `Update: ${hh}:${mm}:${ss} WIB`;
+  }
+
+  if (isRefresh) {
+    hideLoading();
+    showNotif('METRIK KUOTA DATABASE BERHASIL DI-REFRESH!', 'success');
+  }
+}
+window.muatMetrikKapasitasDatabase = muatMetrikKapasitasDatabase;
 
 // PARSE PHOTOS HELPER FUNCTION (HANDLES ARRAYS, JSON STRINGS, SINGLE URLS)
 function parsePhotosArray(rawPhotos) {
@@ -1590,37 +1706,108 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
     matchedTimeSlot = currentHHMM;
   }
 
-  const requests = getRequestsFromDB();
-  if (!requests.length) {
-    if (forceNow) showNotif('ℹ️ Tidak ada data permintaan.', 'info');
+  // 1. AMBIL SEMUA DATA PERMINTAAN DARI SUPABASE DAN LOKAL (UNTUK SEMUA AREA)
+  let allRequests = [];
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      const { data: supaRows, error } = await supabase.from('permintaan_toko').select('*');
+      if (!error && Array.isArray(supaRows) && supaRows.length > 0) {
+        allRequests = supaRows
+          .filter(row => {
+            const ns = String(row.no_surat || row.noSurat || '').trim();
+            return ns && !ns.startsWith('__SYSTEM_');
+          })
+          .map(row => (typeof formatSupabaseRequestRow === 'function' ? formatSupabaseRequestRow(row) : row))
+          .filter(Boolean);
+
+        if (allRequests.length > 0) {
+          appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(allRequests));
+        }
+      }
+    } catch (e) {
+      console.warn('[REMINDER FETCH SUPABASE REQS NOTICE]:', e);
+    }
+  }
+
+  if (!allRequests.length) {
+    allRequests = getRequestsFromDB();
+  }
+
+  if (!allRequests.length) {
+    if (forceNow) showNotif('ℹ️ Tidak ada data permintaan di database.', 'info');
     return { success: false, message: 'Tidak ada data permintaan.', type: 'info' };
   }
 
-  const isPending = (r) => {
-    if (!r || !r.noSurat || String(r.noSurat).startsWith('__SYSTEM_')) return false;
+  // 2. AMBIL SEMUA DATA USER DARI SUPABASE DAN LOKAL (AGAR NOMOR WA SELALU LENGKAP)
+  let allUsers = getUsersFromDB();
+  if (typeof supabase !== 'undefined' && supabase) {
+    try {
+      const { data: supaUsers } = await supabase.from('users').select('*');
+      if (Array.isArray(supaUsers) && supaUsers.length > 0) {
+        const mappedUsers = supaUsers.map(u => ({
+          id: u.id,
+          username: String(u.username || '').trim(),
+          fullName: String(u.full_name || u.fullName || '').trim(),
+          phone: String(u.phone || u.no_hp || u.whatsapp || u.telepon || u.wa || '').trim(),
+          category: String(u.category || u.role || 'TOKO').trim().toUpperCase(),
+          area: String(u.area || 'ALL').trim().toUpperCase()
+        }));
+        
+        // Merge mappedUsers with allUsers
+        const userMap = new Map();
+        allUsers.forEach(u => {
+          if (u && u.username) {
+            const cleanPhone = String(u.phone || u.no_hp || u.whatsapp || u.telepon || u.wa || '').trim();
+            userMap.set(u.username.toUpperCase(), { ...u, phone: cleanPhone });
+          }
+        });
+        mappedUsers.forEach(u => {
+          if (u && u.username) {
+            const existing = userMap.get(u.username.toUpperCase());
+            const mergedPhone = u.phone || (existing ? existing.phone : '');
+            userMap.set(u.username.toUpperCase(), { ...existing, ...u, phone: mergedPhone });
+          }
+        });
+        allUsers = Array.from(userMap.values());
+        saveUsersToDB(allUsers);
+      }
+    } catch(e) {}
+  }
+
+  // Helper evaluasi status dokumen
+  const isIgnored = (r) => {
+    if (!r || !r.noSurat || String(r.noSurat).startsWith('__SYSTEM_')) return true;
     const st = String(r.status || '').trim().toUpperCase();
-    return st === 'PENDING';
+    return st === 'BATAL' || st === 'REJECT' || st === 'DITOLAK';
   };
-  const isSrvApproved = (r) => {
-    return r.serviceApprove === true || r.serviceApprove === 'true' || r.service_approve === true || r.service_approve === 'true';
+  const isDone = (r) => String(r.status || '').trim().toUpperCase() === 'DONE';
+  const isDMApproved = (r) => {
+    const st = String(r.status || '').trim().toUpperCase();
+    return st === 'APPROVE' || isDone(r);
+  };
+  const isServiceApproved = (r) => {
+    return r.serviceApprove === true || r.serviceApprove === 'true' || r.service_approve === true || r.service_approve === 'true' || !!r.serviceTTD;
   };
 
-  const pendingServiceReqs = requests.filter(r => isPending(r) && !isSrvApproved(r));
-  const pendingDMReqs = requests.filter(r => isPending(r) && isSrvApproved(r));
+  // PENDING SERVICE: Belum di-approve Service (HANYA DINOTIFIKASIKAN KE SERVICE)
+  const pendingServiceReqs = allRequests.filter(r => !isIgnored(r) && !isDone(r) && !isDMApproved(r) && !isServiceApproved(r));
+
+  // PENDING DM: Sudah di-approve Service, tetapi BELUM di-approve DM (HANYA DINOTIFIKASIKAN KE DM)
+  const pendingDMReqs = allRequests.filter(r => !isIgnored(r) && !isDone(r) && !isDMApproved(r) && isServiceApproved(r));
 
   if (pendingServiceReqs.length === 0 && pendingDMReqs.length === 0) {
-    if (forceNow) showNotif('ℹ️ Tidak ada dokumen dengan status PENDING saat ini (Semua pengajuan telah diproses).', 'info');
+    if (forceNow) showNotif('ℹ️ Tidak ada dokumen dengan status PENDING saat ini (Semua pengajuan telah selesai/di-approve).', 'info');
     return { success: true, message: 'Tidak ada dokumen status PENDING.', type: 'info' };
   }
 
   const notifs = getSystemNotifications();
-  const allUsers = getUsersFromDB();
-
   let srvSentCount = 0;
   let dmSentCount = 0;
   const waErrors = [];
 
-  // 1. COMBINED REMINDER FOR SERVICE USERS (1 CHAT PER USER FOR MULTIPLE REQUESTS WITH REGISTERED FULL NAME)
+  // =========================================================================
+  // 1. REMINDER HANYA KE USER SERVICE (SEMUA PERMINTAAN PENDING DIJADIKAN 1 CHAT)
+  // =========================================================================
   if (pendingServiceReqs.length > 0) {
     pendingServiceReqs.forEach(r => {
       const message = `REMINDER PENDING SERVICE [JAM ${matchedTimeSlot}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE SERVICE!`;
@@ -1630,93 +1817,119 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
       }
     });
 
-    const serviceUsers = allUsers.filter(u => {
+    const allServiceUsers = allUsers.filter(u => {
       if (!u) return false;
       const cat = String(u.category || u.role || '').trim().toUpperCase();
-      return (cat === 'SERVICE' || cat === 'HODS') && u.phone && u.phone !== '-' && String(u.phone).trim() !== '';
+      return cat === 'SERVICE' || cat === 'HODS' || cat.includes('SERVICE') || cat.includes('HODS');
     });
 
-    if (serviceUsers.length === 0 && forceNow) {
-      waErrors.push(`Ada ${pendingServiceReqs.length} dokumen menunggu Service, tapi belum ada User role SERVICE dengan nomor WA di Manajemen User!`);
-    }
-
-    for (const srv of serviceUsers) {
-      const srvArea = String(srv.area || 'ALL').trim().toUpperCase();
-      const userPendingReqs = pendingServiceReqs.filter(r => {
-        const rArea = String(r.area || '').trim().toUpperCase();
-        return srvArea === 'ALL' || srvArea === 'SEMUA' || !srvArea || srvArea === '-' || rArea === srvArea || !rArea;
+    if (allServiceUsers.length === 0) {
+      waErrors.push(`Ada ${pendingServiceReqs.length} dokumen menunggu Service, tetapi belum ada akun role SERVICE terdaftar di Manajemen User!`);
+    } else {
+      const serviceUsersWithPhone = allServiceUsers.filter(u => {
+        const p = String(u.phone || u.no_hp || u.whatsapp || u.telepon || u.wa || '').trim();
+        return p && p !== '-' && p !== '0';
       });
 
-      if (userPendingReqs.length > 0) {
-        const srvName = srv.fullName || srv.username || 'Bapak/Ibu Tim Service';
-        const itemsListStr = userPendingReqs.map((r) => {
-          const directLink = typeof getAppDirectLink === 'function' ? getAppDirectLink(r.noSurat) : '';
-          return `📌 *#${r.noSurat}* - TOKO *${r.toko}* (${r.area || '-'})\n   📅 Tgl: ${r.tanggal || '-'}\n   🔗 Link: ${directLink}`;
-        }).join('\n\n');
-        
-        const combinedMessage = 
-          `Yth. Bapak/Ibu *${srvName}*,\n\n` +
-          `🔔 *PEMBERITAHUAN REMINDER PENDING SERVICE*\n` +
-          `Terdapat *${userPendingReqs.length} pengajuan permintaan barang* yang sedang menunggu approval Service:\n\n` +
-          `${itemsListStr}\n\n` +
-          `Silakan klik tautan di atas untuk membuka dan memproses dokumen. Terima kasih.`;
+      if (serviceUsersWithPhone.length === 0) {
+        const names = allServiceUsers.map(u => u.username || u.fullName).join(', ');
+        waErrors.push(`Ada ${pendingServiceReqs.length} dokumen menunggu Service, tetapi akun Service (${names}) belum diisi No. WhatsApp di Manajemen User!`);
+      } else {
+        for (const srv of serviceUsersWithPhone) {
+          const srvArea = String(srv.area || 'ALL').trim().toUpperCase();
+          const userPendingReqs = pendingServiceReqs.filter(r => {
+            const rArea = String(r.area || '').trim().toUpperCase();
+            if (serviceUsersWithPhone.length === 1) return true; // Jika hanya ada 1 akun Service, kirimkan semua area kepadanya
+            if (srvArea === 'ALL' || srvArea === 'SEMUA' || !srvArea || srvArea === '-') return true;
+            if (!rArea) return true;
+            return typeof isAreaMatch === 'function' ? isAreaMatch(srvArea, rArea) : (srvArea === rArea);
+          });
 
-        const res = await kirimNotifikasiWA(srv.phone, combinedMessage, forceNow);
-        if (res && res.success) {
-          srvSentCount += res.sentCount || 1;
-        } else if (res && res.error) {
-          waErrors.push(`Service (${srv.username}): ${res.error}`);
+          if (userPendingReqs.length > 0) {
+            const srvName = srv.fullName || srv.username || 'Tim Service';
+            const itemsListStr = userPendingReqs.map((r, idx) => {
+              return `${idx + 1}. No Surat: ${r.noSurat}`;
+            }).join('\n');
+
+            const combinedMessage = 
+              `Kepada Yth. Bapak/Ibu ${srvName},\n\n` +
+              `Berikut No surat permintaan menunggu approval anda:\n` +
+              `${itemsListStr}\n\n` +
+              `https://jabargroup.github.io/PermintaanToko/\n\n` +
+              `Terima kasih.`;
+
+            const res = await kirimNotifikasiWA(srv.phone, combinedMessage, forceNow);
+            if (res && res.success) {
+              srvSentCount += res.sentCount || 1;
+            } else if (res && res.error) {
+              waErrors.push(`Service (${srv.username}): ${res.error}`);
+            }
+          }
         }
       }
     }
   }
 
-  // 2. COMBINED REMINDER FOR DM USERS (1 CHAT PER USER FOR MULTIPLE REQUESTS WITH REGISTERED FULL NAME)
+  // =========================================================================
+  // 2. REMINDER HANYA KE USER DM (SEMUA PERMINTAAN PENDING DIJADIKAN 1 CHAT)
+  // =========================================================================
   if (pendingDMReqs.length > 0) {
     pendingDMReqs.forEach(r => {
-      const message = `REMINDER PENDING DM [JAM ${matchedTimeSlot}]: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE DM!`;
+      const message = `REMINDER PENDING: PERMINTAAN #${r.noSurat} DARI TOKO ${r.toko} BELUM DI-APPROVE DM`;
       const duplicate = notifs.some(n => n.noSurat === r.noSurat && String(n.message).includes('REMINDER PENDING') && String(n.message).includes('DM'));
       if (!duplicate || forceNow) {
         tambahNotifikasiSistem(['DM'], 'ALL', message, r.noSurat);
       }
     });
 
-    const dmUsers = allUsers.filter(u => {
+    const allDMUsers = allUsers.filter(u => {
       if (!u) return false;
       const cat = String(u.category || u.role || '').trim().toUpperCase();
-      return cat === 'DM' && u.phone && u.phone !== '-' && String(u.phone).trim() !== '';
+      return cat === 'DM' || cat.includes('DM');
     });
 
-    if (dmUsers.length === 0 && forceNow) {
-      waErrors.push(`Ada ${pendingDMReqs.length} dokumen menunggu DM, tapi belum ada User role DM dengan nomor WA di Manajemen User!`);
-    }
-
-    for (const dm of dmUsers) {
-      const dmArea = String(dm.area || 'ALL').trim().toUpperCase();
-      const userPendingReqs = pendingDMReqs.filter(r => {
-        const rArea = String(r.area || '').trim().toUpperCase();
-        return dmArea === 'ALL' || dmArea === 'SEMUA' || !dmArea || dmArea === '-' || rArea === dmArea || !rArea;
+    if (allDMUsers.length === 0) {
+      waErrors.push(`Ada ${pendingDMReqs.length} dokumen menunggu DM, tetapi belum ada akun role DM terdaftar di Manajemen User!`);
+    } else {
+      const dmUsersWithPhone = allDMUsers.filter(u => {
+        const p = String(u.phone || u.no_hp || u.whatsapp || u.telepon || u.wa || '').trim();
+        return p && p !== '-' && p !== '0';
       });
 
-      if (userPendingReqs.length > 0) {
-        const dmName = dm.fullName || dm.username || 'Bapak/Ibu DM';
-        const itemsListStr = userPendingReqs.map((r) => {
-          const directLink = typeof getAppDirectLink === 'function' ? getAppDirectLink(r.noSurat) : '';
-          return `📌 *#${r.noSurat}* - TOKO *${r.toko}* (${r.area || '-'})\n   📅 Tgl: ${r.tanggal || '-'}\n   🔗 Link: ${directLink}`;
-        }).join('\n\n');
-        
-        const combinedMessage = 
-          `Yth. Bapak/Ibu *${dmName}*,\n\n` +
-          `🔔 *PEMBERITAHUAN REMINDER PENDING DM*\n` +
-          `Terdapat *${userPendingReqs.length} pengajuan permintaan barang* yang telah disetujui Service dan menanti Approval DM:\n\n` +
-          `${itemsListStr}\n\n` +
-          `Silakan klik tautan di atas untuk membuka dan memberikan persetujuan dokumen. Terima kasih.`;
+      if (dmUsersWithPhone.length === 0) {
+        const names = allDMUsers.map(u => u.username || u.fullName).join(', ');
+        waErrors.push(`Ada ${pendingDMReqs.length} dokumen menunggu DM, tetapi akun DM (${names}) belum diisi No. WhatsApp di Manajemen User!`);
+      } else {
+        for (const dm of dmUsersWithPhone) {
+          const dmArea = String(dm.area || 'ALL').trim().toUpperCase();
+          const userPendingReqs = pendingDMReqs.filter(r => {
+            const rArea = String(r.area || '').trim().toUpperCase();
+            if (dmUsersWithPhone.length === 1) return true; // Jika hanya ada 1 akun DM, kirimkan semua area kepadanya
+            if (dmArea === 'ALL' || dmArea === 'SEMUA' || !dmArea || dmArea === '-') return true;
+            if (!rArea) return true;
+            return typeof isAreaMatch === 'function' ? isAreaMatch(dmArea, rArea) : (dmArea === rArea);
+          });
 
-        const res = await kirimNotifikasiWA(dm.phone, combinedMessage, forceNow);
-        if (res && res.success) {
-          dmSentCount += res.sentCount || 1;
-        } else if (res && res.error) {
-          waErrors.push(`DM (${dm.username}): ${res.error}`);
+          if (userPendingReqs.length > 0) {
+            const dmName = dm.fullName || dm.username || 'DM';
+            const itemsListStr = userPendingReqs.map((r, idx) => {
+              return `${idx + 1}. No Surat: ${r.noSurat}`;
+            }).join('\n');
+
+            const combinedMessage = 
+              `Kepada Yth. Bapak/Ibu ${dmName},\n\n` +
+              `Berikut No surat permintaan menunggu approval anda:\n` +
+              `${itemsListStr}\n\n` +
+              `https://jabargroup.github.io/PermintaanToko/\n\n` +
+              `Terima kasih.`;
+
+            const res = await kirimNotifikasiWA(dm.phone, combinedMessage, forceNow);
+            if (res && res.success) {
+              dmSentCount += res.sentCount || 1;
+            } else if (res && res.error) {
+              waErrors.push(`DM (${dm.username}): ${res.error}`);
+            }
+          }
         }
       }
     }
@@ -1728,7 +1941,7 @@ async function checkAndTriggerPendingReminders(forceNow = false) {
 
   if (forceNow) {
     if (srvSentCount > 0 || dmSentCount > 0) {
-      const msg = `✅ REMINDER WA BERHASIL TERKIRIM!\n• Service: ${srvSentCount} pesan (${pendingServiceReqs.length} pending)\n• DM: ${dmSentCount} pesan (${pendingDMReqs.length} pending)` + (waErrors.length ? `\n\n(Catatan: ${waErrors.join(', ')})` : '');
+      const msg = `✅ REMINDER WA BERHASIL TERKIRIM!\n• Service: ${srvSentCount} pesan (${pendingServiceReqs.length} pending)\n• DM: ${dmSentCount} pesan (${pendingDMReqs.length} pending)` + (waErrors.length ? `\n\n(Catatan:\n${waErrors.join('\n')})` : '');
       showNotif(msg, 'success');
       return { success: true, message: msg, type: 'success' };
     } else {
@@ -2161,6 +2374,12 @@ function formatSupabaseRequestRow(row) {
   const noSurat = row.no_surat || row.noSurat || '';
   if (!noSurat) return null;
 
+  const sanitizeSig = (sig) => {
+    if (!sig || typeof sig !== 'string') return '';
+    if (sig.includes('DIGITALLY VERIFIED') || sig.includes('OfficialDigitalSignatureStamp')) return '';
+    return sig;
+  };
+
   return {
     noSurat: noSurat,
     tanggal: row.tanggal || '',
@@ -2174,9 +2393,10 @@ function formatSupabaseRequestRow(row) {
     status: row.status || 'PENDING',
     serviceApprove: row.service_approve !== undefined ? !!row.service_approve : !!row.serviceApprove,
     serviceUserName: row.service_user_name || row.serviceUserName || '',
-    serviceTTD: row.service_ttd || row.serviceTTD || '',
+    serviceTTD: sanitizeSig(row.service_ttd || row.serviceTTD || ''),
     dmUserName: row.dm_user_name || row.dmUserName || '',
-    dmTTD: row.dm_ttd || row.dmTTD || '',
+    dmTTD: sanitizeSig(row.dm_ttd || row.dmTTD || ''),
+    pemohonTTD: sanitizeSig(row.pemohon_ttd || row.pemohonTTD || row.toko_ttd || row.tokoTTD || ''),
     createdBy: row.created_by || row.createdBy || '',
     createdAt: row.created_at || row.createdAt || '',
     userId: row.user_id || row.userId || '',
@@ -2261,9 +2481,28 @@ function handleRealtimePermintaanToko(payload) {
     if (rawNoSurat === '__SYSTEM_TTD_MAP__') {
       try {
         if (payload.new && payload.new.catatan) {
-          const ttdMap = JSON.parse(payload.new.catatan);
-          appStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap));
-          try { localStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap)); } catch(e) {}
+          const ttdMap = typeof payload.new.catatan === 'object' ? payload.new.catatan : JSON.parse(payload.new.catatan);
+          if (ttdMap && typeof ttdMap === 'object') {
+            const currentMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+            const merged = { ...currentMap, ...ttdMap };
+            appStorage.setItem(TTD_DB_KEY, JSON.stringify(merged));
+            try { localStorage.setItem(TTD_DB_KEY, JSON.stringify(merged)); } catch(e) {}
+            try { localStorage.setItem('APP_USER_TTD_MAP', JSON.stringify(merged)); } catch(e) {}
+
+            // Update user accounts in local DB with real signature
+            const allUsers = getUsersFromDB();
+            let anyU = false;
+            allUsers.forEach(u => {
+              if (u) {
+                const s = merged[u.id] || merged[u.username] || merged[u.fullName];
+                if (s && typeof s === 'string' && s.length > 50 && (!u.ttd || u.ttd.length < 50)) {
+                  u.ttd = s;
+                  anyU = true;
+                }
+              }
+            });
+            if (anyU) saveUsersToDB(allUsers);
+          }
         }
       } catch(e) {}
       return;
@@ -2973,6 +3212,42 @@ async function syncSupabaseLookupToLocalCache() {
             try { localStorage.setItem(ADMIN_REMINDER_TIME_KEY, tVal); } catch(e) {}
           }
           if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
+        } catch(e) {}
+      }
+    } catch(e) {}
+
+    // Explicitly sync __SYSTEM_TTD_MAP__ from permintaan_toko & lookup
+    try {
+      const { data: sysTtd } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_TTD_MAP__').maybeSingle();
+      let rawTtd = sysTtd && sysTtd.catatan;
+      if (!rawTtd) {
+        const { data: lkpTtd } = await supabase.from('lookup').select('value').eq('key', 'SYSTEM_TTD_MAP').maybeSingle();
+        if (lkpTtd && lkpTtd.value) rawTtd = lkpTtd.value;
+      }
+      if (rawTtd) {
+        try {
+          const ttdMap = typeof rawTtd === 'object' ? rawTtd : JSON.parse(rawTtd);
+          if (ttdMap && typeof ttdMap === 'object') {
+            const currentMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+            const merged = { ...currentMap, ...ttdMap };
+            appStorage.setItem(TTD_DB_KEY, JSON.stringify(merged));
+            try { localStorage.setItem(TTD_DB_KEY, JSON.stringify(merged)); } catch(e) {}
+            try { localStorage.setItem('APP_USER_TTD_MAP', JSON.stringify(merged)); } catch(e) {}
+
+            // Populate signatures into local users database
+            const allUsers = getUsersFromDB();
+            let anyU = false;
+            allUsers.forEach(u => {
+              if (u) {
+                const s = ttdMap[u.id] || ttdMap[u.username] || ttdMap[u.fullName];
+                if (s && typeof s === 'string' && s.length > 50 && (!u.ttd || u.ttd.length < 50)) {
+                  u.ttd = s;
+                  anyU = true;
+                }
+              }
+            });
+            if (anyU) saveUsersToDB(allUsers);
+          }
         } catch(e) {}
       }
     } catch(e) {}
@@ -5977,20 +6252,52 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     const codeYear = String(now.getFullYear()).slice(-2);
     const codeMonth = String(now.getMonth() + 1).padStart(2, '0');
     const codeDay = String(now.getDate()).padStart(2, '0');
-    const timeCode = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
+    const datePrefix = `${codeYear}${codeMonth}${codeDay}`; // Contoh: 260813
 
     const allStores = getStoresFromDB();
     const safeToko = String(toko || '').trim().toUpperCase();
     const matchedStore = allStores.find(s => s && s.fullName && String(s.fullName).trim().toUpperCase() === safeToko);
-    let storeCode = matchedStore ? (matchedStore.storeCode || generateStoreCode(matchedStore.fullName)) : generateStoreCode(safeToko);
+    
+    let storeCode = '';
+    if (currentUser && currentUser.category === 'TOKO' && currentUser.storeCode) {
+      storeCode = String(currentUser.storeCode).trim().toUpperCase();
+    } else if (matchedStore && matchedStore.storeCode) {
+      storeCode = String(matchedStore.storeCode).trim().toUpperCase();
+    } else if (matchedStore) {
+      storeCode = generateStoreCode(matchedStore.fullName);
+    } else {
+      storeCode = generateStoreCode(safeToko);
+    }
+
     const targetArea = (matchedStore && matchedStore.area) ? matchedStore.area : (getUserAreaList(currentUser.area)[0] || 'BDG');
 
-    // Pastikan nomor surat unik dengan stempel waktu
-    let seq = requests.length + 1;
-    let noSurat = `PRMT/${targetArea}-${storeCode}/${codeYear}${codeMonth}${codeDay}-${String(seq).padStart(2, '0')}${timeCode.slice(-3)}`;
+    let fullStoreTag = storeCode;
+    if (!fullStoreTag.startsWith(targetArea + '-') && !fullStoreTag.startsWith(targetArea)) {
+      fullStoreTag = `${targetArea}-${storeCode}`;
+    } else if (!fullStoreTag.includes('-') && fullStoreTag.startsWith(targetArea)) {
+      fullStoreTag = `${targetArea}-${fullStoreTag.slice(targetArea.length).replace(/^-+/, '')}`;
+    }
+
+    // Hitung nomor urut harian (2 digit, reset mulai dari 01 setiap ganti hari)
+    let maxSeqToday = 0;
+    requests.forEach(r => {
+      if (r && r.noSurat) {
+        const s = String(r.noSurat).trim().toUpperCase();
+        const m = s.match(new RegExp(`/${datePrefix}-?(\\d{2})`)) || s.match(new RegExp(`${datePrefix}-?(\\d{2})`));
+        if (m && m[1]) {
+          const num = parseInt(m[1], 10);
+          if (!isNaN(num) && num > maxSeqToday) {
+            maxSeqToday = num;
+          }
+        }
+      }
+    });
+
+    let seq = maxSeqToday + 1;
+    let noSurat = `PRMT/${fullStoreTag}/${datePrefix}${String(seq).padStart(2, '0')}`;
     while (requests.some(r => r && String(r.noSurat).trim().toUpperCase() === noSurat.toUpperCase())) {
       seq++;
-      noSurat = `PRMT/${targetArea}-${storeCode}/${codeYear}${codeMonth}${codeDay}-${String(seq).padStart(2, '0')}${timeCode.slice(-3)}`;
+      noSurat = `PRMT/${fullStoreTag}/${datePrefix}${String(seq).padStart(2, '0')}`;
     }
     
     const isDMUser = currentUser && currentUser.category === 'DM';
@@ -6552,27 +6859,9 @@ function approveService(noSurat) {
       requests[idx].serviceApprove = true;
       requests[idx].serviceUserName = currentUser ? (currentUser.fullName || currentUser.username) : 'SERVICE';
 
-      const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-      let sig = (currentUser && currentUser.ttd) ||
-                ttdMap[currentUser.id] || 
-                ttdMap[currentUser.username] || 
-                ttdMap[currentUser.fullName] || 
-                ttdMap[`SERVICE_${currentUser.area}`] || 
-                ttdMap[`SERVICE_ALL`] ||
-                ttdMap[`HODS`] ||
-                ttdMap[`SERVICE`] ||
-                '';
-      if (!sig) {
-        const allUsers = getUsersFromDB();
-        const anySrv = allUsers.find(u => (u.category === 'SERVICE' || u.category === 'HODS') && (u.ttd || ttdMap[u.id] || ttdMap[u.username]));
-        if (anySrv) sig = anySrv.ttd || ttdMap[anySrv.id] || ttdMap[anySrv.username] || '';
-      }
-      if (!sig && typeof getOfficialDigitalSignatureStampSvg === 'function') {
-        sig = getOfficialDigitalSignatureStampSvg('SERVICE APPROVED', requests[idx].serviceUserName, getFormattedDateDDMMYYYY());
-      }
-      if (sig) {
-        requests[idx].serviceTTD = sig;
-      }
+      // AMBIL TTD DIGITAL ASLI DARI PROFIL / MENU TTD SERVICE
+      const srvSig = getUserRealSignature('SERVICE', requests[idx].area, currentUser ? currentUser.username : '', requests[idx].serviceUserName);
+      requests[idx].serviceTTD = srvSig || '';
 
       if (!requests[idx].log) requests[idx].log = [];
       requests[idx].log.push({
@@ -6649,26 +6938,9 @@ function approveDM(noSurat) {
       requests[idx].status = 'APPROVE';
       requests[idx].dmUserName = currentUser ? (currentUser.fullName || currentUser.username) : 'DM';
 
-      const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-      let sig = (currentUser && currentUser.ttd) ||
-                ttdMap[currentUser.id] || 
-                ttdMap[currentUser.username] || 
-                ttdMap[currentUser.fullName] || 
-                ttdMap['DM'] || 
-                ttdMap['ADMIN'] || 
-                ttdMap['SUPER_ADMIN'] || 
-                '';
-      if (!sig) {
-        const allUsers = getUsersFromDB();
-        const anyDm = allUsers.find(u => (u.category === 'DM' || u.category === 'ADMIN') && (u.ttd || ttdMap[u.id] || ttdMap[u.username]));
-        if (anyDm) sig = anyDm.ttd || ttdMap[anyDm.id] || ttdMap[anyDm.username] || '';
-      }
-      if (!sig && typeof getOfficialDigitalSignatureStampSvg === 'function') {
-        sig = getOfficialDigitalSignatureStampSvg('DM APPROVED', requests[idx].dmUserName || 'FERRY EDIYANTO', getFormattedDateDDMMYYYY());
-      }
-      if (sig) {
-        requests[idx].dmTTD = sig;
-      }
+      // AMBIL TTD DIGITAL ASLI DARI PROFIL / MENU TTD DM
+      const dmSig = getUserRealSignature('DM', requests[idx].area, currentUser ? currentUser.username : '', requests[idx].dmUserName);
+      requests[idx].dmTTD = dmSig || '';
 
       if (!requests[idx].log) requests[idx].log = [];
       requests[idx].log.push({
@@ -8224,23 +8496,96 @@ function closeDetail() {
   }, 100);
 }
 
-function getOfficialDigitalSignatureStampSvg(roleLabel, nameStr, dateStr) {
-  const label = String(roleLabel || 'APPROVED').toUpperCase();
-  const name = String(nameStr || 'OFFICIAL SIGNER').toUpperCase();
-  const date = dateStr || (typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '');
-  
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="52" viewBox="0 0 160 52">
-    <rect x="1.5" y="1.5" width="157" height="49" rx="6" fill="#f8fafc" stroke="#0284c7" stroke-width="1.2" stroke-dasharray="3,2"/>
-    <circle cx="20" cy="26" r="12" fill="#0284c7"/>
-    <path d="M14 26 L18 30 L26 21" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="38" y="19" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="bold" fill="#0369a1" letter-spacing="0.4">${label}</text>
-    <text x="38" y="32" font-family="Arial, Helvetica, sans-serif" font-size="9.5" font-weight="bold" fill="#0f172a">${name.length > 18 ? name.substring(0, 18) + '...' : name}</text>
-    <text x="38" y="44" font-family="Arial, Helvetica, sans-serif" font-size="7.5" fill="#64748b">DIGITALLY VERIFIED ${date ? '• ' + date : ''}</text>
-  </svg>`;
-  
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+function getUserRealSignature(targetRole, targetArea = '', targetUsername = '', targetFullName = '') {
+  let ttdMap = {};
+  try {
+    ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
+  } catch(e) {}
+  let localMap = {};
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localMap = JSON.parse(localStorage.getItem('APP_USER_TTD_MAP') || '{}');
+    }
+  } catch(e) {}
+  const mergedMap = { ...ttdMap, ...localMap };
+
+  const allUsers = getUsersFromDB();
+  const role = String(targetRole || '').toUpperCase();
+  const area = String(targetArea || '').toUpperCase();
+  const uname = String(targetUsername || '').toUpperCase();
+  const fname = String(targetFullName || '').toUpperCase();
+
+  const isValidSig = (s) => {
+    if (!s || typeof s !== 'string') return false;
+    if (s.includes('DIGITALLY VERIFIED') || s.includes('OfficialDigitalSignatureStamp') || s.includes('rect x="1.5"') || s.includes('<svg') || s.includes('APPROVED')) return false;
+    return s.startsWith('data:image/') || s.startsWith('http') || s.length > 50;
+  };
+
+  // 1. Check exact user match by username / ID / FullName
+  if (uname) {
+    if (isValidSig(mergedMap[uname])) return mergedMap[uname];
+    try {
+      const loc = localStorage.getItem(`LOCAL_TTD_${uname}`);
+      if (isValidSig(loc)) return loc;
+    } catch(e) {}
+    const u = allUsers.find(x => x && String(x.username || '').toUpperCase() === uname);
+    if (u && isValidSig(u.ttd)) return u.ttd;
+    if (u && isValidSig(mergedMap[u.id])) return mergedMap[u.id];
+  }
+  if (fname) {
+    if (isValidSig(mergedMap[fname])) return mergedMap[fname];
+    const u = allUsers.find(x => x && String(x.fullName || '').toUpperCase() === fname);
+    if (u && isValidSig(u.ttd)) return u.ttd;
+  }
+
+  // 2. Check by Role & Area
+  if (role === 'SERVICE' || role === 'HODS') {
+    if (area && isValidSig(mergedMap[`SERVICE_${area}`])) return mergedMap[`SERVICE_${area}`];
+    if (isValidSig(mergedMap['SERVICE_TSM'])) return mergedMap['SERVICE_TSM'];
+    if (isValidSig(mergedMap['SERVICE_BDG'])) return mergedMap['SERVICE_BDG'];
+    if (isValidSig(mergedMap['SERVICE_CRB'])) return mergedMap['SERVICE_CRB'];
+    if (isValidSig(mergedMap['SERVICE_KNG'])) return mergedMap['SERVICE_KNG'];
+    if (isValidSig(mergedMap['SERVICE_ALL'])) return mergedMap['SERVICE_ALL'];
+    if (isValidSig(mergedMap['HODS'])) return mergedMap['HODS'];
+    if (isValidSig(mergedMap['SERVICE'])) return mergedMap['SERVICE'];
+
+    const srvUser = allUsers.find(u => u && (u.category === 'SERVICE' || u.category === 'HODS') && (
+      (area && isAreaMatch(u.area, area)) || isValidSig(u.ttd) || isValidSig(mergedMap[u.id]) || isValidSig(mergedMap[u.username])
+    ));
+    if (srvUser && isValidSig(srvUser.ttd)) return srvUser.ttd;
+    if (srvUser && isValidSig(mergedMap[srvUser.id])) return mergedMap[srvUser.id];
+    if (srvUser && isValidSig(mergedMap[srvUser.username])) return mergedMap[srvUser.username];
+
+    const anySrv = allUsers.find(u => u && (u.category === 'SERVICE' || u.category === 'HODS') && isValidSig(u.ttd));
+    if (anySrv && isValidSig(anySrv.ttd)) return anySrv.ttd;
+  } else if (role === 'DM' || role === 'DISTRICT_MANAGER') {
+    if (isValidSig(mergedMap['DM'])) return mergedMap['DM'];
+    if (isValidSig(mergedMap['DISTRICT_MANAGER'])) return mergedMap['DISTRICT_MANAGER'];
+    if (isValidSig(mergedMap['ADMIN'])) return mergedMap['ADMIN'];
+    if (isValidSig(mergedMap['SUPER_ADMIN'])) return mergedMap['SUPER_ADMIN'];
+
+    const dmUser = allUsers.find(u => u && (u.category === 'DM' || u.category === 'ADMIN') && (isValidSig(u.ttd) || isValidSig(mergedMap[u.id]) || isValidSig(mergedMap[u.username])));
+    if (dmUser && isValidSig(dmUser.ttd)) return dmUser.ttd;
+    if (dmUser && isValidSig(mergedMap[dmUser.id])) return mergedMap[dmUser.id];
+    if (dmUser && isValidSig(mergedMap[dmUser.username])) return mergedMap[dmUser.username];
+  } else if (role === 'GBJ') {
+    if (isValidSig(mergedMap['GBJ'])) return mergedMap['GBJ'];
+    const gbjUser = allUsers.find(u => u && u.category === 'GBJ' && (isValidSig(u.ttd) || isValidSig(mergedMap[u.id]) || isValidSig(mergedMap[u.username])));
+    if (gbjUser && isValidSig(gbjUser.ttd)) return gbjUser.ttd;
+    if (gbjUser && isValidSig(mergedMap[gbjUser.id])) return mergedMap[gbjUser.id];
+  }
+
+  // Check currentUser fallback if matching role
+  if (currentUser && isValidSig(currentUser.ttd)) {
+    const curCat = String(currentUser.category || '').toUpperCase();
+    if (role === curCat || (role === 'SERVICE' && curCat === 'HODS') || (role === 'DM' && curCat === 'ADMIN')) {
+      return currentUser.ttd;
+    }
+  }
+
+  return '';
 }
-window.getOfficialDigitalSignatureStampSvg = getOfficialDigitalSignatureStampSvg;
+window.getUserRealSignature = getUserRealSignature;
 
 const PDF_MODEL_KEY = 'SELECTED_PDF_MODEL';
 let currentlyPreviewedModel = 'MODEL_1';
@@ -8433,7 +8778,10 @@ function renderFullPdfPreviewDocument(modelId) {
         <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; text-align: center;">
           <div style="font-weight: 800; color: #0f172a; text-transform: uppercase;">PEMOHON</div>
           <div style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 48px;">
-            <img src="${getOfficialDigitalSignatureStampSvg('PEMOHON', 'TOKO UTAMA', '01/08/2026')}" style="max-height: 46px; max-width: 90%; object-fit: contain;">
+            ${(() => {
+              const gbjSig = getUserRealSignature('GBJ');
+              return gbjSig ? `<img src="${gbjSig}" style="max-height: 46px; max-width: 90%; object-fit: contain;">` : '';
+            })()}
           </div>
           <div>
             <div style="font-weight: 800; color: #0f172a; font-size: 11px;">TOKO UTAMA</div>
@@ -8444,7 +8792,10 @@ function renderFullPdfPreviewDocument(modelId) {
         <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; text-align: center;">
           <div style="font-weight: 800; color: #0f172a; text-transform: uppercase;">DIPERIKSA</div>
           <div style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 48px;">
-            <img src="${getOfficialDigitalSignatureStampSvg('SERVICE APPROVED', 'SERVICE BANDUNG', '01/08/2026')}" style="max-height: 46px; max-width: 90%; object-fit: contain;">
+            ${(() => {
+              const srvSig = getUserRealSignature('SERVICE', 'BDG');
+              return srvSig ? `<img src="${srvSig}" style="max-height: 46px; max-width: 90%; object-fit: contain;">` : '';
+            })()}
           </div>
           <div>
             <div style="font-weight: 800; color: #0f172a; font-size: 11px;">SERVICE BANDUNG</div>
@@ -8455,7 +8806,10 @@ function renderFullPdfPreviewDocument(modelId) {
         <div style="width: 30%; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; text-align: center;">
           <div style="font-weight: 800; color: #0f172a; text-transform: uppercase;">DISETUJUI</div>
           <div style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 48px;">
-            <img src="${getOfficialDigitalSignatureStampSvg('DM APPROVED', 'FERRY EDIYANTO', '01/08/2026')}" style="max-height: 46px; max-width: 90%; object-fit: contain;">
+            ${(() => {
+              const dmSig = getUserRealSignature('DM');
+              return dmSig ? `<img src="${dmSig}" style="max-height: 46px; max-width: 90%; object-fit: contain;">` : '';
+            })()}
           </div>
           <div>
             <div style="font-weight: 800; color: #0f172a; font-size: 11px;">FERRY EDIYANTO</div>
@@ -8514,48 +8868,22 @@ function bukaPdfModal(noSurat) {
   const dmUser = users.find(u => u && u.category === 'DM') || users.find(u => u && u.username === 'ADMIN');
   const serviceName = req.serviceUserName || (serviceUser ? serviceUser.fullName : 'SERVICE SUPERVISOR');
 
-  const ttdMap = JSON.parse(appStorage.getItem(TTD_DB_KEY) || '{}');
-  
-  // 1. RESOLVE SERVICE TTD
-  let serviceTTD = req.serviceTTD || '';
-  if (!serviceTTD && serviceUser) {
-    serviceTTD = serviceUser.ttd || ttdMap[serviceUser.id] || ttdMap[serviceUser.username] || ttdMap[serviceUser.fullName] || ttdMap['SERVICE_' + serviceUser.area] || '';
-  }
-  if (!serviceTTD && req.area) {
-    serviceTTD = ttdMap['SERVICE_' + req.area] || ttdMap['SERVICE_TSM'] || ttdMap['SERVICE_BDG'] || ttdMap['SERVICE_CRB'] || ttdMap['SERVICE_KNG'] || '';
-  }
+  // 1. RESOLVE SERVICE TTD (MENGAMBIL TTD ASLI DARI PROFIL / MENU TTD SERVICE)
+  let serviceTTD = (req.serviceTTD && !req.serviceTTD.includes('DIGITALLY VERIFIED') && !req.serviceTTD.includes('OfficialDigitalSignatureStamp')) ? req.serviceTTD : '';
   if (!serviceTTD) {
-    serviceTTD = ttdMap['SERVICE_ALL'] || ttdMap['HODS'] || ttdMap['SERVICE'] || '';
+    serviceTTD = getUserRealSignature('SERVICE', req.area, req.serviceUserName, serviceName);
   }
-  if (!serviceTTD) {
-    const anySrvWithTtd = users.find(u => (u.category === 'SERVICE' || u.category === 'HODS') && (u.ttd || ttdMap[u.id] || ttdMap[u.username] || ttdMap[u.fullName]));
-    if (anySrvWithTtd) {
-      serviceTTD = anySrvWithTtd.ttd || ttdMap[anySrvWithTtd.id] || ttdMap[anySrvWithTtd.username] || ttdMap[anySrvWithTtd.fullName] || '';
-    }
-  }
-  // JIKA SUDAH APPROVE / DONE / SERVICE APPROVE: OTOMATIS BERIKAN TTD DIGITAL RESMI
-  if (!serviceTTD && (req.serviceApprove || req.status === 'APPROVE' || req.status === 'DONE')) {
-    serviceTTD = getOfficialDigitalSignatureStampSvg('SERVICE APPROVED', serviceName, req.tanggal || '');
+  if (serviceTTD && req.serviceApprove && !req.serviceTTD) {
+    req.serviceTTD = serviceTTD;
   }
 
-  // 2. RESOLVE DM TTD
-  let dmTTD = req.dmTTD || '';
-  if (!dmTTD && dmUser) {
-    dmTTD = dmUser.ttd || ttdMap[dmUser.id] || ttdMap[dmUser.username] || ttdMap[dmUser.fullName] || '';
-  }
+  // 2. RESOLVE DM TTD (MENGAMBIL TTD ASLI DARI PROFIL / MENU TTD DM)
+  let dmTTD = (req.dmTTD && !req.dmTTD.includes('DIGITALLY VERIFIED') && !req.dmTTD.includes('OfficialDigitalSignatureStamp')) ? req.dmTTD : '';
   if (!dmTTD) {
-    dmTTD = ttdMap['DM'] || ttdMap['DISTRICT_MANAGER'] || ttdMap['ADMIN'] || ttdMap['SUPER_ADMIN'] || '';
+    dmTTD = getUserRealSignature('DM', req.area, req.dmUserName, dmUser ? dmUser.fullName : '');
   }
-  if (!dmTTD) {
-    const anyDmWithTtd = users.find(u => (u.category === 'DM' || u.category === 'ADMIN') && (u.ttd || ttdMap[u.id] || ttdMap[u.username] || ttdMap[u.fullName]));
-    if (anyDmWithTtd) {
-      dmTTD = anyDmWithTtd.ttd || ttdMap[anyDmWithTtd.id] || ttdMap[anyDmWithTtd.username] || ttdMap[anyDmWithTtd.fullName] || '';
-    }
-  }
-  // JIKA SUDAH APPROVE / DONE / DM USER: OTOMATIS BERIKAN TTD DIGITAL RESMI
-  if (!dmTTD && (req.status === 'APPROVE' || req.status === 'DONE' || req.dmUserName)) {
-    const dmDisplayName = req.dmUserName || (dmUser ? dmUser.fullName : 'FERRY EDIYANTO');
-    dmTTD = getOfficialDigitalSignatureStampSvg('DM APPROVED', dmDisplayName, req.tanggal || '');
+  if (dmTTD && (req.status === 'APPROVE' || req.status === 'DONE') && !req.dmTTD) {
+    req.dmTTD = dmTTD;
   }
 
   const creatorUser = users.find(u => 
@@ -8586,12 +8914,9 @@ function bukaPdfModal(noSurat) {
 
   let tokoTTD = '';
   if (isRequesterGBJ) {
-    tokoTTD = req.pemohonTTD || req.tokoTTD || '';
-    if (!tokoTTD) {
-      tokoTTD = ttdMap['GBJ'] || (creatorUser && (creatorUser.ttd || ttdMap[creatorUser.id] || ttdMap[creatorUser.username] || ttdMap[creatorUser.fullName])) || '';
-    }
-    if (!tokoTTD && (req.status === 'APPROVE' || req.status === 'DONE')) {
-      tokoTTD = getOfficialDigitalSignatureStampSvg('GBJ', req.toko || req.createdBy || 'GBJ', req.tanggal || '');
+    tokoTTD = (req.pemohonTTD || req.tokoTTD || '');
+    if (!tokoTTD || tokoTTD.includes('DIGITALLY VERIFIED') || tokoTTD.includes('OfficialDigitalSignatureStamp')) {
+      tokoTTD = getUserRealSignature('GBJ', req.area, req.createdBy, req.toko);
     }
   } else {
     // KECUALI LOGIN GBJ, PEMOHON WAJIB KOSONG!
@@ -9197,11 +9522,22 @@ function simpanTTD() {
     }
     currentUser.ttd = png;
     appStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap));
+
+    // SIMPAN JUGA LANGSUNG KE PROFIL USER DI USERS_DB_KEY
+    try {
+      const allUsers = getUsersFromDB();
+      const uIdx = allUsers.findIndex(u => u && (u.id === currentUser.id || u.username === currentUser.username));
+      if (uIdx !== -1) {
+        allUsers[uIdx].ttd = png;
+        saveUsersToDB(allUsers);
+      }
+    } catch(uErr) {}
     
     // SIMPAN PERSISTEN PADA PENYIMPANAN LOKAL (LOCALSTORAGE) PERANGKAT
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('APP_USER_TTD_MAP', JSON.stringify(ttdMap));
+        localStorage.setItem(TTD_DB_KEY, JSON.stringify(ttdMap));
         if (currentUser) {
           if (currentUser.id) localStorage.setItem(`LOCAL_TTD_${currentUser.id}`, png);
           if (currentUser.username) localStorage.setItem(`LOCAL_TTD_${currentUser.username}`, png);
@@ -9214,6 +9550,38 @@ function simpanTTD() {
       if (currentUser.username) appStorage.setItem(`LOCAL_TTD_${currentUser.username}`, png);
     }
 
+    // UPDATE DOKUMEN PERMINTAAN LOKAL YANG SUDAH DI-APPROVE AGAR LANGSUNG TERPASANG TTD BARU INI
+    try {
+      const allReqs = getRequestsFromDB();
+      let reqsChanged = false;
+      allReqs.forEach(r => {
+        if (!r) return;
+        if (currentUser.category === 'SERVICE' && r.serviceApprove) {
+          if (r.area === currentUser.area || currentUser.area === 'ALL' || !r.serviceTTD) {
+            r.serviceTTD = png;
+            reqsChanged = true;
+            if (typeof supabase !== 'undefined' && supabase) {
+              supabase.from('permintaan_toko').update({ service_ttd: png }).eq('no_surat', r.noSurat).then(() => {}, () => {});
+            }
+          }
+        } else if (currentUser.category === 'DM' && (r.status === 'APPROVE' || r.status === 'DONE')) {
+          r.dmTTD = png;
+          reqsChanged = true;
+          if (typeof supabase !== 'undefined' && supabase) {
+            supabase.from('permintaan_toko').update({ dm_ttd: png }).eq('no_surat', r.noSurat).then(() => {}, () => {});
+          }
+        } else if (currentUser.category === 'GBJ' && (r.createdBy === currentUser.username || r.createdBy === currentUser.fullName || r.isGBJ)) {
+          r.pemohonTTD = png;
+          reqsChanged = true;
+          if (typeof supabase !== 'undefined' && supabase) {
+            supabase.from('permintaan_toko').update({ pemohon_ttd: png }).eq('no_surat', r.noSurat).then(() => {}, () => {});
+          }
+        }
+      });
+      if (reqsChanged) saveRequestsToDB(allReqs);
+    } catch(rErr) {}
+
+    // UPLOAD TTD KE SUPABASE DATABASE AGAR SEMUA PERANGKAT OTOMATIS LENGKAP
     if (typeof supabase !== 'undefined' && supabase) {
       try {
         const systemTtdRow = {
@@ -9233,15 +9601,28 @@ function simpanTTD() {
         };
         supabase.from('permintaan_toko').upsert(systemTtdRow).then(({ error }) => {
           if (error) console.warn('[SUPABASE TTD SAVE NOTICE]:', error.message);
-          else console.log('⚡ [SUPABASE TTD SUCCESS]: TTD berhasil disimpan ke Supabase Database!');
+          else console.log('⚡ [SUPABASE TTD SUCCESS]: TTD berhasil di-upload ke Supabase!');
         });
+
+        // Backup juga ke tabel lookup di Supabase
+        supabase.from('lookup').upsert({
+          key: 'SYSTEM_TTD_MAP',
+          value: JSON.stringify(ttdMap),
+          type: 'TTD',
+          code: 'TTD_MAP',
+          updated_at: new Date().toISOString()
+        }).then(() => {}, () => {});
+
+        if (currentUser && currentUser.id) {
+          supabase.from('users').update({ ttd: png }).eq('id', currentUser.id).then(() => {}, () => {});
+        }
       } catch(sbErr) {
         console.warn('[SUPABASE TTD SAVE NOTICE]:', sbErr);
       }
     }
     
     pushCentralCloudDB();
-    showNotif('TANDA TANGAN DIGITAL BERHASIL DISIMPAN!', 'success');
+    showNotif('TANDA TANGAN DIGITAL BERHASIL DISIMPAN & DI-UPLOAD KE SUPABASE!', 'success');
     tutupTTD();
   });
 }

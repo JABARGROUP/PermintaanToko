@@ -512,6 +512,38 @@ section#masterDbPage.page.active,
   transform: none !important;
 }
 
+/* RESPONSIVE HP / MOBILE: POPUP BANTUAN CHAT PAS DI TENGAH-TENGAH LAYAR */
+@media (max-width: 640px) {
+  .popupBantuan,
+  #helpModal,
+  #chatWindow {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    bottom: 80px !important;
+    width: 100% !important;
+    max-width: calc(100vw - 16px) !important;
+    display: none;
+    margin: 0 auto !important;
+  }
+  .popupBantuan.show,
+  #helpModal.show,
+  #chatWindow.show {
+    display: block !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+  }
+  .chatBox,
+  #helpModal .chatBox,
+  .popupBantuan .chatBox {
+    width: 100% !important;
+    max-width: calc(100vw - 16px) !important;
+    margin: 0 auto !important;
+    height: 390px !important;
+  }
+}
+
 .chatHeader {
   background: var(--primary);
   color: #ffffff;
@@ -2433,7 +2465,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   display: none;
   align-items: flex-start !important;
   justify-content: center !important;
-  padding-top: 12px !important;
+  padding-top: 4px !important;
 }
 
 #popupTambahToko.show {
@@ -2443,7 +2475,7 @@ body.design-mode-3d-isometric .dashboardTable th {
 #popupTambahToko .popupBox {
   width: 480px !important;
   max-width: 92vw !important;
-  max-height: 86vh !important;
+  max-height: 88vh !important;
   overflow: hidden !important;
   margin: 0 auto !important;
   padding: 0 !important;
