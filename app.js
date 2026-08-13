@@ -53,15 +53,44 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
   }
 
   const startTime = performance.now();
-  let latencyMs = 32;
+  let latencyMs = 28;
+  let isSbConnected = false;
+
+  let sbReqCount = 0;
+  let sbUserCount = 0;
+  let sbStoreCount = 0;
+  let sbChatCount = 0;
 
   try {
     if (typeof supabase !== 'undefined' && supabase) {
-      await supabase.from('lookup').select('key').limit(1);
+      const [resReq, resUser, resStore, resChat] = await Promise.allSettled([
+        supabase.from('permintaan_toko').select('*', { count: 'exact', head: true }),
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('toko_list').select('*', { count: 'exact', head: true }),
+        supabase.from('chat_messages').select('*', { count: 'exact', head: true })
+      ]);
+
       const endTime = performance.now();
       latencyMs = Math.max(12, Math.round(endTime - startTime));
+      isSbConnected = true;
+      window.isSupabaseOnline = true;
+
+      if (resReq.status === 'fulfilled' && resReq.value && typeof resReq.value.count === 'number') {
+        sbReqCount = resReq.value.count;
+      }
+      if (resUser.status === 'fulfilled' && resUser.value && typeof resUser.value.count === 'number') {
+        sbUserCount = resUser.value.count;
+      }
+      if (resStore.status === 'fulfilled' && resStore.value && typeof resStore.value.count === 'number') {
+        sbStoreCount = resStore.value.count;
+      }
+      if (resChat.status === 'fulfilled' && resChat.value && typeof resChat.value.count === 'number') {
+        sbChatCount = resChat.value.count;
+      }
     }
-  } catch(e) {}
+  } catch(e) {
+    console.warn('[SUPABASE METRICS FETCH NOTICE]:', e);
+  }
 
   // 1. Data Calculation
   const reqs = typeof getRequestsFromDB === 'function' ? getRequestsFromDB() : [];
@@ -78,16 +107,25 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
   });
   const storageMB = Math.round((totalPhotoBytes / (1024 * 1024)) * 10) / 10;
 
-  // DB Size: Base Postgres + System Tables (~27MB) + JSON Documents
-  const baseDbMB = 27;
-  const docEstimateMB = Math.round((reqs.length * 0.015 + users.length * 0.005) * 10) / 10;
+  // Total Records across Supabase & Local
+  const totalEffectiveReqs = Math.max(reqs.length, sbReqCount);
+  const totalEffectiveUsers = Math.max(users.length, sbUserCount);
+  const totalEffectiveStores = Math.max(0, sbStoreCount);
+  const totalEffectiveChats = Math.max(0, sbChatCount);
+
+  // Live DB Size Calculation: Base Postgres (~28.4MB) + dynamic table size
+  const baseDbMB = 28.4;
+  const docEstimateMB = Math.round((totalEffectiveReqs * 0.045 + totalEffectiveUsers * 0.02 + totalEffectiveStores * 0.01 + totalEffectiveChats * 0.005) * 10) / 10;
   const totalDbMB = Math.min(500, Math.round((baseDbMB + docEstimateMB) * 10) / 10);
 
-  // Egress (Bandwidth transfer): Base ~39 MB + dynamic egress
-  const egressMB = 39;
+  // Live Egress: Base bandwidth + transfer
+  const baseEgressMB = 39.2;
+  const dynamicEgressMB = Math.round((totalEffectiveReqs * 0.08 + totalEffectiveChats * 0.02 + (storageMB * 0.4)) * 10) / 10;
+  const egressMB = Math.round((baseEgressMB + dynamicEgressMB) * 10) / 10;
 
-  // MAU (Monthly Active Users): Active registered users/stores
-  const activeUserCount = users.filter(u => u && u.username && String(u.username).toUpperCase() !== 'SYSTEM').length;
+  // Live MAU (Monthly Active Users & Stores): Total registered users + stores
+  const localActiveUserCount = users.filter(u => u && u.username && String(u.username).toUpperCase() !== 'SYSTEM').length;
+  const activeUserCount = Math.max(localActiveUserCount, totalEffectiveUsers + totalEffectiveStores);
 
   // 2. DOM Updates
   const latencyBadge = document.getElementById('usageLatencyBadge');
@@ -95,12 +133,12 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
 
   const statusTitle = document.getElementById('usageStatusTitle');
   if (statusTitle) {
-    const isOnline = !!window.isSupabaseOnline || (typeof supabase !== 'undefined' && !!supabase);
+    const isOnline = isSbConnected || !!window.isSupabaseOnline;
     statusTitle.textContent = isOnline ? 'STATUS: ONLINE (REALTIME AKTIF)' : 'STATUS: OFFLINE / TERPUTUS';
     statusTitle.style.color = isOnline ? '#10b981' : '#ef4444';
   }
 
-  // Update Egress (39 MB / 5 GB)
+  // Update Egress (e.g. 39.8 MB / 5 GB)
   const egressText = document.getElementById('usageEgressText');
   if (egressText) egressText.textContent = `${egressMB} MB`;
   const egressPct = (egressMB / (5 * 1024)) * 100;
@@ -110,7 +148,7 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
     svgEgressArc.setAttribute('stroke-dashoffset', String(offset));
   }
 
-  // Update Database Size (27 MB / 500 MB)
+  // Update Database Size (e.g. 28.5 MB / 500 MB)
   const dbText = document.getElementById('usageDbText');
   if (dbText) dbText.textContent = `${totalDbMB} MB`;
   const dbPct = (totalDbMB / 500) * 100;
@@ -120,7 +158,7 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
     svgDbArc.setAttribute('stroke-dashoffset', String(offset));
   }
 
-  // Update MAU (0 / 50.000)
+  // Update MAU
   const mauText = document.getElementById('usageMauText');
   if (mauText) mauText.textContent = `${activeUserCount}`;
   const mauPct = (activeUserCount / 50000) * 100;
@@ -130,7 +168,7 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
     svgMauArc.setAttribute('stroke-dashoffset', String(offset));
   }
 
-  // Update File Storage (0 MB / 1 GB)
+  // Update File Storage
   const storageText = document.getElementById('usageStorageText');
   if (storageText) storageText.textContent = `${storageMB} MB`;
   const storagePct = (storageMB / 1024) * 100;
@@ -148,6 +186,8 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
     const ss = String(now.getSeconds()).padStart(2, '0');
     lastUpdated.textContent = `Update: ${hh}:${mm}:${ss} WIB`;
   }
+
+  updateGlobalConnectionDotStatus();
 
   if (isRefresh) {
     hideLoading();
@@ -199,6 +239,9 @@ async function pingSupabaseKeepAlive() {
 }
 try {
   pingSupabaseKeepAlive();
+  setTimeout(() => {
+    if (typeof initSupabaseRealtimeEngine === 'function') initSupabaseRealtimeEngine();
+  }, 100);
 } catch (e) {}
 
 // FIREBASE LIVE CONNECTION MONITOR
