@@ -5846,31 +5846,26 @@ body:has(#masterDbPage.active) {
 #popupNotifList .popupNotifCard {
   width: 480px !important;
   max-width: 92vw !important;
-  max-height: 65vh !important;
+  max-height: calc(100vh - 120px) !important;
   display: flex !important;
   flex-direction: column !important;
-  margin-top: 8px !important;
-  margin-bottom: auto !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
+  margin: auto !important;
   transform: none !important;
   overflow: hidden !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
 }
 
 #popupNotifList #notifListBody {
-  max-height: 38vh !important;
-  min-height: 180px !important;
-  flex: 1 1 auto !important;
+  max-height: 220px !important;
+  min-height: 80px !important;
   overflow-y: auto !important;
 }
 
 #popupNotif,
 #popupNotifList {
-  align-items: flex-start !important;
+  align-items: center !important;
   justify-content: center !important;
-  padding-top: 4vh !important;
-  padding-bottom: 20px !important;
+  padding: 12px !important;
 }
 
 #popupNotif .popupNotifCard,
@@ -5912,11 +5907,11 @@ body:has(#masterDbPage.active) {
 
 @media (max-width: 640px) {
   #popupNotifList,
-  #popupNotif,
-  .popupOverlay {
-    padding-top: 4px !important;
-    padding-bottom: 75px !important;
-    align-items: flex-start !important;
+  #popupNotif {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px !important;
+    padding-bottom: calc(52px + 2cm) !important;
   }
   #confirmOverlay {
     align-items: center !important;
@@ -5925,14 +5920,13 @@ body:has(#masterDbPage.active) {
   #popupNotifList .popupNotifCard,
   #popupNotif .popupNotifCard,
   #popupNotifCard {
-    margin-top: 0 !important;
-    max-height: 62vh !important;
+    margin: auto !important;
+    max-height: calc(100vh - 160px) !important;
     height: auto !important;
   }
   #popupNotifList #notifListBody {
-    max-height: 38vh !important;
-    min-height: 180px !important;
-    flex: 1 1 auto !important;
+    max-height: 190px !important;
+    min-height: 80px !important;
   }
 }
 
@@ -6249,11 +6243,11 @@ html body .cardStat .icon {
   border-radius: 10px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 1MM (56PX) DI ATAS BOTTOM MENU */
+/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 2CM DI ATAS BOTTOM MENU */
 @media (max-width: 640px) {
   html body .page.active {
-    height: calc(100vh - 56px) !important; /* 52px height bottomMenu + 4px (1mm) gap */
-    max-height: calc(100vh - 56px) !important;
+    height: calc(100vh - 52px - 2cm) !important; /* 52px height bottomMenu + 2cm gap */
+    max-height: calc(100vh - 52px - 2cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6278,26 +6272,23 @@ html body .cardStat .icon {
   }
 
   #popupNotifList,
-  #popupNotif,
-  .popupOverlay {
-    padding-top: 4px !important;
-    padding-bottom: 56px !important; /* 52px height bottomMenu + 4px (1mm) gap */
-    align-items: flex-start !important;
+  #popupNotif {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px !important;
+    padding-bottom: calc(52px + 2cm) !important;
   }
 
   #popupNotifList .popupNotifCard,
   #popupNotif .popupNotifCard,
   #popupNotifCard {
-    margin-top: 0 !important;
-    max-height: 62vh !important;
+    margin: auto !important;
+    max-height: calc(100vh - 160px) !important;
     height: auto !important;
   }
 
   #popupNotifList #notifListBody {
-    max-height: 38vh !important;
-    min-height: 180px !important;
-    flex: 1 1 auto !important;
+    max-height: 190px !important;
+    min-height: 80px !important;
   }
 }
-
-
