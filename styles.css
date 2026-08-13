@@ -378,12 +378,12 @@ body.light-mode .aesthetic-orb-3 {
 
 .page {
   display: none !important;
-  padding: 16px 8px !important;
+  padding: 16px 0 !important;
   animation: fade .25s ease-out;
   padding-bottom: 95px;
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 auto;
+  width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
+  margin: 0 auto !important;
 }
 
 .page.active {
@@ -486,12 +486,12 @@ section#masterDbPage.page.active,
   margin: 0 !important;
   width: 40px !important;
   height: 40px !important;
-  border-radius: 12px !important;
+  border-radius: 5px !important;
 }
 
 .theme-toggle-btn {
   border: 1px solid var(--border-color);
-  border-radius: 12px !important;
+  border-radius: 5px !important;
   background: var(--bg-box);
   color: var(--primary);
   display: flex;
@@ -514,7 +514,7 @@ section#masterDbPage.page.active,
 
 .notif-bell-btn {
   border: 1px solid var(--border-color);
-  border-radius: 12px !important;
+  border-radius: 5px !important;
   background: var(--bg-box);
   color: var(--primary);
   display: none;
@@ -541,7 +541,7 @@ section#masterDbPage.page.active,
   font-weight: 800;
   min-width: 18px;
   height: 18px;
-  border-radius: 9px;
+  border-radius: 5px !important;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -553,7 +553,7 @@ section#masterDbPage.page.active,
 /* FLOATING HELP / CHAT BUTTON & UNREAD BADGE */
 .helpButton {
   border: 1px solid var(--border-color);
-  border-radius: 12px !important;
+  border-radius: 5px !important;
   background: var(--bg-box);
   color: #16a34a;
   display: none;
@@ -584,7 +584,7 @@ section#masterDbPage.page.active,
   font-weight: 800;
   min-width: 18px;
   height: 18px;
-  border-radius: 9px;
+  border-radius: 5px !important;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -602,7 +602,7 @@ section#masterDbPage.page.active,
   font-size: 11px;
   min-width: 20px;
   height: 20px;
-  border-radius: 10px;
+  border-radius: 5px !important;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -610,56 +610,63 @@ section#masterDbPage.page.active,
   border: 2px solid var(--bg-body);
 }
 
-/* POPUP CHAT BANTUAN - OUTER CONTAINER (DESKTOP & MOBILE) */
+/* POPUP CHAT BANTUAN (#popupBantuan) - FULL OVERLAY WITH DARK BACKDROP BLUR */
 .popupBantuan,
+#popupBantuan,
 #helpModal,
 #chatWindow {
-  position: fixed;
-  bottom: 85px !important;
-  right: 12px;
-  width: 440px;
-  max-width: calc(100vw - 24px);
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
   z-index: 9999999 !important;
   display: none;
-  animation: none !important;
-  transition: none !important;
-  transform: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 12px !important;
+  padding-bottom: calc(52px + 1cm) !important;
   box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 .popupBantuan.show,
+#popupBantuan.show,
 #helpModal.show,
 #chatWindow.show {
-  display: block !important;
-  animation: none !important;
-  transition: none !important;
-  transform: none !important;
+  display: flex !important;
   opacity: 1 !important;
 }
 
-/* CHAT BOX CONTAINER - EXTENDED DOWNWARDS (PANJANG KE BAWAH) */
+/* CHAT BOX CONTAINER - CENTERED MODAL CARD WITH 50 DERAJAT (5PX) CORNERS */
 .chatBox,
 #helpModal .chatBox,
-.popupBantuan .chatBox {
-  width: 100% !important;
-  max-width: 100% !important;
-  height: 500px !important;
-  max-height: calc(100vh - 110px) !important;
-  background: var(--bg-box);
-  border-radius: 10px !important;
-  -webkit-clip-path: inset(0 round 10px) !important;
-  clip-path: inset(0 round 10px) !important;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
-  border: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  animation: none !important;
-  transition: none !important;
-  transform: none !important;
+.popupBantuan .chatBox,
+#popupBantuan .chatBox {
+  width: 440px !important;
+  max-width: 94vw !important;
+  height: 520px !important;
+  max-height: calc(100vh - 120px) !important;
+  margin: auto !important;
+  background: var(--bg-box) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid var(--border-color) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  overflow: hidden !important;
   box-sizing: border-box !important;
-  margin: 0 !important;
 }
 
 /* RESPONSIVE HP / MOBILE: BATAS KIRI & KANAN SIMETRIS DAN NAIK DI ATAS MENU ICON DASHBOARD/INPUT */
@@ -701,9 +708,9 @@ section#masterDbPage.page.active,
     height: 480px !important;
     max-height: calc(100vh - 90px) !important;
     margin: 0 auto !important;
-    border-radius: 10px !important;
-    -webkit-clip-path: inset(0 round 10px) !important;
-    clip-path: inset(0 round 10px) !important;
+    border-radius: 5px !important;
+    -webkit-clip-path: inset(0 round 5px) !important;
+    clip-path: inset(0 round 5px) !important;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
     box-sizing: border-box !important;
   }
@@ -762,7 +769,7 @@ section#masterDbPage.page.active,
   background: linear-gradient(135deg, #0284c7, #0369a1) !important;
   color: #ffffff !important;
   padding: 7px 11px !important;
-  border-radius: 14px 14px 2px 14px !important;
+  border-radius: 5px !important;
   max-width: 80% !important;
   font-size: 11.5px !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
@@ -778,7 +785,7 @@ section#masterDbPage.page.active,
   color: var(--text-main) !important;
   border: 1px solid var(--border-color) !important;
   padding: 7px 11px !important;
-  border-radius: 14px 14px 14px 2px !important;
+  border-radius: 5px !important;
   max-width: 80% !important;
   font-size: 11.5px !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
@@ -810,7 +817,7 @@ section#masterDbPage.page.active,
 .chatFooter input {
   flex: 1;
   padding: 7px 12px;
-  border-radius: 20px;
+  border-radius: 5px !important;
   font-size: 11.5px;
 }
 
@@ -833,7 +840,7 @@ section#masterDbPage.page.active,
   max-width: 92%;
   margin: 35px auto;
   background: var(--bg-box);
-  border-radius: 20px;
+  border-radius: 5px !important;
   padding: 26px 22px;
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   border: 1px solid var(--border-color);
@@ -876,7 +883,7 @@ section#masterDbPage.page.active,
   background: var(--bg-body);
   border: 1px dashed var(--border-color);
   padding: 8px;
-  border-radius: 10px;
+  border-radius: 5px !important;
   margin-bottom: 14px;
 }
 
@@ -900,7 +907,7 @@ section#masterDbPage.page.active,
   border: 1px solid var(--border-color);
   color: var(--text-main);
   padding: 5px 3px;
-  border-radius: 6px;
+  border-radius: 5px !important;
   font-size: 9.5px;
   font-weight: 600;
   cursor: pointer;
@@ -919,7 +926,7 @@ section#masterDbPage.page.active,
   display: flex;
   align-items: center;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: 5px !important;
   overflow: hidden;
   background: var(--input-bg);
   margin-bottom: 12px;
@@ -962,7 +969,7 @@ label {
 input, select, textarea {
   width: 100%;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: 5px !important;
   padding: 12px;
   outline: none;
   font-size: 13px;
@@ -993,7 +1000,7 @@ input:focus, select:focus, textarea:focus {
   margin-top: 20px;
   border: none;
   padding: 14px;
-  border-radius: 12px;
+  border-radius: 5px !important;
   background: var(--primary);
   color: #FFF;
   cursor: pointer;
@@ -1012,7 +1019,7 @@ input:focus, select:focus, textarea:focus {
   gap: 8px;
   padding: 10px 18px;
   border: none;
-  border-radius: 10px;
+  border-radius: 5px !important;
   background: var(--primary);
   color: #fff;
   cursor: pointer;
@@ -1025,7 +1032,7 @@ input:focus, select:focus, textarea:focus {
   width: 38px;
   height: 38px;
   border: none;
-  border-radius: 8px;
+  border-radius: 5px !important;
   background: #ef4444;
   color: #fff;
   cursor: pointer;
@@ -1040,7 +1047,7 @@ input:focus, select:focus, textarea:focus {
 .btnScanSeri {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: 5px !important;
   background: var(--primary);
   color: #ffffff;
   border: none;
@@ -1066,7 +1073,7 @@ input:focus, select:focus, textarea:focus {
   background: #16a34a;
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 5px !important;
   cursor: pointer;
   font-size: 13px;
 }
@@ -1079,7 +1086,7 @@ input:focus, select:focus, textarea:focus {
   min-width: 32px !important;
   min-height: 32px !important;
   border: none !important;
-  border-radius: 8px !important;
+  border-radius: 5px !important;
   display: inline-flex !important;
   justify-content: center !important;
   align-items: center !important;
@@ -1197,7 +1204,7 @@ input:focus, select:focus, textarea:focus {
   flex-direction: column;
   justify-content: center;
   padding: 10px 12px !important;
-  border-radius: 16px !important;
+  border-radius: 5px !important;
   color: #ffffff !important;
   cursor: pointer;
   overflow: hidden;
@@ -1225,7 +1232,7 @@ input:focus, select:focus, textarea:focus {
 .cardStat .icon {
   width: 44px !important;
   height: 44px !important;
-  border-radius: 12px !important;
+  border-radius: 5px !important;
   background: rgba(255, 255, 255, 0.25) !important;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -1324,7 +1331,7 @@ input:focus, select:focus, textarea:focus {
 /* ALL MENU CARDS WIDENED & EVENLY ALIGNED LEFT-RIGHT */
 .box, .box.box-full {
   background: var(--bg-box);
-  border-radius: 18px !important;
+  border-radius: 5px !important;
   padding: 18px 14px !important;
   margin-bottom: 22px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -1354,9 +1361,9 @@ input:focus, select:focus, textarea:focus {
   margin-top: 1mm !important;
   margin-bottom: 1mm !important;
   padding: 0 !important;
-  border-radius: 16px !important;
-  -webkit-clip-path: inset(0 round 16px) !important;
-  clip-path: inset(0 round 16px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
   background: var(--bg-box) !important;
   border: 1px solid var(--border-color) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
@@ -1387,9 +1394,9 @@ input:focus, select:focus, textarea:focus {
   touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
   border: none !important;
-  border-radius: 16px !important;
-  -webkit-clip-path: inset(0 round 16px) !important;
-  clip-path: inset(0 round 16px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
   background: transparent !important;
   box-shadow: none !important;
   margin: 0 !important;
@@ -1409,9 +1416,9 @@ input:focus, select:focus, textarea:focus {
   touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
   border: 1px solid var(--border-color) !important;
-  border-radius: 16px !important;
-  -webkit-clip-path: inset(0 round 16px) !important;
-  clip-path: inset(0 round 16px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
   background: var(--bg-box) !important;
 }
 
@@ -1604,7 +1611,7 @@ input:focus, select:focus, textarea:focus {
   border-left: none !important;
   border-right: none !important;
   border-bottom: 2px solid rgba(0, 0, 0, 0.15) !important;
-  border-radius: 8px 8px 0 0 !important;
+  border-radius: 5px !important;
   box-shadow: none !important;
   text-shadow: none !important;
   box-sizing: border-box !important;
@@ -1665,31 +1672,9 @@ input:focus, select:focus, textarea:focus {
 .lastItem:hover { background: var(--table-hover); }
 
 /* ANIMASI KEDIP-KEDIP ORANGE UNTUK BARIS DENGAN STATUS TUNGGU DM */
-@keyframes orangePulseBlink {
-  0% {
-    background-color: rgba(249, 115, 22, 0.18) !important;
-    border-color: #f97316 !important;
-    box-shadow: 0 0 10px rgba(249, 115, 22, 0.4) !important;
-  }
-  50% {
-    background-color: rgba(249, 115, 22, 0.48) !important;
-    border-color: #ea580c !important;
-    box-shadow: 0 0 18px rgba(249, 115, 22, 0.85) !important;
-  }
-  100% {
-    background-color: rgba(249, 115, 22, 0.18) !important;
-    border-color: #f97316 !important;
-    box-shadow: 0 0 10px rgba(249, 115, 22, 0.4) !important;
-  }
-}
-
-.rowWaitingDmBlink {
-  animation: orangePulseBlink 1.3s infinite ease-in-out !important;
-}
-
 .rowWaitingDmBlink td,
 .rowWaitingDmBlink div {
-  color: #ffffff !important;
+  color: var(--text-main) !important;
   font-weight: 700 !important;
 }
 
@@ -1731,7 +1716,7 @@ html body #inputPage {
   padding-left: 10px !important;
   padding-right: 10px !important;
   box-sizing: border-box !important;
-  border-radius: 14px !important;
+  border-radius: 5px !important;
 }
 
 /* PC / DESKTOP (min-width: 769px) - FITS SCREEN PROPERLY WITHOUT JUMPING OR HUGE EMPTY GAP */
@@ -1789,7 +1774,7 @@ html body #inputPage {
   border-collapse: separate !important;
   border-spacing: 0 !important;
   border: 1px solid var(--border-color) !important;
-  border-radius: 8px !important;
+  border-radius: 5px !important;
   background: var(--bg-box) !important;
   color: var(--text-main) !important;
   overflow: visible !important;
@@ -1884,14 +1869,13 @@ tr.blink-row-red .btnIcon .material-symbols-rounded {
 tr.blink-row-red,
 tr.blink-row-red td,
 tr.blink-row-red td div,
-tr.blink-row-red td span,
 tr.blink-row-red td small,
 tr.blink-row-red td strong,
 .blink-row-red,
 .blink-row-red td {
-  animation: blinkRowRed 0.6s ease-in-out infinite !important;
-  font-weight: 900 !important;
-  letter-spacing: 0.3px !important;
+  animation: none !important;
+  background-color: transparent !important;
+  font-weight: 400 !important;
 }
 
 .historyTable td:last-child, #tableMasterDb td:last-child, #tableUserMgmt td:last-child {
@@ -1936,7 +1920,7 @@ tr.blink-row-red td strong,
   width: 100%;
   min-height: 130px;
   border: 2px dashed var(--border-color);
-  border-radius: 16px;
+  border-radius: 5px !important;
   background: var(--bg-header);
   display: flex;
   flex-direction: column;
@@ -1963,7 +1947,7 @@ tr.blink-row-red td strong,
   position: relative;
   width: 70px;
   height: 70px;
-  border-radius: 10px;
+  border-radius: 5px !important;
   overflow: hidden;
   border: 1px solid var(--border-color);
 }
@@ -2050,9 +2034,9 @@ section#masterDbPage.page.active {
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y !important;
   border: 1px solid var(--border-color) !important;
-  border-radius: 16px !important;
-  -webkit-clip-path: inset(0 round 16px) !important;
-  clip-path: inset(0 round 16px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
   position: relative !important;
   box-sizing: border-box !important;
   background: var(--bg-box) !important;
@@ -2135,7 +2119,7 @@ section#masterDbPage.page.active {
   -webkit-overflow-scrolling: touch !important;
   touch-action: auto !important;
   overscroll-behavior: contain !important;
-  border-radius: 12px !important;
+  border-radius: 5px !important;
   box-sizing: border-box !important;
 }
 
@@ -2249,11 +2233,11 @@ body.design-mode-3d-isometric .dashboardTable th {
 /* DYNAMIC THEME-MATCHED COMPACT FULL-WIDTH BOTTOM NAVIGATION BAR */
 #bottomMenu {
   position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  bottom: 6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: calc(100% - 2mm) !important;
+  max-width: calc(100% - 2mm) !important;
   height: 52px !important;
   background: var(--bg-box) !important;
   backdrop-filter: blur(16px) saturate(180%) !important;
@@ -2261,17 +2245,13 @@ body.design-mode-3d-isometric .dashboardTable th {
   display: flex;
   justify-content: space-around !important;
   align-items: center !important;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-  border-top: 1px solid var(--border-color) !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-bottom: none !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 5px !important;
+  margin: 0 auto !important;
   z-index: 99999999 !important;
   padding: 0 4px !important;
   box-sizing: border-box !important;
-  transform: translateY(0) !important;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, background 0.3s ease, border-color 0.3s ease !important;
   opacity: 1 !important;
   pointer-events: auto !important;
@@ -2297,7 +2277,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   flex: 1 !important;
   height: 100% !important;
   padding: 4px 0 !important;
-  border-radius: 12px !important;
+  border-radius: 5px !important;
   pointer-events: auto !important;
   position: relative !important;
   z-index: 100000000 !important;
@@ -2389,7 +2369,7 @@ body.design-mode-3d-isometric .dashboardTable th {
 
 .popupBox, .akunBox, .rejectBoxPopup, .ttdBox, .confirmBox {
   background: var(--bg-box);
-  border-radius: 22px !important;
+  border-radius: 5px !important;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   overflow: hidden;
   color: var(--text-main);
@@ -2426,7 +2406,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   margin: auto !important;
   transform: translateY(-20px) !important;
   padding: 18px 20px !important;
-  border-radius: 20px !important;
+  border-radius: 5px !important;
   box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
   box-sizing: border-box !important;
 }
@@ -2456,7 +2436,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   padding: 6px 10px !important;
   font-size: 12px !important;
   height: 35px !important;
-  border-radius: 8px !important;
+  border-radius: 5px !important;
 }
 
 /* ALL BUTTONS IN POPUP AKUN: UNIFORM EQUAL SHORT HEIGHT (35px), EQUAL FONT SIZE, EQUAL BORDER RADIUS */
@@ -2472,7 +2452,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   max-height: 35px !important;
   font-size: 11.5px !important;
   font-weight: 700 !important;
-  border-radius: 8px !important;
+  border-radius: 5px !important;
   padding: 0 10px !important;
   display: flex !important;
   align-items: center !important;
@@ -2538,7 +2518,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   min-width: 320px !important;
   max-width: 95vw !important;
   background: var(--bg-box);
-  border-radius: 18px !important;
+  border-radius: 5px !important;
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   border: 1px solid var(--border-color);
@@ -2576,7 +2556,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   width: 380px !important;
   max-width: 90vw !important;
   padding: 0;
-  border-radius: 18px !important;
+  border-radius: 5px !important;
 }
 
 .rejectHeaderPopup {
@@ -2602,7 +2582,7 @@ body.design-mode-3d-isometric .dashboardTable th {
 
 .rejectBodyPopup textarea {
   width: 100%;
-  border-radius: 10px;
+  border-radius: 5px !important;
   padding: 10px;
   font-size: 12.5px;
   margin-bottom: 14px;
@@ -2618,7 +2598,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   width: calc(100vw - 2mm) !important;
   max-width: calc(100vw - 2mm) !important;
   background: var(--bg-box);
-  border-radius: 18px;
+  border-radius: 5px !important;
   box-shadow: 0 16px 40px rgba(0,0,0,.35);
   overflow: hidden;
   color: var(--text-main);
@@ -2634,7 +2614,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   width: 440px !important;
   max-width: 90vw !important;
   margin: auto !important;
-  border-radius: 18px !important;
+  border-radius: 5px !important;
   overflow: hidden !important;
   background: var(--bg-box) !important;
   border: 1px solid var(--border-color) !important;
@@ -2659,7 +2639,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   overflow: hidden !important;
   margin: 0 auto !important;
   padding: 0 !important;
-  border-radius: 18px !important;
+  border-radius: 5px !important;
   box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;
   display: flex !important;
   flex-direction: column !important;
@@ -2685,11 +2665,11 @@ body.design-mode-3d-isometric .dashboardTable th {
 .confirmBoxCard,
 #confirmBoxCard,
 #popupNotifCard {
-  width: 420px !important;
-  max-width: 90vw !important;
+  width: 540px !important;
+  max-width: 95vw !important;
   margin: 0 auto !important;
   background: var(--bg-box) !important;
-  border-radius: 18px !important;
+  border-radius: 5px !important;
   overflow: hidden !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
   border: 1px solid var(--border-color) !important;
@@ -2717,7 +2697,7 @@ body.design-mode-3d-isometric .dashboardTable th {
 
 .popupTableScroll {
   border: 1px solid var(--border-color) !important;
-  border-radius: 8px !important;
+  border-radius: 5px !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
   max-height: 58vh !important;
@@ -2856,7 +2836,7 @@ table th,
   flex: 1;
   padding: 9px 14px;
   border: none;
-  border-radius: 10px;
+  border-radius: 5px !important;
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
@@ -2878,7 +2858,7 @@ table th,
   max-height: 92vh !important;
   overflow: visible !important;
   padding: 18px 20px !important;
-  border-radius: 18px !important;
+  border-radius: 5px !important;
   box-sizing: border-box !important;
   margin: auto !important;
 }
@@ -2921,7 +2901,7 @@ table th,
   height: 38px !important;
   padding: 6px 12px !important;
   font-size: 12.5px !important;
-  border-radius: 10px !important;
+  border-radius: 5px !important;
   border: none !important;
   cursor: pointer !important;
   display: flex !important;
@@ -2949,7 +2929,7 @@ table th,
   background: #dc2626 !important;
   color: #fff !important;
   border: none !important;
-  border-radius: 10px !important;
+  border-radius: 5px !important;
   cursor: pointer !important;
 }
 
@@ -2982,7 +2962,7 @@ table th,
   max-width: 94vw !important;
   padding: 20px 18px !important;
   text-align: center !important;
-  border-radius: 18px !important;
+  border-radius: 5px !important;
   background: var(--bg-box) !important;
   border: 1px solid var(--border-color) !important;
   box-shadow: 0 16px 40px rgba(0,0,0,.35) !important;
@@ -2999,7 +2979,7 @@ table th,
   max-width: 100% !important;
   height: 220px !important;
   border: 2px dashed var(--primary) !important;
-  border-radius: 12px !important;
+  border-radius: 5px !important;
   background: #ffffff !important;
   cursor: crosshair !important;
   touch-action: none !important;
@@ -3019,7 +2999,7 @@ table th,
   flex: 1 !important;
   height: 38px !important;
   padding: 8px 16px !important;
-  border-radius: 10px !important;
+  border-radius: 5px !important;
   border: none !important;
   cursor: pointer !important;
   font-size: 12.5px !important;
@@ -3070,7 +3050,7 @@ table th,
 
 .popupTableScroll {
   overflow-x: auto;
-  border-radius: 10px;
+  border-radius: 5px !important;
   margin-top: 14px !important;
   margin-bottom: 18px !important;
 }
@@ -3100,7 +3080,7 @@ table th,
 .btnPdfNumSimple {
   width: 42px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 5px !important;
   font-size: 15px;
   font-weight: 900;
   cursor: pointer;
@@ -3207,7 +3187,7 @@ table th,
   width: 820px !important;
   max-width: 98vw !important;
   box-sizing: border-box !important;
-  border-radius: 16px !important;
+  border-radius: 5px !important;
   overflow: hidden !important;
 }
 
@@ -3226,7 +3206,7 @@ table th,
   background: #ffffff;
   color: #1e293b;
   padding: 24px;
-  border-radius: 8px;
+  border-radius: 5px !important;
   box-shadow: 0 4px 16px rgba(0,0,0,0.1);
   font-family: 'Poppins', sans-serif;
   line-height: 1.5;
@@ -3243,7 +3223,7 @@ table th,
   
   #pdfDocumentContent .pdf-paper {
     padding: 14px 10px !important;
-    border-radius: 8px !important;
+    border-radius: 5px !important;
   }
 
   .pdf-info-grid td {
@@ -3368,7 +3348,7 @@ table th,
   margin: auto !important;
   max-width: 90vw !important;
   max-height: 82vh !important;
-  border-radius: 10px !important;
+  border-radius: 5px !important;
   object-fit: contain !important;
   transform-origin: center center !important;
   will-change: transform !important;
@@ -3510,7 +3490,7 @@ table th,
     grid-template-columns: 1fr;
     border: 1px solid var(--border-color);
     padding: 14px 12px;
-    border-radius: 12px;
+    border-radius: 5px !important;
     background: var(--bg-header);
     gap: 10px;
     margin-bottom: 12px;
@@ -3547,7 +3527,7 @@ table th,
     overflow-y: scroll !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y !important;
-    border-radius: 16px !important;
+    border-radius: 5px !important;
     box-sizing: border-box !important;
     margin-bottom: 0 !important;
     padding-bottom: 0 !important;
@@ -3564,9 +3544,9 @@ table th,
     min-height: 0 !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y !important;
-    border-radius: 16px !important;
-    -webkit-clip-path: inset(0 round 16px) !important;
-    clip-path: inset(0 round 16px) !important;
+    border-radius: 5px !important;
+    -webkit-clip-path: inset(0 round 5px) !important;
+    clip-path: inset(0 round 5px) !important;
     margin-top: 1mm !important;
     margin-bottom: 0 !important;
     padding-bottom: 0 !important;
@@ -3611,7 +3591,7 @@ table th,
     max-height: 90vh !important;
     padding: 14px !important;
     box-sizing: border-box;
-    border-radius: 16px !important;
+    border-radius: 5px !important;
   }
 
   #popupDetail .popupBoxDetail,
@@ -3621,7 +3601,7 @@ table th,
     padding: 0 0 4px 0 !important;
     padding-bottom: 4px !important;
     box-sizing: border-box !important;
-    border-radius: 18px !important;
+    border-radius: 5px !important;
   }
 
   #bottomMenu {
@@ -3666,8 +3646,8 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 52px - 3cm) !important;
-    max-height: calc(100vh - 52px - 3cm) !important;
+    height: calc(100vh - 52px - 1cm) !important;
+    max-height: calc(100vh - 52px - 1cm) !important;
     overflow: hidden !important;
     padding: 4px 6px 0 6px !important;
     margin-bottom: 0 !important;
@@ -3692,7 +3672,7 @@ table th,
   .cardStat {
     padding: 8px 10px !important;
     min-height: 72px !important;
-    border-radius: 14px !important;
+    border-radius: 5px !important;
   }
 
   .cardStat .icon {
@@ -3926,7 +3906,7 @@ button.btnKembali {
     min-height: 78px !important;
     height: 82px !important;
     max-height: 86px !important;
-    border-radius: 14px !important;
+    border-radius: 5px !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
@@ -3940,7 +3920,7 @@ button.btnKembali {
   .cardStat .icon {
     width: 38px !important;
     height: 38px !important;
-    border-radius: 10px !important;
+    border-radius: 5px !important;
   }
 
   .cardStat .icon .material-symbols-rounded {
@@ -3970,10 +3950,10 @@ button.btnKembali {
   .page, .page.active, #dashboardPage, #userManagementPage {
     padding-top: 10px !important;
     padding-bottom: 56px !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-    width: 100% !important;
-    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: calc(100vw - 2mm) !important;
+    max-width: calc(100vw - 2mm) !important;
     margin-left: auto !important;
     margin-right: auto !important;
     box-sizing: border-box !important;
@@ -3991,8 +3971,8 @@ button.btnKembali {
     max-width: 100% !important;
     overflow: hidden !important;
     overflow-y: hidden !important;
-    height: calc(100vh - 52px - 3cm) !important;
-    max-height: calc(100vh - 52px - 3cm) !important;
+    height: calc(100vh - 52px - 1cm) !important;
+    max-height: calc(100vh - 52px - 1cm) !important;
     box-sizing: border-box !important;
     margin-bottom: 0 !important;
   }
@@ -4022,9 +4002,9 @@ button.btnKembali {
     max-height: 100% !important;
     overflow: hidden !important;
     padding: 0 !important;
-    border-radius: 16px !important;
-    -webkit-clip-path: inset(0 round 16px) !important;
-    clip-path: inset(0 round 16px) !important;
+    border-radius: 5px !important;
+    -webkit-clip-path: inset(0 round 5px) !important;
+    clip-path: inset(0 round 5px) !important;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -4057,9 +4037,9 @@ button.btnKembali {
     margin: 0 !important;
     margin-bottom: 1mm !important;
     border: 1px solid var(--border-color) !important;
-    border-radius: 16px !important;
-    -webkit-clip-path: inset(0 round 16px) !important;
-    clip-path: inset(0 round 16px) !important;
+    border-radius: 5px !important;
+    -webkit-clip-path: inset(0 round 5px) !important;
+    clip-path: inset(0 round 5px) !important;
     background: var(--bg-box) !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
     box-sizing: border-box !important;
@@ -4088,10 +4068,10 @@ button.btnKembali {
   .dashboardTable td,
   .dashboardTable td *,
   .dashboardTable th * {
-    padding: 8px 8px !important;
-    font-size: 11.5px !important;
+    padding: 6px 4px !important;
+    font-size: 10px !important;
     white-space: nowrap !important;
-    word-break: keep-all !important;
+    word-break: normal !important;
   }
 
   #detailDashboard #lastData {
@@ -4114,33 +4094,39 @@ button.btnKembali {
   .lastHeader, .lastItem {
     width: 100% !important;
     min-width: 100% !important;
-    padding: 10px 6px !important;
-    font-size: 11.5px !important;
+    padding: 8px 4px !important;
+    font-size: 10px !important;
     display: grid !important;
-    grid-template-columns: minmax(70px, 1fr) minmax(130px, 1.8fr) minmax(140px, 2.2fr) minmax(95px, 1.2fr) !important;
-    gap: 6px !important;
+    grid-template-columns: minmax(65px, 1fr) minmax(110px, 1.8fr) minmax(120px, 2.2fr) minmax(85px, 1.2fr) !important;
+    gap: 4px !important;
     align-items: center !important;
     box-sizing: border-box !important;
-    white-space: normal !important;
-    word-break: break-word !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
   }
 
   .lastHeader > div, .lastItem > div {
-    overflow: visible !important;
-    text-overflow: clip !important;
-    word-break: break-word !important;
-    white-space: normal !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    word-break: normal !important;
+    white-space: nowrap !important;
+    font-size: 10px !important;
   }
 
-  /* MOBILE HP POPUP DETAIL TABLE: DIRECT STRETCH ON MAIN POPUP CARD WITHOUT INNER CARD WRAPPER */
-  #popupDetail .popupBoxDetail {
-    width: calc(100vw - 10px) !important;
-    max-width: calc(100vw - 10px) !important;
-    margin: 0 auto !important;
+  /* MOBILE HP POPUP DETAIL TABLE: FULL 1 PAGE CARD ON MOBILE HP */
+  #popupDetail .popupBoxDetail,
+  #popupDetailBarangV2 .popupBoxDetailV2,
+  .popupBoxDetail,
+  .popupBoxDetailV2 {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
     padding: 0 !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
-    border-radius: 14px !important;
+    border-radius: 0 !important;
   }
 
   #popupDetail .popupHeader {
@@ -4152,6 +4138,9 @@ button.btnKembali {
     padding: 0 !important;
     margin: 0 !important;
     box-sizing: border-box !important;
+    height: calc(100vh - 50px) !important;
+    max-height: calc(100vh - 50px) !important;
+    flex: 1 1 auto !important;
   }
 
   #popupDetail .popupTableScroll {
@@ -4209,30 +4198,21 @@ button.btnKembali {
   }
 }
 
-/* STRICT 100% SYMMETRICAL & BALANCED MARGINS (12PX EQUAL LEFT & RIGHT PADDING) FOR ALL PAGES & DASHBOARD */
+/* STRICT 100% SYMMETRICAL & BALANCED MARGINS (1MM EQUAL LEFT & RIGHT MARGIN MATCHING MENU INPUT & BOTTOM MENU) FOR ALL PAGES & DASHBOARD */
 .page,
 .page.active,
 #dashboardPage,
-#userManagementPage {
-  padding-left: 12px !important;
-  padding-right: 12px !important;
-  padding-bottom: 61px !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  box-sizing: border-box !important;
-}
-
+#inputPage,
+#userManagementPage,
 #riwayatPage,
 #masterDbPage,
 #riwayatPage.active,
 #masterDbPage.active {
-  padding-left: 12px !important;
-  padding-right: 12px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
   padding-bottom: 61px !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
   margin-left: auto !important;
   margin-right: auto !important;
   box-sizing: border-box !important;
@@ -4241,18 +4221,20 @@ button.btnKembali {
 .dashboardTop,
 .stats,
 #detailDashboard,
+#detailDashboard .tableWrap,
+.dashboardTableContainer,
 .box,
 .box.box-full {
-  width: 100% !important;
-  max-width: 100% !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+  width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   box-sizing: border-box !important;
 }
 
 #detailDashboard {
   padding: 0 !important;
-  border-radius: 16px !important;
+  border-radius: 5px !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -4330,7 +4312,7 @@ tr.rowHighlightOrange,
 div.rowHighlightOrange {
   background: rgba(249, 115, 22, 0.25) !important;
   border-left: 4px solid #f97316 !important;
-  border-radius: 8px !important;
+  border-radius: 5px !important;
   box-shadow: inset 0 0 10px rgba(249, 115, 22, 0.18) !important;
   font-weight: 800 !important;
   transition: all 0.2s ease !important;
@@ -4393,7 +4375,7 @@ div.rowHighlightOrange {
   width: 95% !important;
   max-width: 950px !important;
   max-height: 88vh !important;
-  border-radius: 14px !important;
+  border-radius: 5px !important;
   overflow: hidden !important;
   border: 1px solid var(--border-color) !important;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3) !important;
@@ -4598,7 +4580,7 @@ div.rowHighlightOrange {
   margin: 0 0 18px 0 !important;
   border-top: 1px solid #e2e8f0 !important;
   background: #f8fafc !important;
-  border-radius: 0 0 14px 14px !important;
+  border-radius: 0 0 9.5px 9.5px !important;
   flex-shrink: 0 !important;
   display: flex !important;
   align-items: center !important;
@@ -4612,7 +4594,7 @@ div.rowHighlightOrange {
     width: calc(100vw - 12px) !important;
     max-width: calc(100vw - 12px) !important;
     max-height: 88vh !important;
-    border-radius: 14px !important;
+    border-radius: 5px !important;
   }
 
   .detailHeaderInfo {
@@ -4684,7 +4666,7 @@ div.rowHighlightOrange {
   max-height: 90vh !important;
   margin: auto 1mm !important;
   padding: 0 !important;
-  border-radius: 14px !important;
+  border-radius: 5px !important;
   overflow: hidden !important;
   border: 1px solid var(--border-color) !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4) !important;
@@ -4701,7 +4683,7 @@ div.rowHighlightOrange {
   font-size: 16px !important;
   padding: 14px 18px !important;
   margin: 0 !important;
-  border-radius: 18px 18px 0 0 !important;
+  border-radius: 5px !important;
   position: relative !important;
   display: flex !important;
   align-items: center !important;
@@ -4886,7 +4868,7 @@ div.rowHighlightOrange {
   margin: 0 !important;
   border-top: none !important;
   background: transparent !important;
-  border-radius: 0 0 18px 18px !important;
+  border-radius: 0 0 9.5px 9.5px !important;
   flex-shrink: 0 !important;
   display: flex !important;
   align-items: center !important;
@@ -4938,37 +4920,51 @@ div.rowHighlightOrange {
     max-width: calc(100vw - 2mm) !important;
     padding: 0 !important;
     margin: auto 1mm !important;
-    border-radius: 14px !important;
+    border-radius: 5px !important;
   }
 
-  .detailHeaderInfoV2 {
+  /* NO SURAT, TOKO, TANGGAL HEADER: STACKED VERTICALLY & LEFT-ALIGNED ON HP */
+  .detailHeaderInfo,
+  .detailHeaderInfoV2,
+  #detailHeaderInfoV2 {
     display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding: 6px 10px !important;
+    flex-direction: column !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    padding: 8px 12px !important;
     font-size: 11px !important;
     width: 100% !important;
+    gap: 4px !important;
+    text-align: left !important;
   }
 
+  .noSuratWrap,
   .noSuratWrapV2,
+  .detailHeaderInfo .noSuratWrap,
   .detailHeaderInfoV2 .noSuratWrapV2 {
-    display: inline-flex !important;
+    display: flex !important;
     font-size: 11px !important;
     text-align: left !important;
     white-space: nowrap !important;
     flex: 0 0 auto !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+    margin-left: 0 !important;
   }
 
+  .tokoWrap,
   .tokoWrapV2,
+  .detailHeaderInfo .tokoWrap,
   .detailHeaderInfoV2 .tokoWrapV2 {
-    display: inline-flex !important;
+    display: flex !important;
     font-size: 11px !important;
-    text-align: right !important;
+    text-align: left !important;
     white-space: nowrap !important;
     flex: 0 0 auto !important;
-    margin-left: auto !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
   }
 
   .tableCardV2,
@@ -5040,9 +5036,9 @@ div.rowHighlightOrange {
     min-height: 0 !important;
     margin-top: 1mm !important;
     margin-bottom: 0 !important;
-    border-radius: 16px !important;
-    -webkit-clip-path: inset(0 round 16px) !important;
-    clip-path: inset(0 round 16px) !important;
+    border-radius: 5px !important;
+    -webkit-clip-path: inset(0 round 5px) !important;
+    clip-path: inset(0 round 5px) !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y !important;
     position: relative !important;
@@ -5055,9 +5051,9 @@ div.rowHighlightOrange {
     height: 100% !important;
     max-height: 100% !important;
     min-height: 100% !important;
-    border-radius: 16px !important;
-    -webkit-clip-path: inset(0 round 16px) !important;
-    clip-path: inset(0 round 16px) !important;
+    border-radius: 5px !important;
+    -webkit-clip-path: inset(0 round 5px) !important;
+    clip-path: inset(0 round 5px) !important;
     overflow-x: auto !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
@@ -5069,9 +5065,9 @@ div.rowHighlightOrange {
     max-height: calc(100vh - 160px) !important;
     margin-top: 1mm !important;
     margin-bottom: 1mm !important;
-    border-radius: 16px !important;
-    -webkit-clip-path: inset(0 round 16px) !important;
-    clip-path: inset(0 round 16px) !important;
+    border-radius: 5px !important;
+    -webkit-clip-path: inset(0 round 5px) !important;
+    clip-path: inset(0 round 5px) !important;
   }
 
   .dashboardTable,
@@ -5114,17 +5110,17 @@ div.rowHighlightOrange {
 }
 
 #pdfModal .popupBox {
-  width: 820px !important;
+  width: 100vw !important;
   max-width: 100vw !important;
   height: 100vh !important;
   max-height: 100vh !important;
   border-radius: 0 !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
   padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   background: #cbd5e1 !important;
-  box-shadow: 0 0 50px rgba(0,0,0,0.5) !important;
+  box-shadow: none !important;
   overflow: hidden !important;
 }
 
@@ -5145,7 +5141,7 @@ div.rowHighlightOrange {
   flex: 1 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  padding: 16px !important;
+  padding: 0 !important;
   background: #cbd5e1 !important;
   display: flex !important;
   flex-direction: column !important;
@@ -5155,14 +5151,14 @@ div.rowHighlightOrange {
 
 #pdfDocumentContent .pdf-paper {
   width: 100% !important;
-  max-width: 780px !important;
-  min-height: calc(100vh - 65px) !important;
-  margin: 0 auto !important;
+  max-width: 100% !important;
+  min-height: calc(100vh - 56px) !important;
+  margin: 0 !important;
   padding: 24px 28px !important;
   box-sizing: border-box !important;
   background: #ffffff !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
-  border-radius: 6px !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 .btnPrintHeader {
@@ -5173,7 +5169,7 @@ div.rowHighlightOrange {
   background: #ffffff !important;
   color: #0284c7 !important;
   border: 1.5px solid #ffffff !important;
-  border-radius: 6px !important;
+  border-radius: 5px !important;
   font-weight: 800 !important;
   font-size: 12.5px !important;
   cursor: pointer !important;
@@ -5292,7 +5288,7 @@ html body.design-mode-normal .tableWrap,
 html body.design-mode-normal .popupBox,
 html body.design-mode-normal .akunBox,
 html body.design-mode-normal .confirmBox {
-  border-radius: 16px !important;
+  border-radius: 5px !important;
 }
 
 /* =============================================================================
@@ -5309,9 +5305,9 @@ html body.design-mode-normal .confirmBox {
 #popupDetailBarangV2 .tableWrap,
 .tableCardV2,
 .tableCardV2.tableWrap {
-  border-radius: 10px !important;
-  -webkit-clip-path: inset(0 round 10px) !important;
-  clip-path: inset(0 round 10px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
@@ -5385,6 +5381,43 @@ table tbody tr:last-child td:last-child,
   border-bottom-right-radius: 0 !important;
 }
 
+/* ANIMASI BERKEDIP SANGAT JELAS PADA BARIS TABEL (TR) UNTUK STATUS TUNGGU SERVICE & TUNGGU DM */
+@keyframes rowLetterBlink {
+  0%, 45% {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  50%, 95% {
+    opacity: 0.08 !important;
+    visibility: hidden !important;
+  }
+}
+
+tr.status-blinking-row,
+tr.blink-row-red,
+tr.rowWaitingDmBlink,
+.dashboardTable tbody tr.status-blinking-row,
+.dashboardTable tbody tr.blink-row-red,
+.historyTable tbody tr.status-blinking-row {
+  animation: rowLetterBlink 0.75s infinite !important;
+  will-change: opacity, visibility !important;
+}
+
+tr.status-blinking-row td,
+tr.status-blinking-row td div,
+tr.status-blinking-row td span,
+tr.status-blinking-row td small,
+tr.status-blinking-row td strong,
+tr.blink-row-red td,
+tr.blink-row-red td div,
+tr.blink-row-red td span,
+tr.blink-row-red td small,
+tr.blink-row-red td strong {
+  color: var(--text-main) !important;
+  background-color: transparent !important;
+  font-weight: 400 !important;
+}
+
 /* =============================================================================
    FULL 2D TOUCH SCROLL (KANAN, KIRI, ATAS, BAWAH) ON MOBILE (HP) & ALL SCREENS
    ============================================================================= */
@@ -5420,7 +5453,7 @@ table.detailTableV2 {
 /* Dashboard Table Grid Rounded Corners */
 #detailDashboard .lastHeader,
 .lastHeader {
-  border-radius: 13px 13px 0 0 !important;
+  border-radius: 5px !important;
 }
 
 #detailDashboard .lastHeader > div:first-child,
@@ -5435,7 +5468,7 @@ table.detailTableV2 {
 
 #detailDashboard #lastData .lastItem:last-child,
 .lastItem:last-child {
-  border-radius: 0 0 13px 13px !important;
+  border-radius: 0 0 9.5px 9.5px !important;
 }
 
 html body thead,
@@ -5481,7 +5514,7 @@ html body .dashboardTable thead tr {
 #riwayatPage #searchRiwayat,
 #riwayatPage #filterStatusDropdown {
   border: 1px solid var(--border-color) !important;
-  border-radius: 8px !important;
+  border-radius: 5px !important;
   background: var(--input-bg) !important;
   color: var(--input-text) !important;
   box-shadow: none !important;
@@ -5489,7 +5522,7 @@ html body .dashboardTable thead tr {
 }
 
 #riwayatPage .btnDownload {
-  border-radius: 8px !important;
+  border-radius: 5px !important;
   box-shadow: none !important;
   border: none !important;
   transform: none !important;
@@ -5503,9 +5536,9 @@ html body .dashboardTable thead tr {
 
 #riwayatPage .tableWrap {
   border: 1px solid var(--border-color) !important;
-  border-radius: 16px !important;
-  -webkit-clip-path: inset(0 round 16px) !important;
-  clip-path: inset(0 round 16px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
   box-shadow: none !important;
   background: var(--bg-box) !important;
   margin-top: 0.5mm !important;
@@ -5536,7 +5569,7 @@ html body .dashboardTable thead tr {
 #riwayatPage .btnIcon {
   transform: none !important;
   box-shadow: none !important;
-  border-radius: 6px !important;
+  border-radius: 5px !important;
 }
 
 #riwayatPage .btnIcon:hover {
@@ -5594,28 +5627,36 @@ html body .dashboardTable thead tr {
   }
 }
 
-/* POPUP VIEW PDF FULL HEIGHT & TOP SHIFTED OVERRIDE FOR MOBILE HP SCROLLING */
+/* POPUP VIEW PDF FULL HEIGHT & FULL WIDTH OVERRIDE FOR ALL DEVICES */
 #pdfModal.popupOverlay,
 #pdfModal.popupOverlay.show,
 html body #pdfModal.popupOverlay {
   display: flex !important;
-  align-items: flex-start !important;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-  touch-action: pan-y !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  touch-action: pan-x pan-y !important;
   -webkit-overflow-scrolling: touch !important;
 }
 
 #pdfModal .popupBox,
 #pdfModal.show .popupBox,
 html body #pdfModal .popupBox {
-  height: calc(100vh - 8px) !important;
-  max-height: calc(100vh - 8px) !important;
-  margin-top: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
-  border-radius: 12px !important;
-  touch-action: pan-y !important;
+  border-radius: 0 !important;
+  touch-action: pan-x pan-y !important;
   -webkit-overflow-scrolling: touch !important;
 }
 
@@ -5623,13 +5664,17 @@ html body #pdfModal .popupBox {
 #pdfModal.show #pdfDocumentContent,
 html body #pdfModal #pdfDocumentContent {
   flex: 1 !important;
-  height: auto !important;
-  max-height: calc(100vh - 60px) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: calc(100vh - 56px) !important;
+  max-height: calc(100vh - 56px) !important;
   overflow-y: auto !important;
+  overflow-x: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  touch-action: pan-y !important;
+  touch-action: pan-x pan-y !important;
   overscroll-behavior-y: contain !important;
   box-sizing: border-box !important;
+  padding: 0 !important;
 }
 
 /* OVERRIDE TOUCH ACTION LOCK WHEN PDF MODAL IS OPEN */
@@ -5708,9 +5753,9 @@ body:has(#masterDbPage.active) {
   touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
   position: relative !important;
-  border-radius: 10px !important;
-  -webkit-clip-path: inset(0 round 10px) !important;
-  clip-path: inset(0 round 10px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
   border: 0 !important;
   background: var(--bg-box) !important;
   box-shadow: none !important;
@@ -5743,9 +5788,9 @@ body:has(#masterDbPage.active) {
   flex-direction: column !important;
   overflow: hidden !important;
   touch-action: auto !important;
-  border-radius: 11.5px !important;
-  -webkit-clip-path: inset(0 round 11.5px) !important;
-  clip-path: inset(0 round 11.5px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
   box-sizing: border-box !important;
 }
 
@@ -5828,9 +5873,9 @@ body:has(#masterDbPage.active) {
 }
 
 #popupNotifList .popupNotifCard {
-  width: 480px !important;
-  max-width: 92vw !important;
-  max-height: calc(100vh - 120px) !important;
+  width: 620px !important;
+  max-width: 95vw !important;
+  max-height: calc(100vh - 100px) !important;
   display: flex !important;
   flex-direction: column !important;
   margin: auto !important;
@@ -5840,8 +5885,8 @@ body:has(#masterDbPage.active) {
 }
 
 #popupNotifList #notifListBody {
-  max-height: 220px !important;
-  min-height: 80px !important;
+  max-height: 480px !important;
+  min-height: 140px !important;
   overflow-y: auto !important;
 }
 
@@ -5905,12 +5950,12 @@ body:has(#masterDbPage.active) {
   #popupNotif .popupNotifCard,
   #popupNotifCard {
     margin: auto !important;
-    max-height: calc(100vh - 160px) !important;
+    max-height: calc(100vh - 120px) !important;
     height: auto !important;
   }
   #popupNotifList #notifListBody {
-    max-height: 190px !important;
-    min-height: 80px !important;
+    max-height: 380px !important;
+    min-height: 120px !important;
   }
 }
 
@@ -5976,7 +6021,7 @@ body:has(#masterDbPage.active) {
    APPLIES TO DASHBOARD TABLE, RIWAYAT TABLE, MASTER DB & DETAIL DATA POPUP V2
    ============================================================================= */
 
-/* 1. Ensure Table Containers permit both horizontal & vertical scrolling */
+/* 1. Ensure Table Containers & Table Bodies permit full vertical (atas-bawah) & horizontal (kanan-kiri) scrolling */
 #detailDashboard,
 #detailDashboard .tableWrap,
 #riwayatPage .tableWrap,
@@ -5984,12 +6029,24 @@ body:has(#masterDbPage.active) {
 #popupDetail .tableWrap,
 #popupDetailBarangV2 .tableWrap,
 .tableCardV2,
-.tableCardV2.tableWrap {
+.tableCardV2.tableWrap,
+html body .tableWrap {
   overflow-x: auto !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y !important;
   overscroll-behavior: contain !important;
+}
+
+html body table tbody,
+html body .dashboardTable tbody,
+html body .historyTable tbody,
+html body .masterDbTable tbody,
+html body .detailTableV2 tbody,
+html body #lastData,
+html body #riwayatData,
+html body #masterDbData {
+  touch-action: pan-x pan-y !important;
 }
 
 /* 2. Container Max-Heights for Vertical Scrolling (Atas - Bawah) */
@@ -6080,7 +6137,7 @@ html body .tableWrap th {
 #masterDbPage .tableWrap::-webkit-scrollbar-track,
 #popupDetailBarangV2 .tableWrap::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.06) !important;
-  border-radius: 4px !important;
+  border-radius: 5px !important;
 }
 
 .tableWrap::-webkit-scrollbar-thumb,
@@ -6091,7 +6148,7 @@ html body .tableWrap th {
 #masterDbPage .tableWrap::-webkit-scrollbar-thumb,
 #popupDetailBarangV2 .tableWrap::-webkit-scrollbar-thumb {
   background: var(--primary, #0284c7) !important;
-  border-radius: 4px !important;
+  border-radius: 5px !important;
 }
 
 .tableWrap::-webkit-scrollbar-thumb:hover,
@@ -6128,9 +6185,9 @@ html body .mainBox,
 html body .boxCard,
 html body [class*="card"],
 html body [class*="Card"] {
-  border-radius: 9.5px !important;
-  -webkit-clip-path: inset(0 round 9.5px) !important;
-  clip-path: inset(0 round 9.5px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
 }
 
 /* 2. SELURUH TABEL, WRAPPER TABEL, CELL & CONTAINER TABEL (SUDUT UJUNG 95 DERAJAT / 9.5PX) */
@@ -6155,9 +6212,9 @@ html body .detailTableV2,
 html body .detailTable2,
 html body #detailContainer,
 html body .detailRow {
-  border-radius: 9.5px !important;
-  -webkit-clip-path: inset(0 round 9.5px) !important;
-  clip-path: inset(0 round 9.5px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
 }
 
 /* 3. SELURUH POPUP, MODAL, OVERLAY CARDS & DIALOG BOXES */
@@ -6177,9 +6234,9 @@ html body #popupAkun .akunBox,
 html body #popupTTD .ttdBox,
 html body [class*="popupBox"],
 html body [class*="Popup"] {
-  border-radius: 9.5px !important;
-  -webkit-clip-path: inset(0 round 9.5px) !important;
-  clip-path: inset(0 round 9.5px) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
 }
 
 /* 4. POPUP & CARD HEADERS & TABLE HEADERS (TOP CORNERS & CENTER ALIGNMENT) */
@@ -6192,7 +6249,7 @@ html body .dashboardTable th,
 html body .historyTable th,
 html body .masterDbTable th,
 html body .detailTableV2 th {
-  border-radius: 9.5px 9.5px 0 0 !important;
+  border-radius: 5px 5px 0 0 !important;
   text-align: center !important;
 }
 
@@ -6201,7 +6258,7 @@ html body .popupCardBodyContainerV2,
 html body .popupContent,
 html body .rejectBodyPopup,
 html body .artemisBodyPopup {
-  border-radius: 0 0 9.5px 9.5px !important;
+  border-radius: 0 0 5px 5px !important;
 }
 
 /* 6. FORM INPUTS, TOMBOL & ICON */
@@ -6221,10 +6278,10 @@ html body .btnSuccess,
 html body .btnWarning,
 html body .iconWrap,
 html body .cardStat .icon {
-  border-radius: 9.5px !important;
+  border-radius: 5px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 2CM DI ATAS BOTTOM MENU */
+/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 1CM DI ATAS BOTTOM MENU */
 @media (max-width: 640px) {
   html body .page.active,
   html body #dashboardPage.active,
@@ -6233,8 +6290,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 52px - 2cm) !important; /* 52px height bottomMenu + 2cm gap */
-    max-height: calc(100vh - 52px - 2cm) !important;
+    height: calc(100vh - 52px - 1cm) !important; /* 52px height bottomMenu + 1cm gap */
+    max-height: calc(100vh - 52px - 1cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6263,19 +6320,19 @@ html body .cardStat .icon {
     align-items: center !important;
     justify-content: center !important;
     padding: 12px !important;
-    padding-bottom: calc(52px + 2cm) !important;
+    padding-bottom: calc(52px + 1cm) !important;
   }
 
   #popupNotifList .popupNotifCard,
   #popupNotif .popupNotifCard,
   #popupNotifCard {
     margin: auto !important;
-    max-height: calc(100vh - 160px) !important;
+    max-height: calc(100vh - 120px) !important;
     height: auto !important;
   }
 
   #popupNotifList #notifListBody {
-    max-height: 190px !important;
-    min-height: 80px !important;
+    max-height: 380px !important;
+    min-height: 120px !important;
   }
 }

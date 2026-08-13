@@ -620,10 +620,12 @@ function getSystemNotifications() {
 }
 
 function getSystemNotifsClearedTimestamp() {
+  let clearedAt = Number(appStorage.getItem('NOTIFS_CLEARED_AT') || (typeof localStorage !== 'undefined' ? localStorage.getItem('NOTIFS_CLEARED_AT') : 0) || 0);
+  if (clearedAt) return clearedAt;
   const raw = appStorage.getItem(NOTIFICATIONS_DB_KEY) || '[]';
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && parsed.clearedAt) return Number(parsed.clearedAt) || 0;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.clearedAt) return Number(parsed.clearedAt) || 0;
   } catch(e) {}
   return 0;
 }
@@ -1033,7 +1035,7 @@ function loadNotificationList() {
     item.style.cssText = `
       padding: 12px;
       margin-bottom: 8px;
-      border-radius: 8px;
+      border-radius: 5px;
       border: 1px solid var(--border-color);
       background: ${isRead ? 'var(--bg-box)' : 'var(--bg-header)'};
       cursor: pointer;
@@ -1224,20 +1226,27 @@ function hapusSemuaNotifikasiSystem() {
     return;
   }
 
-  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI DARI SISTEM?', async () => {
+  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI DARI SISTEM (DATABASE & SELURUH PERANGKAT)?', async () => {
     showLoading('MENGHAPUS SEMUA NOTIFIKASI...');
     try {
+      const clearedAt = Date.now();
       const emptyNotifsPayload = {
-        clearedAt: Date.now(),
+        clearedAt: clearedAt,
         items: []
       };
 
-      // 1. KOSONGKAN PENYIMPANAN LOKAL METADATA & ITEMS
+      // 1. KOSONGKAN PENYIMPANAN LOKAL METADATA & ITEMS PERANGKAT INI
+      appStorage.setItem('NOTIFS_CLEARED_AT', String(clearedAt));
       appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload));
+      try { localStorage.setItem('NOTIFS_CLEARED_AT', String(clearedAt)); } catch(e) {}
       try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload)); } catch(e) {}
 
-      // 2. SINKRONKAN PERSISTEN LANGSUNG KE SUPABASE CLOUD DATABASE
+      // 2. SINKRONKAN PERSISTEN LANGSUNG KE SUPABASE CLOUD DATABASE & HAPUS TABEL NOTIFICATIONS
       if (typeof supabase !== 'undefined' && supabase) {
+        try {
+          await supabase.from('notifications').delete().neq('id', 'NONE');
+        } catch(e) {}
+
         try {
           const systemNotifRow = {
             id: '__SYSTEM_NOTIFICATIONS__',
@@ -1260,7 +1269,16 @@ function hapusSemuaNotifikasiSystem() {
         }
       }
 
-      // 3. PUSH KE DATABASE UTAMA LAIN
+      // 3. BROADCAST SIGNAL EVENT KE SELURUH TAB & PERANGKAT LAIN TERHUBUNG
+      try {
+        if (window.BroadcastChannel) {
+          const bc = new BroadcastChannel('permintaan_toko_sync');
+          bc.postMessage({ type: 'CLEAR_ALL_NOTIFS', clearedAt: clearedAt });
+          bc.close();
+        }
+      } catch(e) {}
+
+      // 4. PUSH KE DATABASE UTAMA LAIN
       if (typeof pushCentralCloudDB === 'function') {
         await pushCentralCloudDB();
       }
@@ -1268,7 +1286,7 @@ function hapusSemuaNotifikasiSystem() {
       hideLoading();
       updateNotifBellCounter();
       if (typeof loadNotificationList === 'function') loadNotificationList();
-      showNotif('SELURUH NOTIFIKASI BERHASIL DIHAPUS!', 'success');
+      showNotif('SELURUH NOTIFIKASI BERHASIL DIHAPUS DARI CLOUD & SELURUH PERANGKAT!', 'success');
     } catch (err) {
       hideLoading();
       console.error('[HAPUS NOTIFIKASI ERROR]:', err);
@@ -5733,33 +5751,20 @@ function loadDashboard() {
   filteredData.forEach(r => {
     const isWaitingDM = (r.status === 'PENDING' && r.serviceApprove);
     const isWaitingService = (r.status === 'PENDING' && !r.serviceApprove);
-
-    let isOrangeRow = false;
-    let isBoldRow = false;
-    if (currentUser) {
-      const cat = (currentUser.category || '').toUpperCase();
-      const isAdm = cat === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN');
-      if ((cat === 'DM' || isAdm) && isWaitingDM) {
-        isOrangeRow = true;
-        isBoldRow = true;
-      } else if ((cat === 'SERVICE' || isAdm) && isWaitingService) {
-        isOrangeRow = true;
-        isBoldRow = true;
-      }
-    }
+    const isPendingStatus = (r.status === 'PENDING' || isWaitingDM || isWaitingService);
 
     const tr = document.createElement('tr');
-    if (shouldRowBlinkRed(r)) {
-      tr.className = 'blink-row-red';
+    if (isPendingStatus || shouldRowBlinkRed(r)) {
+      tr.className = 'status-blinking-row blink-row-red';
     }
     tr.style.cursor = 'pointer';
     tr.title = `KLIK BARIS INI UNTUK MEMBUKA PERMINTAAN #${r.noSurat}`;
     tr.onclick = () => bukaDetailDariDashboard(r.noSurat);
     tr.innerHTML = `
-      <td style="width: 18%; text-align: left; white-space: nowrap;">${formatDateDDMMYYYYString(r.tanggal)}</td>
-      <td style="width: 32%; text-align: left;">${r.noSurat}</td>
-      <td style="width: 30%; text-align: left;">${r.toko} <small>(${r.area})</small></td>
-      <td style="width: 20%; text-align: left !important;">${getBadgeStatus(r)}</td>
+      <td style="width: 18%; text-align: left; white-space: nowrap; color: var(--text-main);">${formatDateDDMMYYYYString(r.tanggal)}</td>
+      <td style="width: 32%; text-align: left; color: var(--text-main);">${r.noSurat}</td>
+      <td style="width: 30%; text-align: left; color: var(--text-main);">${r.toko} <small style="color: var(--text-muted);">(${r.area})</small></td>
+      <td style="width: 20%; text-align: left !important; color: var(--text-main);">${getBadgeStatusHtml(r)}</td>
     `;
     lastDataContainer.appendChild(tr);
   });
@@ -5812,6 +5817,12 @@ function getBadgeStatus(r) {
 
   return st || '-';
 }
+
+function getBadgeStatusHtml(r) {
+  const label = getBadgeStatus(r);
+  return `<span style="color: var(--text-main) !important; font-weight: 500 !important; font-size: 12px !important; white-space: nowrap !important; background: transparent !important; border: none !important;">${label}</span>`;
+}
+window.getBadgeStatusHtml = getBadgeStatusHtml;
 
 function updateStoreDropdownOptions(selectedStoreName = '', filterKeyword = '') {
   const tokoSelect = document.getElementById('toko');
@@ -7362,7 +7373,7 @@ function renderArtemisPhotoPreviews() {
   }
 
   grid.innerHTML = tempArtemisPhotos.map((imgSrc, idx) => `
-    <div style="position: relative; width: 65px; height: 65px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">
+    <div style="position: relative; width: 65px; height: 65px; border-radius: 5px; overflow: hidden; border: 1px solid var(--border-color);">
       <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: cover;">
       <button type="button" onclick="hapusPhotoArtemisTemp(${idx})" style="position: absolute; top: 2px; right: 2px; background: rgba(239,68,68,0.9); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
     </div>
@@ -8039,11 +8050,16 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   const bodyBox = document.getElementById('popupBodyV2');
   if (!bodyBox) return;
 
+  const statusBadgePopupHtml = getBadgeStatusHtml(req);
   let headerInfoHtml = `
-    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: center !important; align-items: center !important; width: 100% !important; padding: 6px 12px !important; text-align: center !important; box-sizing: border-box !important; background: transparent !important;">
-      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; white-space: nowrap !important; flex: 0 0 auto !important; margin: 0 auto !important; background: transparent !important;">
+    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: center !important; align-items: center !important; gap: 12px !important; width: 100% !important; padding: 6px 12px !important; text-align: center !important; box-sizing: border-box !important; background: transparent !important;">
+      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; white-space: nowrap !important; background: transparent !important;">
         <span style="opacity: 0.85; font-weight: 500; color: var(--text-main);">NO SURAT : </span>
         <span class="noSuratValV2" style="color: var(--primary) !important; font-weight: 700 !important; margin-left: 4px; background: transparent !important;">${req.noSurat || '-'}</span>
+      </div>
+      <div style="display: inline-flex !important; align-items: center !important; justify-content: center !important;">
+        <span style="opacity: 0.85; font-weight: 500; color: var(--text-main); margin-right: 4px;">STATUS : </span>
+        ${statusBadgePopupHtml}
       </div>
     </div>
   `;
@@ -8093,7 +8109,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
     let statusPartBadgeHtml = '<span style="color: var(--text-muted); font-size: 11px;">-</span>';
     if (isUnfulfilled) {
-      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 700; font-size: 11px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444;">TIDAK DIPENUHI</span>`;
+      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 5px; font-weight: 700; font-size: 11px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444;">TIDAK DIPENUHI</span>`;
     } else if (statusPartVal) {
       const up = statusPartVal.toUpperCase();
       let badgeBg = 'rgba(2, 132, 199, 0.12)';
@@ -8112,7 +8128,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         badgeColor = '#ef4444';
         badgeBorder = '#ef4444';
       }
-      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 700; font-size: 11px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">${statusPartVal}</span>`;
+      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 5px; font-weight: 700; font-size: 11px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">${statusPartVal}</span>`;
     }
 
     let ketPartTdHtml = showKetPartCol ? `<td style="${tdStyleLeft} ${strikeStyle}">${statusPartBadgeHtml}</td>` : '';
@@ -8122,13 +8138,13 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
       let unfulfilledBtn = '';
       if (isUnfulfilled) {
         unfulfilledBtn = `
-          <button type="button" class="btnIcon btnUndo" onclick="undoBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="BATALKAN (UNDO)" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #f59e0b !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
+          <button type="button" class="btnIcon btnUndo" onclick="undoBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="BATALKAN (UNDO)" style="padding: 3px 6px !important; border-radius: 5px !important; line-height: 1 !important; height: auto !important; background: #f59e0b !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
             <span class="material-symbols-rounded" style="font-size: 15px !important;">undo</span>
           </button>
         `;
       } else {
         unfulfilledBtn = `
-          <button type="button" class="btnIcon btnDelete" onclick="hapusBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="TANDAI TIDAK DIPENUHI" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #ef4444 !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
+          <button type="button" class="btnIcon btnDelete" onclick="hapusBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="TANDAI TIDAK DIPENUHI" style="padding: 3px 6px !important; border-radius: 5px !important; line-height: 1 !important; height: auto !important; background: #ef4444 !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
             <span class="material-symbols-rounded" style="font-size: 15px !important;">cancel</span>
           </button>
         `;
@@ -8136,7 +8152,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
       // TOMBOL EDIT KETERANGAN PART (MANUAL FREE TEXT) PERSIS DI SEBELAH TOMBOL TIDAK DIPENUHI
       const editPartBtn = `
-        <button type="button" class="btnIcon btnEditPartRow" onclick="bukaModalEditKetPartSingle('${req.noSurat}', ${idx})" title="EDIT KETERANGAN / NO PART (FREE TEXT)" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #0284c7 !important; color: #ffffff !important; border: none !important; cursor: pointer !important; margin-left: 4px !important;">
+        <button type="button" class="btnIcon btnEditPartRow" onclick="bukaModalEditKetPartSingle('${req.noSurat}', ${idx})" title="EDIT KETERANGAN / NO PART (FREE TEXT)" style="padding: 3px 6px !important; border-radius: 5px !important; line-height: 1 !important; height: auto !important; background: #0284c7 !important; color: #ffffff !important; border: none !important; cursor: pointer !important; margin-left: 4px !important;">
           <span class="material-symbols-rounded" style="font-size: 15px !important;">edit_note</span>
         </button>
       `;
@@ -8345,11 +8361,11 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   `;
 
   bodyBox.innerHTML = `
-    <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 6px 0 12px 0 !important; display: flex !important; flex-direction: column !important; gap: 6px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 10px 10px !important; overflow: hidden !important;">
+    <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 6px 0 12px 0 !important; display: flex !important; flex-direction: column !important; gap: 6px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 5px 5px !important; overflow: hidden !important;">
       ${headerInfoHtml}
       
-      <div class="tableCardV2 tableWrap" style="display: block !important; border: 0 !important; border-radius: 9.5px !important; -webkit-clip-path: inset(0 round 9.5px) !important; clip-path: inset(0 round 9.5px) !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important; overscroll-behavior: contain !important; max-height: 55vh !important; min-height: 140px !important; background: var(--bg-box) !important; width: 100% !important; min-width: 100% !important; max-width: 100% !important; margin: 2px 0 6px 0 !important; padding: 0 !important; position: relative !important;">
-        <table class="detailTableV2" style="width: 100% !important; min-width: 100% !important; border-radius: 9.5px !important; border: 0 !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
+      <div class="tableCardV2 tableWrap" style="display: block !important; border: 0 !important; border-radius: 5px !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important; overscroll-behavior: contain !important; max-height: 55vh !important; min-height: 140px !important; background: var(--bg-box) !important; width: 100% !important; min-width: 100% !important; max-width: 100% !important; margin: 2px 0 6px 0 !important; padding: 0 !important; position: relative !important;">
+        <table class="detailTableV2" style="width: 100% !important; min-width: 100% !important; border-radius: 5px !important; border: 0 !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
           ${tableHeaderHtml}
           <tbody>
             ${itemsHtml}
@@ -8420,7 +8436,7 @@ function bukaModalEditStatusPart(noSurat) {
       const currentStatusPart = i.statusPart || '';
 
       return `
-        <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 5px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">
             <strong style="font-size: 13px; color: var(--primary);">${idx + 1}. ${typeVal} (SN: ${seriVal})</strong>
             <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);">${barangVal} (Qty: ${i.qty || 1})</span>
@@ -8428,11 +8444,11 @@ function bukaModalEditStatusPart(noSurat) {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
               <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">NO PART / KODE PART</label>
-              <input type="text" id="input_nopart_${idx}" value="${currentNoPart}" placeholder="Contoh: PRT-99210 / BAUT..." style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
+              <input type="text" id="input_nopart_${idx}" value="${currentNoPart}" placeholder="Contoh: PRT-99210 / BAUT..." style="width: 100%; padding: 8px 10px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
             </div>
             <div>
               <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">STATUS PART</label>
-              <input type="text" id="input_statuspart_${idx}" list="list_statuspart_presets" value="${currentStatusPart}" placeholder="Pilih / Ketik Status..." style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
+              <input type="text" id="input_statuspart_${idx}" list="list_statuspart_presets" value="${currentStatusPart}" placeholder="Pilih / Ketik Status..." style="width: 100%; padding: 8px 10px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
               <datalist id="list_statuspart_presets">
                 <option value="READY / TERSEDIA">
                 <option value="PROSES">
@@ -8922,35 +8938,35 @@ function renderFullPdfPreviewDocument(modelId) {
   if (modelId === 'MODEL_2') {
     tableHeaderBg = '#334155';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 10px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
+      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 5px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (modelId === 'MODEL_3') {
     tableHeaderBg = '#0f172a';
     headerTitleHtml = `
-      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 8px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
+      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 5px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (modelId === 'MODEL_4') {
     tableHeaderBg = '#059669';
     headerTitleHtml = `
-      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 6px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
+      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 5px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (modelId === 'MODEL_5') {
     tableHeaderBg = '#7c3aed';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 12px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
+      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 5px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
         PERMINTAAN TOKO
       </div>
     `;
   }
 
   container.innerHTML = `
-    <div style="background: #ffffff; color: #0f172a; width: 100%; max-width: 720px; margin: 0 auto; padding: 20px 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.18); font-family: Arial, sans-serif; box-sizing: border-box; border: 1px solid #cbd5e1;">
+    <div style="background: #ffffff; color: #0f172a; width: 100%; max-width: 720px; margin: 0 auto; padding: 20px 24px; border-radius: 5px; box-shadow: 0 10px 30px rgba(0,0,0,0.18); font-family: Arial, sans-serif; box-sizing: border-box; border: 1px solid #cbd5e1;">
       ${headerTitleHtml}
 
       <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 10px; padding: 2px 0; flex-wrap: wrap; gap: 6px; background: transparent; border: none;">
@@ -8991,7 +9007,7 @@ function renderFullPdfPreviewDocument(modelId) {
         </tbody>
       </table>
 
-      <div style="margin-top: 8px; margin-bottom: 12px; font-size: 11px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 5px solid ${tableHeaderBg}; padding: 8px 12px; border-radius: 6px; color: #0f172a;">
+      <div style="margin-top: 8px; margin-bottom: 12px; font-size: 11px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 5px solid ${tableHeaderBg}; padding: 8px 12px; border-radius: 5px; color: #0f172a;">
         <div style="font-weight: 800; font-size: 11px; color: ${tableHeaderBg === '#0f172a' ? '#0369a1' : tableHeaderBg}; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
           <span>📌</span> CATATAN / KETERANGAN PERMINTAAN:
         </div>
@@ -9160,7 +9176,7 @@ function bukaPdfModal(noSurat) {
   if (req.photos && req.photos.length > 0) {
     const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
     const deleteBtnHtml = isAdminUser ? `
-      <button type="button" onclick="hapusFotoDokumenBiasa('${req.noSurat}')" style="background:#dc2626; color:#ffffff; border:none; border-radius:4px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+      <button type="button" onclick="hapusFotoDokumenBiasa('${req.noSurat}')" style="background:#dc2626; color:#ffffff; border:none; border-radius: 5px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
         <span class="material-symbols-rounded" style="font-size:13px;">delete</span> HAPUS FOTO DOKUMEN INI
       </button>
     ` : '';
@@ -9173,7 +9189,7 @@ function bukaPdfModal(noSurat) {
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           ${req.photos.map(p => `
-            <div style="width: 95px; height: 95px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #000;">
+            <div style="width: 95px; height: 95px; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: #000;">
               <img src="${p}" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
           `).join('')}
@@ -9202,28 +9218,28 @@ function bukaPdfModal(noSurat) {
   if (activeModel === 'MODEL_2') {
     tableHeaderBg = '#334155';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 10px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
+      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 5px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (activeModel === 'MODEL_3') {
     tableHeaderBg = '#0f172a';
     headerTitleHtml = `
-      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 8px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
+      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 5px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (activeModel === 'MODEL_4') {
     tableHeaderBg = '#059669';
     headerTitleHtml = `
-      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 6px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
+      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 5px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (activeModel === 'MODEL_5') {
     tableHeaderBg = '#7c3aed';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 12px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
+      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 5px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
         PERMINTAAN TOKO
       </div>
     `;
@@ -9254,7 +9270,7 @@ function bukaPdfModal(noSurat) {
         </table>
 
         <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; color: #0f172a;">DETAIL PERMINTAAN:</div>
-        <div class="pdf-table-responsive" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; border-radius: 6px;">
+        <div class="pdf-table-responsive" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; border-radius: 5px;">
           <table style="width: 100%; border-collapse: collapse; font-size: 11px; border: 1px solid #cbd5e1; min-width: 100%;">
             <thead>
               <tr style="background: ${tableHeaderBg}; color: #ffffff;">
@@ -9277,7 +9293,7 @@ function bukaPdfModal(noSurat) {
           const cTxt = (req.catatan || '').trim();
           if (cTxt && cTxt !== '-') {
             return `
-              <div style="margin-top: 12px; margin-bottom: 16px; font-size: 11.5px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 6px solid ${tableHeaderBg}; padding: 12px 16px; border-radius: 8px; box-shadow: 0 3px 10px rgba(2,132,199,0.12); color: #0f172a; opacity: 1 !important;">
+              <div style="margin-top: 12px; margin-bottom: 16px; font-size: 11.5px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 6px solid ${tableHeaderBg}; padding: 12px 16px; border-radius: 5px; box-shadow: 0 3px 10px rgba(2,132,199,0.12); color: #0f172a; opacity: 1 !important;">
                 <div style="font-weight: 800; font-size: 11.5px; color: ${tableHeaderBg === '#0f172a' ? '#0369a1' : tableHeaderBg}; margin-bottom: 4px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
                   <span style="font-size: 14px;">📌</span> CATATAN / KETERANGAN PERMINTAAN:
                 </div>
@@ -9978,36 +9994,43 @@ async function fetchChatFromSupabase() {
   if (typeof supabase === 'undefined' || !supabase) return [];
 
   let retrievedChats = null;
+  let cloudClearedAt = 0;
 
   // 1. Prioritas Utama: Lookup table (1 query ringkas)
   try {
     const { data: lookupRow } = await supabase.from('lookup').select('value').eq('key', 'chat_messages').maybeSingle();
     if (lookupRow && lookupRow.value) {
       const parsed = typeof lookupRow.value === 'string' ? JSON.parse(lookupRow.value) : lookupRow.value;
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.clearedAt) {
+        cloudClearedAt = Number(parsed.clearedAt) || 0;
+        retrievedChats = Array.isArray(parsed.items) ? parsed.items : [];
+      } else if (Array.isArray(parsed)) {
         retrievedChats = parsed;
       }
     }
   } catch(e) {}
 
-  // 2. Fallback: Permintaan_toko broadcast row
-  if (!retrievedChats || retrievedChats.length === 0) {
+  // 2. Fallback: Permintaan_toko broadcast row (__SYSTEM_CHAT_MESSAGES__)
+  if (retrievedChats === null) {
     try {
       const { data: sysRow } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_CHAT_MESSAGES__').maybeSingle();
       if (sysRow && sysRow.catatan) {
-        const parsed = JSON.parse(sysRow.catatan);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          retrievedChats = parsed;
+        const parsed = typeof sysRow.catatan === 'string' ? JSON.parse(sysRow.catatan) : sysRow.catatan;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.clearedAt) {
+          cloudClearedAt = Math.max(cloudClearedAt, Number(parsed.clearedAt) || 0);
+          if (retrievedChats === null) retrievedChats = Array.isArray(parsed.items) ? parsed.items : [];
+        } else if (Array.isArray(parsed)) {
+          if (retrievedChats === null) retrievedChats = parsed;
         }
       }
     } catch(e) {}
   }
 
   // 3. Fallback: Chat_messages table
-  if (!retrievedChats || retrievedChats.length === 0) {
+  if (retrievedChats === null) {
     try {
       const { data: rows } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
-      if (Array.isArray(rows) && rows.length > 0) {
+      if (Array.isArray(rows)) {
         retrievedChats = rows.map(c => ({
           id: c.id,
           room: c.room,
@@ -10024,22 +10047,67 @@ async function fetchChatFromSupabase() {
     } catch(e) {}
   }
 
-  if (Array.isArray(retrievedChats)) {
-    const localChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-    // Merge without duplicates based on id
-    const chatMap = new Map();
-    localChats.forEach(c => { if (c && c.id) chatMap.set(c.id, c); });
-    retrievedChats.forEach(c => { if (c && c.id) chatMap.set(c.id, c); });
-    const mergedChats = Array.from(chatMap.values());
+  // CHECK CLOUD CLEAR SIGNAL VS LOCAL
+  const localClearedAt = Number(appStorage.getItem('CHAT_CLEARED_AT') || (typeof localStorage !== 'undefined' ? localStorage.getItem('CHAT_CLEARED_AT') : 0) || 0);
+  const activeClearedAt = Math.max(cloudClearedAt, localClearedAt);
 
-    if (JSON.stringify(mergedChats) !== JSON.stringify(localChats)) {
-      appStorage.setItem(CHAT_DB_KEY, JSON.stringify(mergedChats));
-      try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(mergedChats)); } catch(e) {}
+  if (activeClearedAt > 0) {
+    appStorage.setItem('CHAT_CLEARED_AT', String(activeClearedAt));
+    try { localStorage.setItem('CHAT_CLEARED_AT', String(activeClearedAt)); } catch(e) {}
+  }
+
+  if (activeClearedAt > 0 && Array.isArray(retrievedChats)) {
+    retrievedChats = retrievedChats.filter(c => {
+      if (!c) return false;
+      let t = 0;
+      const timeVal = c.created_at || c.createdAt || c.tanggal;
+      if (timeVal) {
+        if (typeof timeVal === 'number') t = timeVal;
+        else t = new Date(timeVal).getTime();
+      }
+      if (!t || isNaN(t)) return false;
+      return t > activeClearedAt;
+    });
+  }
+
+  if (activeClearedAt > 0 && (retrievedChats === null || retrievedChats.length === 0)) {
+    appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
+    appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
+    try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify([])); } catch(e) {}
+    try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([])); } catch(e) {}
+    refreshActiveChatUI();
+    return [];
+  }
+
+  if (Array.isArray(retrievedChats)) {
+    if (retrievedChats.length === 0 && activeClearedAt > 0) {
+      appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
+      appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
+      try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify([])); } catch(e) {}
+      try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([])); } catch(e) {}
+      refreshActiveChatUI();
+      return [];
+    }
+
+    let finalChats = retrievedChats;
+    if (activeClearedAt === 0) {
+      const localChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+      const chatMap = new Map();
+      localChats.forEach(c => { if (c && c.id) chatMap.set(c.id, c); });
+      retrievedChats.forEach(c => { if (c && c.id) chatMap.set(c.id, c); });
+      finalChats = Array.from(chatMap.values());
+    }
+
+    const prevStr = appStorage.getItem(CHAT_DB_KEY) || '[]';
+    const newStr = JSON.stringify(finalChats);
+    if (prevStr !== newStr) {
+      appStorage.setItem(CHAT_DB_KEY, newStr);
+      try { localStorage.setItem(CHAT_DB_KEY, newStr); } catch(e) {}
       refreshActiveChatUI();
       if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
       if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
     }
-    return mergedChats;
+    return finalChats;
   }
   return [];
 }
@@ -10080,7 +10148,40 @@ window.addEventListener('storage', (e) => {
   if (e.key === CHAT_DB_KEY || e.key === CHAT_ROOM_DB_KEY) {
     refreshActiveChatUI();
   }
+  if (e.key === NOTIFICATIONS_DB_KEY) {
+    if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+    if (typeof loadNotificationList === 'function') loadNotificationList();
+  }
 });
+
+try {
+  if (window.BroadcastChannel) {
+    const syncChannel = new BroadcastChannel('permintaan_toko_sync');
+    syncChannel.onmessage = (event) => {
+      if (event && event.data) {
+        if (event.data.type === 'CLEAR_ALL_CHATS') {
+          const clearedAt = event.data.clearedAt || Date.now();
+          appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
+          appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
+          appStorage.setItem('CHAT_CLEARED_AT', String(clearedAt));
+          try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify([])); } catch(e) {}
+          try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([])); } catch(e) {}
+          try { localStorage.setItem('CHAT_CLEARED_AT', String(clearedAt)); } catch(e) {}
+          if (typeof refreshActiveChatUI === 'function') refreshActiveChatUI();
+        } else if (event.data.type === 'CLEAR_ALL_NOTIFS') {
+          const clearedAt = event.data.clearedAt || Date.now();
+          const emptyNotifsPayload = { clearedAt: clearedAt, items: [] };
+          appStorage.setItem('NOTIFS_CLEARED_AT', String(clearedAt));
+          appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload));
+          try { localStorage.setItem('NOTIFS_CLEARED_AT', String(clearedAt)); } catch(e) {}
+          try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload)); } catch(e) {}
+          if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+          if (typeof loadNotificationList === 'function') loadNotificationList();
+        }
+      }
+    };
+  }
+} catch(e) {}
 
 function isServiceTSMUser() {
   if (!currentUser) return false;
@@ -10241,10 +10342,10 @@ function loadDaftarChatAdmin() {
   const actionToolbar = document.createElement('div');
   actionToolbar.style.cssText = 'display:flex; flex-direction:column; gap:6px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border-color);';
   actionToolbar.innerHTML = `
-    <button type="button" onclick="bukaModalPilihUserChat()" style="width:100%; padding:9px 12px; background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; border:none; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 5px rgba(2,132,199,0.25);">
+    <button type="button" onclick="bukaModalPilihUserChat()" style="width:100%; padding:9px 12px; background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; border:none; border-radius: 5px; font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 5px rgba(2,132,199,0.25);">
       <span class="material-symbols-rounded" style="font-size:17px;">add_comment</span> + MULAI CHAT KE TOKO / USER
     </button>
-    <button type="button" onclick="bukaModalBroadcastChat()" style="width:100%; padding:7px 12px; background:rgba(245,158,11,0.12); color:#d97706; border:1px dashed #d97706; border-radius:8px; font-weight:700; font-size:11.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+    <button type="button" onclick="bukaModalBroadcastChat()" style="width:100%; padding:7px 12px; background:rgba(245,158,11,0.12); color:#d97706; border:1px dashed #d97706; border-radius: 5px; font-weight:700; font-size:11.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
       <span class="material-symbols-rounded" style="font-size:17px;">campaign</span> SIARKAN KE SEMUA TOKO
     </button>
   `;
@@ -10271,14 +10372,14 @@ function loadDaftarChatAdmin() {
 
   rooms.forEach(r => {
     const item = document.createElement('div');
-    item.style.cssText = 'padding:10px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.2s; display:flex; justify-content:space-between; align-items:center; border-radius:6px; margin-bottom:4px;';
+    item.style.cssText = 'padding:10px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.2s; display:flex; justify-content:space-between; align-items:center; border-radius: 5px; margin-bottom:4px;';
     item.onmouseover = () => item.style.background = 'rgba(59,130,246,0.06)';
     item.onmouseout = () => item.style.background = 'transparent';
 
-    const unreadBadgeHtml = r.unreadAdmin > 0 ? `<span style="background:#ef4444; color:#fff; border-radius:10px; padding:2px 8px; font-size:10px; font-weight:bold;">${r.unreadAdmin} UNREAD</span>` : '';
+    const unreadBadgeHtml = r.unreadAdmin > 0 ? `<span style="background:#ef4444; color:#fff; border-radius: 5px; padding:2px 8px; font-size:10px; font-weight:bold;">${r.unreadAdmin} UNREAD</span>` : '';
     
     const deleteRoomBtnHtml = isSysAdmin ? `
-      <button type="button" class="btnIcon btnDelete" onclick="event.stopPropagation(); hapusChatRoom('${r.room}', '${r.user}')" title="HAPUS CHAT USER INI" style="padding:5px; background:rgba(239,68,68,0.1); color:#ef4444; border-radius:6px; border:none; cursor:pointer; display:flex; align-items:center;">
+      <button type="button" class="btnIcon btnDelete" onclick="event.stopPropagation(); hapusChatRoom('${r.room}', '${r.user}')" title="HAPUS CHAT USER INI" style="padding:5px; background:rgba(239,68,68,0.1); color:#ef4444; border-radius: 5px; border:none; cursor:pointer; display:flex; align-items:center;">
         <span class="material-symbols-rounded" style="font-size:17px;">delete</span>
       </button>
     ` : '';
@@ -10287,7 +10388,7 @@ function loadDaftarChatAdmin() {
       <div style="flex:1; min-width:0; margin-right:8px;" onclick="bukaRoomAdmin('${r.room}', '${r.user}', '${r.userName || r.user}', '${r.userArea || 'TSM'}')">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
           <div style="font-size:12.5px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            ${r.userName || r.user} <span style="font-size:10.5px; font-weight:bold; color:var(--primary); background:rgba(59,130,246,0.15); padding:1px 5px; border-radius:4px;">(${r.userArea || 'TSM'})</span>
+            ${r.userName || r.user} <span style="font-size:10.5px; font-weight:bold; color:var(--primary); background:rgba(59,130,246,0.15); padding:1px 5px; border-radius: 5px;">(${r.userArea || 'TSM'})</span>
           </div>
           ${unreadBadgeHtml}
         </div>
@@ -10361,7 +10462,7 @@ function filterListUserChat(query) {
 
   filtered.forEach(u => {
     const card = document.createElement('div');
-    card.style.cssText = 'padding:9px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-radius:6px; margin-bottom:4px; transition:background 0.2s;';
+    card.style.cssText = 'padding:9px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-radius: 5px; margin-bottom:4px; transition:background 0.2s;';
     card.onmouseover = () => card.style.background = 'rgba(59,130,246,0.08)';
     card.onmouseout = () => card.style.background = 'transparent';
     card.onclick = () => {
@@ -10385,7 +10486,7 @@ function filterListUserChat(query) {
         </div>
       </div>
       <div style="text-align:right; flex-shrink:0;">
-        <span style="font-size:10px; font-weight:700; color:var(--primary); background:rgba(59,130,246,0.15); padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:2px;">
+        <span style="font-size:10px; font-weight:700; color:var(--primary); background:rgba(59,130,246,0.15); padding:2px 6px; border-radius: 5px; display:inline-block; margin-bottom:2px;">
           ${u.area || 'TSM'}
         </span>
         <div style="font-size:9.5px; color:var(--text-muted); font-weight:600;">
@@ -10870,17 +10971,22 @@ function hapusSemuaChatAdmin() {
     return;
   }
 
-  showConfirm('YAKIN INGIN MENGHAPUS SELURUH RIWAYAT CHAT & ROOM DARI SISTEM?', () => {
+  showConfirm('YAKIN INGIN MENGHAPUS SELURUH RIWAYAT CHAT & ROOM DARI SISTEM (DATABASE & SELURUH PERANGKAT)?', () => {
     showLoading('MENGHAPUS SEMUA CHAT...');
     setTimeout(async () => {
       try {
-        // 1. KOSONGKAN PENYIMPANAN LOKAL
+        const clearedAt = Date.now();
+        const clearPayload = { clearedAt: clearedAt, items: [] };
+
+        // 1. KOSONGKAN PENYIMPANAN LOKAL PERANGKAT INI
         appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
         appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
+        appStorage.setItem('CHAT_CLEARED_AT', String(clearedAt));
         try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify([])); } catch(e) {}
         try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([])); } catch(e) {}
+        try { localStorage.setItem('CHAT_CLEARED_AT', String(clearedAt)); } catch(e) {}
 
-        // 2. KOSONGKAN DI SUPABASE CLOUD (chat_messages, chat, lookup, permintaan_toko)
+        // 2. KOSONGKAN & HAPUS DATABASE SUPABASE CLOUD (chat_messages, chat, lookup, permintaan_toko)
         if (typeof pushChatToSupabase === 'function') {
           pushChatToSupabase([], null);
         }
@@ -10890,7 +10996,7 @@ function hapusSemuaChatAdmin() {
           try {
             await supabase.from('lookup').upsert({
               key: 'chat_messages',
-              value: JSON.stringify([]),
+              value: JSON.stringify(clearPayload),
               code: 'CHAT_MESSAGES',
               type: 'CHAT',
               updated_at: new Date().toISOString()
@@ -10903,7 +11009,7 @@ function hapusSemuaChatAdmin() {
               toko: 'SYSTEM',
               area: 'ALL',
               jenis: 'SYSTEM',
-              catatan: JSON.stringify([]),
+              catatan: JSON.stringify(clearPayload),
               items: [],
               photos: [],
               status: 'DONE',
@@ -10917,12 +11023,13 @@ function hapusSemuaChatAdmin() {
           }
         }
 
-        // 3. KOSONGKAN DI FIRESTORE & REALTIME DB
+        // 3. KOSONGKAN DI FIRESTORE & REALTIME DB JIKA TERSEDIA
         if (typeof dbFirestore !== 'undefined' && dbFirestore) {
           try {
             await dbFirestore.collection('app_settings').doc('config').set({
               chatMessages: [],
-              chatRooms: []
+              chatRooms: [],
+              chatClearedAt: clearedAt
             }, { merge: true });
           } catch(e) {}
         }
@@ -10930,16 +11037,26 @@ function hapusSemuaChatAdmin() {
           try {
             await dbRealtime.ref('chat_messages').remove();
             await dbRealtime.ref('chat_rooms').remove();
+            await dbRealtime.ref('chat_cleared_at').set(clearedAt);
           } catch(e) {}
         }
 
-        // 4. SYNC CENTRAL CLOUD
+        // 4. BROADCAST SIGNAL EVENT KE SELURUH TAB & PERANGKAT LAIN TERHUBUNG
+        try {
+          if (window.BroadcastChannel) {
+            const bc = new BroadcastChannel('permintaan_toko_sync');
+            bc.postMessage({ type: 'CLEAR_ALL_CHATS', clearedAt: clearedAt });
+            bc.close();
+          }
+        } catch(e) {}
+
+        // 5. SYNC CENTRAL CLOUD
         if (typeof pushCentralCloudDB === 'function') {
           await pushCentralCloudDB();
         }
 
         hideLoading();
-        showNotif('SELURUH PESAN CHAT & ROOM BERHASIL DIHAPUS!', 'success');
+        showNotif('SELURUH PESAN CHAT & ROOM BERHASIL DIHAPUS DARI CLOUD & SELURUH PERANGKAT!', 'success');
 
         if (typeof refreshActiveChatUI === 'function') {
           refreshActiveChatUI();
@@ -11024,11 +11141,12 @@ window.addEventListener('click', function (e) {
     tutupImageViewer();
   }
 
-  // 10. Chat Bantuan Popup (#popupBantuan) - Click outside to close
+  // 10. Chat Bantuan Popup (#popupBantuan) - Click outside chatBox to close
   const popupBantuan = document.getElementById('popupBantuan');
+  const chatBox = popupBantuan?.querySelector('.chatBox');
   const helpBtn = document.getElementById('helpButton');
-  if (popupBantuan && (popupBantuan.classList.contains('show') || popupBantuan.style.display === 'block')) {
-    if (!popupBantuan.contains(e.target) && (!helpBtn || !helpBtn.contains(e.target))) {
+  if (popupBantuan && (popupBantuan.classList.contains('show') || popupBantuan.style.display === 'flex' || popupBantuan.style.display === 'block')) {
+    if (e.target === popupBantuan || (chatBox && !chatBox.contains(e.target) && (!helpBtn || !helpBtn.contains(e.target)))) {
       if (typeof tutupBantuan === 'function') {
         tutupBantuan();
       }
