@@ -6243,11 +6243,11 @@ html body .cardStat .icon {
   border-radius: 10px !important;
 }
 
-/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 2CM DI ATAS BOTTOM MENU */
+/* RESPONSIVE HP / MOBILE: BATAS BAWAH HALAMAN & TABEL PINNED 3CM DARI LAYAR BAGIAN BAWAH */
 @media (max-width: 640px) {
   html body .page.active {
-    height: calc(100vh - 52px - 2cm) !important; /* 52px height bottomMenu + 2cm gap */
-    max-height: calc(100vh - 52px - 2cm) !important;
+    height: calc(100vh - 3cm) !important; /* Batas bawah 3cm dari layar bagian bawah */
+    max-height: calc(100vh - 3cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6276,7 +6276,7 @@ html body .cardStat .icon {
     align-items: center !important;
     justify-content: center !important;
     padding: 12px !important;
-    padding-bottom: calc(52px + 2cm) !important;
+    padding-bottom: 3cm !important;
   }
 
   #popupNotifList .popupNotifCard,
