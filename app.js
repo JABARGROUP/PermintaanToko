@@ -9993,59 +9993,53 @@ function refreshActiveChatUI() {
 async function pushChatToSupabase(allChats, newChatObj) {
   if (typeof supabase === 'undefined' || !supabase) return;
 
-  const chatRow = {
-    id: newChatObj?.id || `CHAT-${Date.now()}`,
-    room: newChatObj?.room || '',
-    user: newChatObj?.user || '',
-    user_area: newChatObj?.userArea || currentUser?.area || 'BDG',
-    pengirim: newChatObj?.pengirim || 'USER',
-    sender_id: newChatObj?.senderId || '',
-    sender_username: newChatObj?.senderUsername || '',
-    sender_name: newChatObj?.senderName || '',
-    pesan: newChatObj?.pesan || '',
-    tanggal: newChatObj?.tanggal || '',
-    created_at: new Date().toISOString()
-  };
+  if (newChatObj) {
+    const chatRow = {
+      id: newChatObj.id || `CHAT-${Date.now()}`,
+      room: newChatObj.room || '',
+      user: newChatObj.user || '',
+      user_area: newChatObj.userArea || currentUser?.area || 'BDG',
+      pengirim: newChatObj.pengirim || 'USER',
+      sender_id: newChatObj.senderId || '',
+      sender_username: newChatObj.senderUsername || '',
+      sender_name: newChatObj.senderName || '',
+      pesan: newChatObj.pesan || '',
+      tanggal: newChatObj.tanggal || '',
+      created_at: new Date().toISOString()
+    };
 
-  // 1. Insert individual message to chat_messages table
-  try {
-    supabase.from('chat_messages').insert([chatRow]).then(({ error }) => {
-      if (error) console.warn('[SUPABASE chat_messages INSERT NOTICE]:', error.message);
-      else console.log('⚡ [SUPABASE chat_messages SUCCESS]: Pesan chat berhasil masuk tabel chat_messages!');
-    }).catch(e => console.warn(e));
-  } catch(e1) {}
+    try {
+      supabase.from('chat_messages').insert([chatRow]).then(({ error }) => {
+        if (error) console.warn('[SUPABASE chat_messages INSERT NOTICE]:', error.message);
+      }).catch(e => console.warn(e));
+    } catch(e1) {}
 
-  // 2. Insert individual message to chat table
-  try {
-    supabase.from('chat').insert([chatRow]).then(({ error }) => {
-      if (error) console.warn('[SUPABASE chat INSERT NOTICE]:', error.message);
-      else console.log('⚡ [SUPABASE chat SUCCESS]: Pesan chat berhasil masuk tabel chat!');
-    }).catch(e => console.warn(e));
-  } catch(e2) {}
+    try {
+      supabase.from('chat').insert([chatRow]).catch(e => console.warn(e));
+    } catch(e2) {}
+  }
 
-  // 3. Upsert full chat list to lookup table (key: chat_messages)
+  // Synchronize monolithic cloud cache tables (lookup & permintaan_toko)
   try {
+    const clearPayload = (Array.isArray(allChats) && allChats.length === 0) 
+      ? { clearedAt: Date.now(), items: [] } 
+      : allChats;
+
     supabase.from('lookup').upsert({
       key: 'chat_messages',
-      value: JSON.stringify(allChats),
+      value: JSON.stringify(clearPayload),
       code: 'CHAT_MESSAGES',
       type: 'CHAT',
       updated_at: new Date().toISOString()
-    }, { onConflict: 'key' }).then(({ error }) => {
-      if (error) console.warn('[SUPABASE lookup chat UPSERT NOTICE]:', error.message);
-      else console.log('⚡ [SUPABASE lookup CHAT SUCCESS]: Pesan chat berhasil disimpan ke tabel lookup!');
-    }).catch(e => console.warn(e));
-  } catch(e3) {}
+    }, { onConflict: 'key' }).catch(e => console.warn(e));
 
-  // 4. Upsert full chat list to permintaan_toko table (__SYSTEM_CHAT_MESSAGES__)
-  try {
     const systemChatRow = {
       no_surat: '__SYSTEM_CHAT_MESSAGES__',
       tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
       toko: 'SYSTEM',
       area: 'ALL',
       jenis: 'SYSTEM',
-      catatan: JSON.stringify(allChats),
+      catatan: JSON.stringify(clearPayload),
       items: [],
       photos: [],
       status: 'DONE',
@@ -10053,13 +10047,62 @@ async function pushChatToSupabase(allChats, newChatObj) {
       created_by: 'SYSTEM',
       created_at: new Date().toISOString()
     };
-    supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'no_surat' }).then(({ error }) => {
-      if (error) console.warn('[SUPABASE permintaan_toko CHAT UPSERT NOTICE]:', error.message);
-      else console.log('⚡ [SUPABASE permintaan_toko CHAT SUCCESS]: Chat berhasil disiarkan via permintaan_toko!');
-    }).catch(e => console.warn(e));
-  } catch(e4) {}
+    supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'no_surat' }).catch(e => console.warn(e));
+  } catch(e3) {}
 }
 window.pushChatToSupabase = pushChatToSupabase;
+
+function parseTimestampFromMessage(c) {
+  if (!c) return 0;
+  
+  if (typeof c.created_at === 'number') return c.created_at;
+  if (typeof c.createdAt === 'number') return c.createdAt;
+
+  if (c.created_at && typeof c.created_at === 'string') {
+    const t = new Date(c.created_at).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  if (c.createdAt && typeof c.createdAt === 'string') {
+    const t = new Date(c.createdAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+
+  // Extract timestamp directly from message ID e.g. CHAT-1786523868541-164
+  if (c.id && typeof c.id === 'string' && c.id.includes('CHAT-')) {
+    const match = c.id.match(/CHAT-(\d{10,})/);
+    if (match && match[1]) {
+      const ts = parseInt(match[1], 10);
+      if (!isNaN(ts) && ts > 1000000000000) return ts;
+    }
+  }
+
+  // Parse DD/MM/YYYY HH:mm format
+  if (c.tanggal && typeof c.tanggal === 'string') {
+    const parts = c.tanggal.trim().split(/[\sT]+/);
+    if (parts.length >= 1) {
+      const dateParts = parts[0].split(/[\/\.\-]/);
+      let day = 1, month = 1, year = 2026;
+      if (dateParts.length >= 3) {
+        day = parseInt(dateParts[0], 10) || 1;
+        month = (parseInt(dateParts[1], 10) || 1) - 1;
+        year = parseInt(dateParts[2], 10) || 2026;
+      }
+      let hours = 0, minutes = 0, seconds = 0;
+      if (parts.length >= 2) {
+        const timeParts = parts[1].split(':');
+        if (timeParts.length >= 1) hours = parseInt(timeParts[0], 10) || 0;
+        if (timeParts.length >= 2) minutes = parseInt(timeParts[1], 10) || 0;
+        if (timeParts.length >= 3) seconds = parseInt(timeParts[2], 10) || 0;
+      }
+      const parsedDate = new Date(year, month, day, hours, minutes, seconds);
+      const t = parsedDate.getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+  }
+
+  return 0;
+}
+window.parseTimestampFromMessage = parseTimestampFromMessage;
 
 let chatRealtimeChannel = null;
 
@@ -10068,34 +10111,36 @@ function initChatRealtimeSubscription() {
   try {
     chatRealtimeChannel = supabase
       .channel('public:chat_messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
-        if (payload && payload.new) {
-          const newMsg = {
-            id: payload.new.id || `CHAT-${Date.now()}`,
-            room: payload.new.room || '',
-            user: payload.new.user || '',
-            userArea: payload.new.user_area || payload.new.userArea || 'BDG',
-            pengirim: payload.new.pengirim || 'USER',
-            senderId: payload.new.sender_id || payload.new.senderId || '',
-            senderUsername: payload.new.sender_username || payload.new.senderUsername || '',
-            senderName: payload.new.sender_name || payload.new.senderName || '',
-            pesan: payload.new.pesan || '',
-            tanggal: payload.new.tanggal || ''
-          };
-          const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-          const exists = allChats.some(c => c && (c.id === newMsg.id || (c.room === newMsg.room && c.pesan === newMsg.pesan && c.tanggal === newMsg.tanggal)));
-          if (!exists) {
-            allChats.push(newMsg);
-            appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
-            try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats)); } catch(e) {}
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, payload => {
+        if (payload) {
+          if (payload.eventType === 'DELETE') {
+            if (typeof fetchChatFromSupabase === 'function') {
+              fetchChatFromSupabase().catch(() => {});
+            }
+          } else if (payload.new) {
+            const newMsg = {
+              id: payload.new.id || `CHAT-${Date.now()}`,
+              room: payload.new.room || '',
+              user: payload.new.user || '',
+              userArea: payload.new.user_area || payload.new.userArea || 'BDG',
+              pengirim: payload.new.pengirim || 'USER',
+              senderId: payload.new.sender_id || payload.new.senderId || '',
+              senderUsername: payload.new.sender_username || payload.new.senderUsername || '',
+              senderName: payload.new.sender_name || payload.new.senderName || '',
+              pesan: payload.new.pesan || '',
+              tanggal: payload.new.tanggal || ''
+            };
+            const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+            const exists = allChats.some(c => c && (c.id === newMsg.id || (c.room === newMsg.room && c.pesan === newMsg.pesan && c.tanggal === newMsg.tanggal)));
+            if (!exists) {
+              allChats.push(newMsg);
+              const dynamicRooms = rebuildRoomsFromChats(allChats);
+              clearAllLocalChatStorage(allChats, dynamicRooms);
 
-            const dynamicRooms = rebuildRoomsFromChats(allChats);
-            appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(dynamicRooms));
-            try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(dynamicRooms)); } catch(e) {}
-
-            refreshActiveChatUI();
-            if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-            if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+              refreshActiveChatUI();
+              if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+              if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+            }
           }
         }
       })
@@ -10112,129 +10157,106 @@ async function fetchChatFromSupabase() {
   initChatRealtimeSubscription();
 
   let cloudClearedAt = 0;
-  const chatMap = new Map();
+  let serverChats = null;
 
-  // 1. Ambil data chat lokal saat ini
-  const localChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-  localChats.forEach(c => {
-    if (c && (c.id || c.pesan)) {
-      const key = c.id || `${c.room || ''}_${c.tanggal || ''}_${c.pesan || ''}`;
-      chatMap.set(key, c);
-    }
-  });
-
-  // 2. AMBIL DIRECT DARI TABEL chat_messages (SUMBER UTAMA RECORD INDIVIDUAL)
+  // 1. QUERY UTAMA: Ambil langsung dari tabel chat_messages di Supabase (Authority Server)
   try {
-    const { data: rows } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
-    if (Array.isArray(rows) && rows.length > 0) {
-      rows.forEach(c => {
-        if (c) {
-          const item = {
-            id: c.id || `CHAT-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-            room: c.room || '',
-            user: c.user || '',
-            userArea: c.user_area || c.userArea || 'BDG',
-            pengirim: c.pengirim || 'USER',
-            senderId: c.sender_id || c.senderId || '',
-            senderUsername: c.sender_username || c.senderUsername || '',
-            senderName: c.sender_name || c.senderName || '',
-            pesan: c.pesan || '',
-            tanggal: c.tanggal || ''
-          };
-          const key = item.id || `${item.room}_${item.tanggal}_${item.pesan}`;
-          chatMap.set(key, item);
-        }
-      });
+    const { data: rows, error } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+    if (!error && Array.isArray(rows)) {
+      serverChats = rows.map(c => ({
+        id: c.id || `CHAT-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+        room: c.room || '',
+        user: c.user || '',
+        userArea: c.user_area || c.userArea || 'BDG',
+        pengirim: c.pengirim || 'USER',
+        senderId: c.sender_id || c.senderId || '',
+        senderUsername: c.sender_username || c.senderUsername || '',
+        senderName: c.sender_name || c.senderName || '',
+        pesan: c.pesan || '',
+        tanggal: c.tanggal || ''
+      }));
     }
   } catch(e) {
     console.warn('[SUPABASE chat_messages fetch notice]:', e);
   }
 
-  // 3. AMBIL JUGA DARI TABEL lookup (PENYIMPANAN BATCH CACHE)
-  try {
-    const { data: lookupRow } = await supabase.from('lookup').select('value').eq('key', 'chat_messages').maybeSingle();
-    if (lookupRow && lookupRow.value) {
-      const parsed = typeof lookupRow.value === 'string' ? JSON.parse(lookupRow.value) : lookupRow.value;
-      let items = [];
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.clearedAt) {
-        cloudClearedAt = Number(parsed.clearedAt) || 0;
-        items = Array.isArray(parsed.items) ? parsed.items : [];
-      } else if (Array.isArray(parsed)) {
-        items = parsed;
-      }
-      items.forEach(c => {
-        if (c && (c.id || c.pesan)) {
-          const key = c.id || `${c.room || ''}_${c.tanggal || ''}_${c.pesan || ''}`;
-          if (!chatMap.has(key)) {
-            chatMap.set(key, c);
+  // 2. Fallback: Jika tabel chat_messages kosong/belum ada, periksa lookup & permintaan_toko
+  if (serverChats === null || (serverChats.length === 0 && !appStorage.getItem('CHAT_CLEARED_AT'))) {
+    try {
+      const { data: lookupRow } = await supabase.from('lookup').select('value').eq('key', 'chat_messages').maybeSingle();
+      if (lookupRow && lookupRow.value) {
+        const parsed = typeof lookupRow.value === 'string' ? JSON.parse(lookupRow.value) : lookupRow.value;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.clearedAt) {
+          cloudClearedAt = Math.max(cloudClearedAt, Number(parsed.clearedAt) || 0);
+          if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+            serverChats = parsed.items;
           }
+        } else if (Array.isArray(parsed) && parsed.length > 0) {
+          serverChats = parsed;
         }
-      });
-    }
-  } catch(e) {}
-
-  // 4. AMBIL JUGA DARI TABEL permintaan_toko (__SYSTEM_CHAT_MESSAGES__)
-  try {
-    const { data: sysRow } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_CHAT_MESSAGES__').maybeSingle();
-    if (sysRow && sysRow.catatan) {
-      const parsed = typeof sysRow.catatan === 'string' ? JSON.parse(sysRow.catatan) : sysRow.catatan;
-      let items = [];
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.clearedAt) {
-        cloudClearedAt = Math.max(cloudClearedAt, Number(parsed.clearedAt) || 0);
-        items = Array.isArray(parsed.items) ? parsed.items : [];
-      } else if (Array.isArray(parsed)) {
-        items = parsed;
       }
-      items.forEach(c => {
-        if (c && (c.id || c.pesan)) {
-          const key = c.id || `${c.room || ''}_${c.tanggal || ''}_${c.pesan || ''}`;
-          if (!chatMap.has(key)) {
-            chatMap.set(key, c);
-          }
-        }
-      });
-    }
-  } catch(e) {}
+    } catch(e) {}
+  }
 
-  // 5. EVALUASI WAKTU HAPUS (CLEARED SIGNAL)
+  if (serverChats === null) {
+    try {
+      const { data: sysRow } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_CHAT_MESSAGES__').maybeSingle();
+      if (sysRow && sysRow.catatan) {
+        const parsed = typeof sysRow.catatan === 'string' ? JSON.parse(sysRow.catatan) : sysRow.catatan;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.clearedAt) {
+          cloudClearedAt = Math.max(cloudClearedAt, Number(parsed.clearedAt) || 0);
+          if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+            serverChats = parsed.items;
+          }
+        } else if (Array.isArray(parsed) && parsed.length > 0) {
+          serverChats = parsed;
+        }
+      }
+    } catch(e) {}
+  }
+
+  let finalChats = serverChats !== null ? serverChats : JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+
+  // Pertahankan pesan lokal super baru yang baru dibuat < 10 detik lalu (transient buffer)
+  const localChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+  const nowTs = Date.now();
+  localChats.forEach(lc => {
+    if (lc && lc.id) {
+      const ts = parseTimestampFromMessage(lc);
+      if (nowTs - ts < 10000) {
+        const exists = finalChats.some(sc => sc && sc.id === lc.id);
+        if (!exists) {
+          finalChats.push(lc);
+        }
+      }
+    }
+  });
+
+  // 3. Evaluasi clearedAt timestamp jika ada sinyal hapus
   const localClearedAt = Number(appStorage.getItem('CHAT_CLEARED_AT') || (typeof localStorage !== 'undefined' ? localStorage.getItem('CHAT_CLEARED_AT') : 0) || 0);
   const activeClearedAt = Math.max(cloudClearedAt, localClearedAt);
 
   if (activeClearedAt > 0) {
     appStorage.setItem('CHAT_CLEARED_AT', String(activeClearedAt));
     try { localStorage.setItem('CHAT_CLEARED_AT', String(activeClearedAt)); } catch(e) {}
-  }
 
-  let finalChats = Array.from(chatMap.values());
-
-  if (activeClearedAt > 0) {
     finalChats = finalChats.filter(c => {
       if (!c) return false;
-      let t = 0;
-      const timeVal = c.created_at || c.createdAt || c.tanggal;
-      if (timeVal) {
-        if (typeof timeVal === 'number') t = timeVal;
-        else t = new Date(timeVal).getTime();
-      }
-      if (!t || isNaN(t)) return false;
-      return t > activeClearedAt;
+      const t = parseTimestampFromMessage(c);
+      if (t > 0 && t <= activeClearedAt) return false;
+      return true;
     });
   }
 
-  const prevStr = appStorage.getItem(CHAT_DB_KEY) || '[]';
-  const newStr = JSON.stringify(finalChats);
-  if (prevStr !== newStr || localChats.length === 0) {
-    appStorage.setItem(CHAT_DB_KEY, newStr);
-    try { localStorage.setItem(CHAT_DB_KEY, newStr); } catch(e) {}
+  finalChats.sort((a, b) => parseTimestampFromMessage(a) - parseTimestampFromMessage(b));
 
-    const dynamicRooms = rebuildRoomsFromChats(finalChats);
-    appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(dynamicRooms));
-    try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(dynamicRooms)); } catch(e) {}
+  // 4. Update data penyimpanan lokal dengan data valid dari server
+  clearAllLocalChatStorage(finalChats, rebuildRoomsFromChats(finalChats));
 
-    refreshActiveChatUI();
-    if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-    if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
-  }
+  refreshActiveChatUI();
+  if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+  if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+
   return finalChats;
 }
 window.fetchChatFromSupabase = fetchChatFromSupabase;
@@ -10294,6 +10316,28 @@ try {
           try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([])); } catch(e) {}
           try { localStorage.setItem('CHAT_CLEARED_AT', String(clearedAt)); } catch(e) {}
           if (typeof refreshActiveChatUI === 'function') refreshActiveChatUI();
+        } else if (event.data.type === 'DELETE_ROOM') {
+          const roomUpper = String(event.data.roomTarget || '').toUpperCase();
+          const userUpper = String(event.data.userTarget || '').toUpperCase();
+          let allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+          let rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
+
+          allChats = allChats.filter(c => 
+            String(c.room || '').toUpperCase() !== roomUpper && 
+            String(c.user || '').toUpperCase() !== userUpper &&
+            String(c.senderUsername || '').toUpperCase() !== userUpper
+          );
+          rooms = rooms.filter(r => 
+            String(r.room || '').toUpperCase() !== roomUpper && 
+            String(r.user || '').toUpperCase() !== userUpper
+          );
+
+          if (typeof clearAllLocalChatStorage === 'function') {
+            clearAllLocalChatStorage(allChats, rooms);
+          }
+          if (typeof refreshActiveChatUI === 'function') {
+            refreshActiveChatUI();
+          }
         } else if (event.data.type === 'CLEAR_ALL_NOTIFS') {
           const clearedAt = event.data.clearedAt || Date.now();
           const emptyNotifsPayload = { clearedAt: clearedAt, items: [] };
@@ -10516,15 +10560,9 @@ function loadDaftarChatAdmin() {
     item.onmouseout = () => item.style.background = 'transparent';
 
     const unreadBadgeHtml = r.unreadAdmin > 0 ? `<span style="background:#ef4444; color:#fff; border-radius: 5px; padding:2px 8px; font-size:10px; font-weight:bold;">${r.unreadAdmin} UNREAD</span>` : '';
-    
-    const deleteRoomBtnHtml = isSysAdmin ? `
-      <button type="button" class="btnIcon btnDelete" onclick="event.stopPropagation(); hapusChatRoom('${r.room}', '${r.user}')" title="HAPUS CHAT USER INI" style="padding:5px; background:rgba(239,68,68,0.1); color:#ef4444; border-radius: 5px; border:none; cursor:pointer; display:flex; align-items:center;">
-        <span class="material-symbols-rounded" style="font-size:17px;">delete</span>
-      </button>
-    ` : '';
 
     item.innerHTML = `
-      <div style="flex:1; min-width:0; margin-right:8px;" onclick="bukaRoomAdmin('${r.room}', '${r.user}', '${r.userName || r.user}', '${r.userArea || 'TSM'}')">
+      <div style="flex:1; min-width:0; margin-right:0px;" onclick="bukaRoomAdmin('${r.room}', '${r.user}', '${r.userName || r.user}', '${r.userArea || 'TSM'}')">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
           <div style="font-size:12.5px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
             ${r.userName || r.user} <span style="font-size:10.5px; font-weight:bold; color:var(--primary); background:rgba(59,130,246,0.15); padding:1px 5px; border-radius: 5px;">(${r.userArea || 'TSM'})</span>
@@ -10533,7 +10571,6 @@ function loadDaftarChatAdmin() {
         </div>
         <div style="color:var(--text-muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${r.last || '-'}</div>
       </div>
-      ${deleteRoomBtnHtml}
     `;
     roomsContainer.appendChild(item);
   });
@@ -10753,6 +10790,35 @@ async function kirimBroadcastChatKeSemuaUser() {
 }
 window.kirimBroadcastChatKeSemuaUser = kirimBroadcastChatKeSemuaUser;
 
+function clearAllLocalChatStorage(newChats = [], newRooms = []) {
+  const jsonChats = JSON.stringify(newChats);
+  const jsonRooms = JSON.stringify(newRooms);
+
+  appStorage.setItem(CHAT_DB_KEY, jsonChats);
+  appStorage.setItem(CHAT_ROOM_DB_KEY, jsonRooms);
+  if (typeof CHAT_MESSAGES_KEY !== 'undefined') appStorage.setItem(CHAT_MESSAGES_KEY, jsonChats);
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(CHAT_DB_KEY, jsonChats);
+      localStorage.setItem(CHAT_ROOM_DB_KEY, jsonRooms);
+      localStorage.setItem('CHAT_MESSAGES', jsonChats);
+      localStorage.setItem('CHAT_ROOMS', jsonRooms);
+      localStorage.setItem('STORE_CHAT_DB_V7_CLEAN', jsonChats);
+      localStorage.setItem('STORE_CHAT_MESSAGES_V7_CLEAN', jsonChats);
+      localStorage.setItem('STORE_CHAT_ROOM_DB_V7_CLEAN', jsonRooms);
+      if (!newChats || newChats.length === 0) {
+        localStorage.removeItem('CHAT_MESSAGES');
+        localStorage.removeItem('CHAT_ROOMS');
+        localStorage.removeItem('STORE_CHAT_DB_V7_CLEAN');
+        localStorage.removeItem('STORE_CHAT_MESSAGES_V7_CLEAN');
+        localStorage.removeItem('STORE_CHAT_ROOM_DB_V7_CLEAN');
+      }
+    }
+  } catch(e) {}
+}
+window.clearAllLocalChatStorage = clearAllLocalChatStorage;
+
 function hapusChatRoom(roomTarget, userTarget) {
   const isSysAdmin = currentUser && (
     String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
@@ -10782,20 +10848,32 @@ function hapusChatRoom(roomTarget, userTarget) {
           String(r.user || '').toUpperCase() !== userUpper
         );
 
-        appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
-        appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
+        // 1. BERSIHKAN LENGKAP PENYIMPANAN LOKAL PERANGKAT
+        clearAllLocalChatStorage(allChats, rooms);
 
         // 2. SYNC UPDATED CHATS TO SUPABASE VIA ALL CHAT TARGETS
         if (typeof pushChatToSupabase === 'function') {
           pushChatToSupabase(allChats, null);
         }
         if (typeof supabase !== 'undefined' && supabase) {
-          try { await supabase.from('chat_messages').delete().eq('room', roomTarget); } catch(e) {}
-          try { await supabase.from('chat').delete().eq('room', roomTarget); } catch(e) {}
+          try { if (roomTarget) await supabase.from('chat_messages').delete().eq('room', roomTarget); } catch(e) {}
+          try { if (userTarget) await supabase.from('chat_messages').delete().eq('user', userTarget); } catch(e) {}
+          try { if (userTarget) await supabase.from('chat_messages').delete().eq('sender_username', userTarget); } catch(e) {}
+          try { if (roomTarget) await supabase.from('chat').delete().eq('room', roomTarget); } catch(e) {}
+          try { if (userTarget) await supabase.from('chat').delete().eq('user', userTarget); } catch(e) {}
         }
 
+        // 3. BROADCAST SIGNAL EVENT KE TAB TERHUBUNG
+        try {
+          if (window.BroadcastChannel) {
+            const bc = new BroadcastChannel('permintaan_toko_sync');
+            bc.postMessage({ type: 'DELETE_ROOM', roomTarget: roomTarget, userTarget: userTarget });
+            bc.close();
+          }
+        } catch(e) {}
+
         hideLoading();
-        showNotif(`CHAT ROOM DENGAN '${userTarget || roomTarget}' BERHASIL DIHAPUS!`, 'success');
+        showNotif(`CHAT ROOM DENGAN '${userTarget || roomTarget}' BERHASIL DIHAPUS DARI PENYIMPANAN LOKAL & DATABASE!`, 'success');
 
         if (isAdminChat) {
           kembaliKeDaftarAdmin();
@@ -11124,12 +11202,9 @@ function hapusSemuaChatAdmin() {
         const clearedAt = Date.now();
         const clearPayload = { clearedAt: clearedAt, items: [] };
 
-        // 1. KOSONGKAN PENYIMPANAN LOKAL PERANGKAT INI
-        appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
-        appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
+        // 1. KOSONGKAN HAPUS SELURUH PENYIMPANAN LOKAL PERANGKAT INI
+        clearAllLocalChatStorage([], []);
         appStorage.setItem('CHAT_CLEARED_AT', String(clearedAt));
-        try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify([])); } catch(e) {}
-        try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([])); } catch(e) {}
         try { localStorage.setItem('CHAT_CLEARED_AT', String(clearedAt)); } catch(e) {}
 
         // 2. KOSONGKAN & HAPUS DATABASE SUPABASE CLOUD (chat_messages, chat, lookup, permintaan_toko)

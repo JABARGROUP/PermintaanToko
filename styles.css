@@ -239,7 +239,7 @@ body {
   transition: opacity 0.5s ease;
 }
 
-/* 1. Scenic Landscape Image (Pemandangan Bulan, Gunung & Danau Lebih Jelas & Kelihatan Elegan) */
+/* 1. Scenic Landscape Image (Pemandangan Bulan, Gunung & Danau Buat Agak Tidak Jelas Sedikit & Soft) */
 .aesthetic-bg-image {
   position: absolute;
   inset: 0;
@@ -249,9 +249,9 @@ body {
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
-  opacity: 0.68 !important;
-  filter: saturate(1.3) contrast(1.15);
-  transition: opacity 0.5s ease, background-image 0.3s ease;
+  opacity: 0.48 !important;
+  filter: saturate(1.15) contrast(1.05) blur(1px);
+  transition: opacity 0.5s ease, background-image 0.3s ease, filter 0.5s ease;
   will-change: opacity, background-image;
 }
 
@@ -259,8 +259,8 @@ body.light-mode .aesthetic-bg-image,
 body.classic-mode .aesthetic-bg-image,
 body.forest-mode .aesthetic-bg-image,
 body.sunset-mode .aesthetic-bg-image {
-  opacity: 0.58 !important;
-  filter: saturate(1.2) contrast(1.1);
+  opacity: 0.38 !important;
+  filter: saturate(1.1) contrast(1.0) blur(1px);
 }
 
 /* 2. Subtle Micro Dot Grid Pattern (Samar-samar & Bersih) */
