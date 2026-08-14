@@ -1763,7 +1763,7 @@ html body #inputPage {
     margin-right: auto !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
-    padding-bottom: calc(58px + 1mm) !important;
+    padding-bottom: calc(58px + 3.5cm) !important;
     margin-bottom: 0 !important;
   }
 
@@ -1774,18 +1774,51 @@ html body #inputPage {
     margin-right: auto !important;
     padding-left: 10px !important;
     padding-right: 10px !important;
-    padding-bottom: 12px !important;
-    margin-bottom: 1mm !important;
+    padding-bottom: 25px !important;
+    margin-bottom: 10px !important;
   }
 
   #inputPage #btnSimpan,
   #btnSimpan,
   .btn-primary#btnSimpan {
     margin-top: 14px !important;
-    margin-bottom: 1mm !important;
+    margin-bottom: 30px !important;
     position: relative !important;
     z-index: 10 !important;
   }
+
+  /* MOBILE HP: STORE SEARCH BOX ON INPUT MENU -> HIDE MAGNIFYING GLASS ICON & ADJUST PADDING */
+  #wrapperCariToko > span.material-symbols-rounded {
+    display: none !important;
+  }
+
+  #wrapperCariToko #cariTokoInput {
+    padding-left: 10px !important;
+    padding-right: 28px !important;
+  }
+}
+
+/* REFRESH CLOUD USAGE BUTTON - THEME MATCHED & LEGIBLE HOVER */
+#btnRefreshCloudUsage {
+  border: 1.5px solid var(--primary) !important;
+  color: var(--primary) !important;
+  background: transparent !important;
+  font-weight: 800 !important;
+  transition: all 0.2s ease !important;
+}
+
+#btnRefreshCloudUsage .material-symbols-rounded {
+  color: var(--primary) !important;
+}
+
+#btnRefreshCloudUsage:hover {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: var(--primary) !important;
+}
+
+#btnRefreshCloudUsage:hover .material-symbols-rounded {
+  color: #ffffff !important;
 }
 
 /* DETAIL DATA / RIWAYAT TABLE STYLING - THEME MATCHED BACKGROUND WITH THIN BORDER LINES */
@@ -2059,9 +2092,8 @@ section#masterDbPage.page.active {
   clip-path: inset(0 round 5px) !important;
   position: relative !important;
   box-sizing: border-box !important;
-  background: var(--bg-box) !important;
-  margin-top: 0.5mm !important;
-  margin-bottom: 0 !important;
+  margin-top: 1mm !important;
+  margin-bottom: -1mm !important;
   padding-bottom: 0 !important;
 }
 
@@ -2425,7 +2457,7 @@ body.design-mode-3d-isometric .dashboardTable th {
   overflow-y: auto !important;
   margin: auto !important;
   transform: translateY(-20px) !important;
-  padding: 18px 2mm !important;
+  padding: 18px 2mm 2mm 2mm !important;
   border-radius: 5px !important;
   box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
   box-sizing: border-box !important;
@@ -2666,7 +2698,7 @@ body.design-mode-3d-isometric .dashboardTable th {
 }
 
 #popupTambahToko .popupBody {
-  padding: 16px 2mm 18px 2mm !important;
+  padding: 16px 2mm 2mm 2mm !important;
   overflow: hidden !important;
   flex: 1 !important;
   display: flex !important;
@@ -2877,7 +2909,7 @@ table th,
   height: auto !important;
   max-height: 92vh !important;
   overflow: visible !important;
-  padding: 18px 2mm !important;
+  padding: 18px 2mm 2mm 2mm !important;
   border-radius: 5px !important;
   box-sizing: border-box !important;
   margin: auto !important;
@@ -3617,17 +3649,19 @@ table th,
     border-radius: 5px !important;
   }
 
-  /* POPUP AKUN & POPUP TAMBAH TOKO BARU: 2MM INNER SIDE PADDING BETWEEN CONTENT CARDS AND POPUP BOX WALL */
+  /* POPUP AKUN & POPUP TAMBAH TOKO BARU: 2MM SIDE AND BOTTOM PADDING BETWEEN CONTENT CARDS AND POPUP BOX WALL */
   #popupAkun .akunBox,
   .popupAkun .akunBox,
   .akunBox {
     padding-left: 2mm !important;
     padding-right: 2mm !important;
+    padding-bottom: 2mm !important;
   }
 
   #popupTambahToko .popupBody {
     padding-left: 2mm !important;
     padding-right: 2mm !important;
+    padding-bottom: 2mm !important;
   }
 
   #popupDetail .popupBoxDetail,
@@ -3682,8 +3716,8 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 58px - 1.7cm) !important;
-    max-height: calc(100vh - 58px - 1.7cm) !important;
+    height: calc(100vh - 58px - 1.6cm) !important;
+    max-height: calc(100vh - 58px - 1.6cm) !important;
     overflow: hidden !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -4010,14 +4044,22 @@ button.btnKembali {
     max-width: 100% !important;
     overflow: hidden !important;
     overflow-y: hidden !important;
-    height: calc(100vh - 58px - 1.7cm) !important;
-    max-height: calc(100vh - 58px - 1.7cm) !important;
+    height: calc(100vh - 58px - 1.6cm) !important;
+    max-height: calc(100vh - 58px - 1.6cm) !important;
     box-sizing: border-box !important;
     margin-bottom: 0 !important;
   }
 
   .dashboardTop {
     flex: 0 0 auto !important;
+  }
+
+  /* PC VIEW: MATCH RIWAYAT PAGE & MASTER DB TABLE DISTANCE TO BOTTOMMENU WITH DASHBOARD TABLE */
+  #riwayatPage .tableWrap,
+  #masterDbPage .tableWrap {
+    margin-top: 1mm !important;
+    margin-bottom: -1mm !important;
+    box-sizing: border-box !important;
   }
 
   @media (max-width: 1150px) {
@@ -5745,8 +5787,8 @@ body:has(#masterDbPage.active) {
 #masterDbPage.page.active {
   display: flex !important;
   flex-direction: column !important;
-  height: calc(100vh - 58px - 1.7cm) !important;
-  max-height: calc(100vh - 58px - 1.7cm) !important;
+  height: calc(100vh - 58px - 1.6cm) !important;
+  max-height: calc(100vh - 58px - 1.6cm) !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
   touch-action: auto !important;
@@ -5918,9 +5960,9 @@ body:has(#masterDbPage.active) {
 }
 
 #popupNotifList .popupNotifCard {
-  width: 780px !important;
-  max-width: 96vw !important;
-  max-height: calc(100vh - 100px) !important;
+  width: 1000px !important;
+  max-width: 98vw !important;
+  max-height: calc(100vh - 40px) !important;
   display: flex !important;
   flex-direction: column !important;
   margin: auto !important;
@@ -5930,8 +5972,8 @@ body:has(#masterDbPage.active) {
 }
 
 #popupNotifList #notifListBody {
-  max-height: 480px !important;
-  min-height: 140px !important;
+  max-height: 550px !important;
+  min-height: 200px !important;
   overflow-y: auto !important;
 }
 
@@ -5991,16 +6033,22 @@ body:has(#masterDbPage.active) {
     align-items: center !important;
     justify-content: center !important;
   }
-  #popupNotifList .popupNotifCard,
+  #popupNotifList .popupNotifCard {
+    width: calc(100vw - 2mm) !important;
+    max-width: calc(100vw - 2mm) !important;
+    max-height: calc(100vh - 50px) !important;
+    height: auto !important;
+    margin: auto !important;
+  }
+  #popupNotifList #notifListBody {
+    max-height: calc(100vh - 140px) !important;
+    min-height: 180px !important;
+  }
   #popupNotif .popupNotifCard,
   #popupNotifCard {
     margin: auto !important;
     max-height: calc(100vh - 120px) !important;
     height: auto !important;
-  }
-  #popupNotifList #notifListBody {
-    max-height: 380px !important;
-    min-height: 120px !important;
   }
 }
 
@@ -6367,8 +6415,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 58px - 1.7cm) !important; /* 52px height bottomMenu + 6px bottom offset + 1.7cm gap */
-    max-height: calc(100vh - 58px - 1.7cm) !important;
+    height: calc(100vh - 58px - 1.6cm) !important; /* 52px height bottomMenu + 6px bottom offset + 1.6cm gap */
+    max-height: calc(100vh - 58px - 1.6cm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6380,7 +6428,7 @@ html body .cardStat .icon {
   html body .page#inputPage {
     height: auto !important;
     max-height: none !important;
-    padding-bottom: calc(58px + 3cm) !important; /* Safe 3cm gap above bottomMenu */
+    padding-bottom: calc(58px + 3.5cm) !important; /* Safe 3.5cm gap above bottomMenu */
     box-sizing: border-box !important;
     overflow-y: auto !important;
   }
@@ -6409,16 +6457,21 @@ html body .cardStat .icon {
     padding-bottom: calc(52px + 1cm) !important;
   }
 
-  #popupNotifList .popupNotifCard,
+  #popupNotifList .popupNotifCard {
+    width: calc(100vw - 2mm) !important;
+    max-width: calc(100vw - 2mm) !important;
+    max-height: calc(100vh - 50px) !important;
+    height: auto !important;
+    margin: auto !important;
+  }
+  #popupNotifList #notifListBody {
+    max-height: calc(100vh - 140px) !important;
+    min-height: 180px !important;
+  }
   #popupNotif .popupNotifCard,
   #popupNotifCard {
     margin: auto !important;
     max-height: calc(100vh - 120px) !important;
     height: auto !important;
-  }
-
-  #popupNotifList #notifListBody {
-    max-height: 380px !important;
-    min-height: 120px !important;
   }
 }
