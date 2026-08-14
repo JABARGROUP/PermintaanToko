@@ -671,8 +671,8 @@ section#masterDbPage.page.active,
   box-sizing: border-box !important;
 }
 
-/* RESPONSIVE HP / MOBILE: BATAS KIRI & KANAN SIMETRIS DAN NAIK DI ATAS MENU ICON DASHBOARD/INPUT */
-@media (max-width: 640px) {
+/* RESPONSIVE HP / MOBILE: BATAS KANAN & KIRI PAS 1MM (TAMPILAN PC TIDAK DIUBAH) */
+@media (max-width: 768px) {
   .popupBantuan,
   #popupBantuan,
   #helpModal,
@@ -689,7 +689,10 @@ section#masterDbPage.page.active,
     max-height: 100vh !important;
     transform: none !important;
     margin: 0 !important;
-    padding: 10px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
     display: none;
     box-sizing: border-box !important;
     align-items: center !important;
@@ -713,9 +716,11 @@ section#masterDbPage.page.active,
   #popupBantuan .chatBox {
     width: calc(100vw - 2mm) !important;
     max-width: calc(100vw - 2mm) !important;
+    min-width: calc(100vw - 2mm) !important;
     height: 480px !important;
     max-height: calc(100vh - 90px) !important;
-    margin: auto !important;
+    margin-left: 1mm !important;
+    margin-right: 1mm !important;
     border-radius: 5px !important;
     -webkit-clip-path: inset(0 round 5px) !important;
     clip-path: inset(0 round 5px) !important;
