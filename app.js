@@ -10332,18 +10332,26 @@ function rebuildRoomsFromChats(allChats) {
   if (!Array.isArray(allChats) || allChats.length === 0) return [];
 
   const roomMap = new Map();
+  const allUsers = typeof getUsersFromDB === 'function' ? getUsersFromDB() : [];
 
   allChats.forEach(c => {
     if (!c) return;
     const userTarget = String(c.user || c.senderUsername || 'USER').trim().toUpperCase();
     const roomKey = String(c.room || ('ROOM_' + userTarget)).trim().toUpperCase();
-    const senderDisplay = c.senderName || c.senderUsername || userTarget;
+    
+    // Cari data user toko dari database lokal agar nama room selalu nama Toko / User
+    const userObj = allUsers.find(u => u && u.username && String(u.username).toUpperCase() === userTarget);
+    const tokoFullName = userObj ? (userObj.fullName || userObj.username) : null;
+    const userArea = (userObj ? userObj.area : null) || c.userArea || 'TSM';
+    
+    // Nama room adalah Nama Toko/User (bukan nama Service TSM)
+    const senderDisplay = (c.pengirim === 'USER' && c.senderName) ? c.senderName : (tokoFullName || userTarget);
 
     if (!roomMap.has(roomKey)) {
       roomMap.set(roomKey, {
         room: roomKey,
         user: userTarget,
-        userArea: c.userArea || 'TSM',
+        userArea: userArea,
         userName: senderDisplay,
         last: (c.pengirim === 'SERVICE' ? `SERVICE TSM: ${c.pesan}` : c.pesan),
         lastTime: c.tanggal || '',
@@ -10354,8 +10362,13 @@ function rebuildRoomsFromChats(allChats) {
       const existing = roomMap.get(roomKey);
       existing.last = (c.pengirim === 'SERVICE' ? `SERVICE TSM: ${c.pesan}` : c.pesan);
       if (c.tanggal) existing.lastTime = c.tanggal;
-      if (c.userArea) existing.userArea = c.userArea;
-      if (c.senderName) existing.userName = c.senderName;
+      if (userArea) existing.userArea = userArea;
+      
+      if (c.pengirim === 'USER' && c.senderName) {
+        existing.userName = c.senderName;
+      } else if (tokoFullName && (!existing.userName || String(existing.userName).toUpperCase().includes('SERVICE'))) {
+        existing.userName = tokoFullName;
+      }
     }
   });
 
@@ -10864,9 +10877,12 @@ function loadChatAdmin(room) {
   } else {
     roomChats.forEach(c => {
       const isSelf = (c.pengirim === 'SERVICE' || c.pengirim === 'ADMIN' || (currentUser && String(c.senderUsername).toUpperCase() === String(currentUser.username).toUpperCase()));
+      const senderTitle = isSelf ? `SERVICE TSM (${currentUser?.fullName || currentUser?.username || 'SUPPORT'})` : (c.senderName || c.senderUsername || currentChatUser || 'TOKO/USER');
+
       const div = document.createElement('div');
       div.className = isSelf ? 'chatUser' : 'chatAdmin';
       div.innerHTML = `
+        <div style="font-size:10.5px; font-weight:700; color:${isSelf ? 'var(--primary)' : '#0284c7'}; margin-bottom:3px; letter-spacing:0.3px;">${senderTitle}</div>
         <div class="chatText">${c.pesan}</div>
         <div class="chatTime">${c.tanggal}</div>
       `;
@@ -10908,15 +10924,19 @@ function loadChatUser() {
   if (userChats.length === 0) {
     body.innerHTML = `
       <div class="chatAdmin">
+        <div style="font-size:10.5px; font-weight:700; color:#0284c7; margin-bottom:3px; letter-spacing:0.3px;">SERVICE TSM SUPPORT</div>
         <div class="chatText">HALO 👋<br>ADA YANG BISA KAMI BANTU UNTUK PERMINTAAN TOKO ANDA? SILAKAN KIRIM PESAN DI SINI.</div>
       </div>
     `;
   } else {
     userChats.forEach(c => {
       const isSelf = (c.pengirim === 'USER' || (currentUser && String(c.senderUsername).toUpperCase() === myUsernameUpper));
+      const senderTitle = isSelf ? (currentUser.fullName || currentUser.username) : (c.senderName || 'SERVICE TSM SUPPORT');
+
       const div = document.createElement('div');
       div.className = isSelf ? 'chatUser' : 'chatAdmin';
       div.innerHTML = `
+        <div style="font-size:10.5px; font-weight:700; color:${isSelf ? 'var(--primary)' : '#0284c7'}; margin-bottom:3px; letter-spacing:0.3px;">${senderTitle}</div>
         <div class="chatText">${c.pesan}</div>
         <div class="chatTime">${c.tanggal}</div>
       `;
