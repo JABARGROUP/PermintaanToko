@@ -868,18 +868,18 @@
     </div>
   </div>
 
-  <!-- 2. POPUP CAMERA BARCODE / QR SCANNER -->
+  <!-- 2. POPUP CAMERA BARCODE / QR SCANNER (1MM SCREEN MARGIN ON HP) -->
   <div id="scannerModal" class="popupOverlay">
-    <div class="popupBox" style="width: 440px !important; max-width: 90vw !important; margin: auto !important; border-radius: 5px !important;">
-      <div class="popupHeader" style="background: var(--primary); border-radius: 5px 5px 0 0;">
-        <span><span class="material-symbols-rounded" style="vertical-align: middle;">qr_code_scanner</span> SCAN BARCODE / QR NO SERI</span>
-        <button type="button" onclick="tutupScanner()">&times;</button>
+    <div class="popupBox">
+      <div class="popupHeader" style="background: var(--primary); border-radius: 5px 5px 0 0; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 13px; font-weight: 800; color: #ffffff;"><span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">qr_code_scanner</span> SCAN BARCODE / QR NO SERI</span>
+        <button type="button" onclick="tutupScanner()" style="background: none; border: none; color: #ffffff; font-size: 24px; cursor: pointer; font-weight: 800; line-height: 1; padding: 0;">&times;</button>
       </div>
-      <div class="popupContent" style="text-align: center; padding: 18px;">
-        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">ARAHKAN KAMERA KE BARCODE / QR CODE NO SERI UNIT</p>
-        <div id="readerScanner" style="width: 100%; border-radius: 5px; overflow: hidden; background: #000; min-height: 240px; margin: 0 auto 14px auto;"></div>
-        <div style="display: flex; gap: 10px; justify-content: center;">
-          <button type="button" class="btnBatal" style="width: 100%; height: 40px; background: #ef4444; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: 700;" onclick="tutupScanner()">BATAL / TUTUP</button>
+      <div class="popupContent" style="text-align: center; padding: 10px 2mm 10px 2mm !important; box-sizing: border-box;">
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">ARAHKAN KAMERA KE BARCODE / QR NO SERI</p>
+        <div id="readerScanner" style="width: 100%; max-width: 290px; margin: 4px auto 10px auto; border-radius: 5px; overflow: hidden; background: transparent;"></div>
+        <div style="display: flex; gap: 8px; justify-content: center; width: 100%;">
+          <button type="button" class="btnBatal" style="width: 100%; height: 38px; background: #ef4444; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; font-size: 12.5px;" onclick="tutupScanner()">BATAL / TUTUP</button>
         </div>
       </div>
     </div>

@@ -6071,7 +6071,11 @@ function bukaScanner(btn) {
           html5QrCodeScanner = null;
         }
         html5QrCodeScanner = new Html5Qrcode("readerScanner");
-        const config = { fps: 15, qrbox: { width: 260, height: 160 } };
+        const config = { 
+          fps: 25, 
+          aspectRatio: 1.33333,
+          showTorchButtonIfSupported: true
+        };
 
         html5QrCodeScanner.start(
           { facingMode: "environment" },
@@ -10161,7 +10165,7 @@ async function fetchChatFromSupabase() {
 
   // 1. QUERY UTAMA: Ambil langsung dari tabel chat_messages di Supabase (Authority Server)
   try {
-    const { data: rows, error } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+    const { data: rows, error } = await supabase.from('chat_messages').select('*');
     if (!error && Array.isArray(rows)) {
       serverChats = rows.map(c => ({
         id: c.id || `CHAT-${Date.now()}-${Math.floor(Math.random()*1000)}`,
@@ -10175,6 +10179,8 @@ async function fetchChatFromSupabase() {
         pesan: c.pesan || '',
         tanggal: c.tanggal || ''
       }));
+      // Urutkan pesan di JavaScript secara presisi tanpa memicu error 400 di konsol browser
+      serverChats.sort((a, b) => parseTimestampFromMessage(a) - parseTimestampFromMessage(b));
     }
   } catch(e) {
     console.warn('[SUPABASE chat_messages fetch notice]:', e);
