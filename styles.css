@@ -2395,16 +2395,51 @@ body.design-mode-3d-isometric .dashboardTable th {
 
 
 
-/* SLIGHTLY SMALLER POPUP BOXES */
-.popupOverlay, .popupAkun, .popupTTD {
-  position: fixed;
-  inset: 0;
+/* ALL POPUP BACKDROP OVERLAYS IN APP: NO BLUR, MORE DIMMED OVERLAY (80% GELAP REDUP) FOR ALL POPUPS */
+.popupOverlay, 
+.popupAkun, 
+.popupTTD,
+.popupBantuan,
+#popupBantuan,
+#popupDetail,
+#popupDetailBarangV2,
+#popupTambahToko,
+#popupAkun,
+#popupTTD,
+#popupNotif,
+#popupNotifList,
+#confirmOverlay,
+#confirmModal,
+#rejectOverlay,
+#artemisOverlay,
+#pdfModal,
+#chatBroadcastModal,
+#popupPdfModelsModal,
+#scannerModal,
+#popupUserForm,
+#popupEditStatusPart,
+#popupEditKeteranganPartSingle,
+#loadingOverlay,
+.modal-overlay,
+.modalBackdrop,
+div[class*="popupOverlay"],
+div[class*="popupAkun"],
+div[class*="popupTTD"],
+div[class*="popupBantuan"],
+div[id*="popupBantuan"],
+div[id*="Overlay"],
+div[id*="Modal"] {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.80) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.popupOverlay, .popupAkun, .popupTTD, .popupBantuan, #popupBantuan {
   display: none;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, 0.1) !important;
-  backdrop-filter: blur(3.5px) saturate(110%) !important;
-  -webkit-backdrop-filter: blur(3.5px) saturate(110%) !important;
   z-index: 99999;
   padding: 16px;
 }
@@ -2443,19 +2478,32 @@ body.design-mode-3d-isometric .dashboardTable th {
   z-index: 99999999999 !important;
 }
 
-.popupOverlay.show, .popupAkun.show, .popupTTD.show {
+.popupOverlay.show, .popupAkun.show, .popupTTD.show, .popupBantuan.show, #popupBantuan.show {
   display: flex !important;
 }
 
-.popupBox, .akunBox, .rejectBoxPopup, .ttdBox, .confirmBox {
+.popupBox, 
+.akunBox, 
+.rejectBoxPopup, 
+.ttdBox, 
+.confirmBox,
+.popupNotifCard,
+.confirmBoxCard,
+.popupBoxDetailV2,
+.artemisBoxPopup,
+.chatBox,
+#popupBantuan .popupBox,
+#popupBantuan .chatBox,
+#confirmBoxCard,
+#popupNotifCard {
   background: var(--bg-box);
   border-radius: 5px !important;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   overflow: hidden;
   color: var(--text-main);
   border: 1px solid var(--border-color);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   animation: fade .25s ease-out;
 }
 
@@ -2729,8 +2777,9 @@ body.design-mode-3d-isometric .dashboardTable th {
   display: none;
   align-items: center !important;
   justify-content: center !important;
-  padding: 1cm 1mm !important;
+  padding: 16px 2mm !important;
   box-sizing: border-box !important;
+  z-index: 999999 !important;
 }
 
 #popupTambahToko.show {
@@ -2740,9 +2789,9 @@ body.design-mode-3d-isometric .dashboardTable th {
 #popupTambahToko .popupBox {
   width: 480px !important;
   max-width: calc(100vw - 2mm) !important;
-  max-height: calc(100vh - 2cm) !important;
+  max-height: calc(100vh - 40px) !important;
   overflow: hidden !important;
-  margin: 1cm auto !important;
+  margin: auto !important;
   padding: 0 !important;
   border-radius: 5px !important;
   box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;
@@ -2779,8 +2828,8 @@ body.design-mode-3d-isometric .dashboardTable th {
   overflow: hidden !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
   border: 1px solid var(--border-color) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   animation: fade .2s ease-out !important;
 }
 
