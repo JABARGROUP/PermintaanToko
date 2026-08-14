@@ -5458,24 +5458,34 @@ function initMobileBackButtonEngine() {
       return;
     }
 
-    const openModals = [
-      document.getElementById('popupDetail'),
-      document.getElementById('popupNotifList'),
-      document.getElementById('popupBantuan'),
-      document.getElementById('popupAkun'),
-      document.getElementById('popupUserForm'),
-      document.getElementById('pdfModal'),
-      document.getElementById('rejectOverlay'),
-      document.getElementById('popupTambahToko'),
-      document.getElementById('popupPdfModelsModal'),
-      document.getElementById('confirmOverlay'),
-      document.getElementById('imageViewer'),
-      document.getElementById('scannerModal')
+    const openModalConfigs = [
+      { id: 'popupDetail', closeFn: () => { const m = document.getElementById('popupDetail'); if (m) m.style.display = 'none'; } },
+      { id: 'popupDetailBarangV2', closeFn: typeof tutupDetailBarangV2 === 'function' ? tutupDetailBarangV2 : null },
+      { id: 'popupNotifList', closeFn: typeof tutupNotificationModal === 'function' ? tutupNotificationModal : null },
+      { id: 'popupBantuan', closeFn: typeof tutupBantuan === 'function' ? tutupBantuan : null },
+      { id: 'popupAkun', closeFn: typeof tutupAkun === 'function' ? tutupAkun : null },
+      { id: 'popupUserForm', closeFn: () => { const m = document.getElementById('popupUserForm'); if (m) m.style.display = 'none'; } },
+      { id: 'pdfModal', closeFn: typeof tutupPdfModal === 'function' ? tutupPdfModal : null },
+      { id: 'rejectOverlay', closeFn: typeof tutupReject === 'function' ? tutupReject : null },
+      { id: 'popupTambahToko', closeFn: typeof tutupModalTambahToko === 'function' ? tutupModalTambahToko : null },
+      { id: 'popupPdfModelsModal', closeFn: typeof tutupModalPdfModels === 'function' ? tutupModalPdfModels : null },
+      { id: 'confirmOverlay', closeFn: typeof tutupConfirm === 'function' ? tutupConfirm : null },
+      { id: 'popupNotif', closeFn: typeof tutupNotif === 'function' ? tutupNotif : null },
+      { id: 'popupCloudUsageModal', closeFn: typeof tutupModalCloudUsage === 'function' ? tutupModalCloudUsage : null },
+      { id: 'popupEditStatusPart', closeFn: typeof tutupModalEditStatusPart === 'function' ? tutupModalEditStatusPart : null },
+      { id: 'popupEditKetPartSingle', closeFn: typeof tutupModalEditKetPartSingle === 'function' ? tutupModalEditKetPartSingle : null },
+      { id: 'popupArtemis', closeFn: typeof closeArtemisModal === 'function' ? closeArtemisModal : null },
+      { id: 'imageViewer', closeFn: typeof tutupImageViewer === 'function' ? tutupImageViewer : null },
+      { id: 'scannerModal', closeFn: typeof tutupScanner === 'function' ? tutupScanner : null }
     ];
 
     let closedAnyModal = false;
-    openModals.forEach(m => {
-      if (m && (m.classList.contains('show') || m.style.display === 'flex' || m.style.display === 'block')) {
+    openModalConfigs.forEach(item => {
+      const m = document.getElementById(item.id);
+      if (m && (m.classList.contains('show') || (m.style.display && m.style.display !== 'none'))) {
+        if (typeof item.closeFn === 'function') {
+          try { item.closeFn(); } catch (err) {}
+        }
         m.classList.remove('show');
         m.style.display = 'none';
         closedAnyModal = true;
@@ -5529,6 +5539,35 @@ function initMobileBackButtonEngine() {
       if (mobileBackspaceCount < 5) {
         try { history.pushState({ page: 'dashboardPage' }, '', location.href); } catch(err) {}
       }
+    }
+  });
+
+  // KLIK DI LUAR AREA POPUP (BACKDROP OVERLAY) = TUTUP POPUP MODAL (PDF & MODAL LAINNYA)
+  window.addEventListener('click', (event) => {
+    const pdfModal = document.getElementById('pdfModal');
+    if (pdfModal && event.target === pdfModal) {
+      if (typeof tutupPdfModal === 'function') tutupPdfModal();
+      pdfModal.style.setProperty('display', 'none', 'important');
+      pdfModal.classList.remove('show');
+    }
+
+    const pdfModelsModal = document.getElementById('popupPdfModelsModal');
+    if (pdfModelsModal && event.target === pdfModelsModal) {
+      if (typeof tutupModalPdfModels === 'function') tutupModalPdfModels();
+      pdfModelsModal.style.setProperty('display', 'none', 'important');
+      pdfModelsModal.classList.remove('show');
+    }
+
+    const detailV2 = document.getElementById('popupDetailBarangV2');
+    if (detailV2 && event.target === detailV2) {
+      if (typeof tutupDetailBarangV2 === 'function') tutupDetailBarangV2();
+      detailV2.style.setProperty('display', 'none', 'important');
+    }
+
+    const cloudUsage = document.getElementById('popupCloudUsageModal');
+    if (cloudUsage && event.target === cloudUsage) {
+      if (typeof tutupModalCloudUsage === 'function') tutupModalCloudUsage();
+      cloudUsage.style.setProperty('display', 'none', 'important');
     }
   });
 }
@@ -6756,20 +6795,20 @@ function filterRiwayat() {
 
   thead.innerHTML = `
     <tr>
-      <th>AKSI</th>
-      <th>TGL</th>
-      <th>NO SURAT</th>
-      <th>TOKO</th>
-      <th>JENIS</th>
-      <th>STATUS</th>
-      <th>CATATAN</th>
+      <th style="text-align:center;">AKSI</th>
+      <th style="text-align:center;">TGL</th>
+      <th style="text-align:center;">NO SURAT</th>
+      <th style="text-align:center;">TOKO</th>
+      <th style="text-align:center;">JENIS</th>
+      <th style="text-align:center;">STATUS</th>
+      <th style="text-align:center;">CATATAN</th>
     </tr>
   `;
 
   tbody.innerHTML = '';
 
   if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted); border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">BELUM ADA DATA PERMINTAAN.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted); border:none !important;">BELUM ADA DATA PERMINTAAN.</td></tr>`;
     return;
   }
 
@@ -6910,6 +6949,26 @@ function filterRiwayat() {
     `;
     tbody.appendChild(tr);
   });
+
+  // BUAT PATEN 10 BARIS KOSONG PELENGKAP (JIKA DATA BERTAMBAH AKAN OTOMATIS BERTAMBAH)
+  const targetMinRowsRiwayat = 10;
+  if (data.length < targetMinRowsRiwayat) {
+    for (let i = data.length; i < targetMinRowsRiwayat; i++) {
+      const emptyTr = document.createElement('tr');
+      emptyTr.className = 'empty-grid-row';
+      emptyTr.style.height = '42px';
+      emptyTr.innerHTML = `
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      `;
+      tbody.appendChild(emptyTr);
+    }
+  }
 }
 
 function lihatFotoByNoSurat(noSurat) {
@@ -11777,7 +11836,7 @@ function loadMasterDbTable() {
   tbody.innerHTML = '';
 
   if (requests.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted); border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">BELUM ADA DATA PERMINTAAN TERDAFTAR.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted); border:none !important;">BELUM ADA DATA PERMINTAAN TERDAFTAR.</td></tr>`;
     updateMultiMasterDbBtnState();
     return;
   }
@@ -11813,6 +11872,29 @@ function loadMasterDbTable() {
     `;
     tbody.appendChild(tr);
   });
+
+  // BUAT PATEN 10 BARIS KOSONG PELENGKAP (JIKA DATA BERTAMBAH AKAN OTOMATIS BERTAMBAH)
+  const targetMinRowsMaster = 10;
+  if (requests.length < targetMinRowsMaster) {
+    for (let i = requests.length; i < targetMinRowsMaster; i++) {
+      const emptyTr = document.createElement('tr');
+      emptyTr.className = 'empty-grid-row';
+      emptyTr.style.height = '42px';
+      emptyTr.innerHTML = `
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      `;
+      tbody.appendChild(emptyTr);
+    }
+  }
   updateMultiMasterDbBtnState();
 }
 
