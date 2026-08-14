@@ -239,7 +239,7 @@ body {
   transition: opacity 0.5s ease;
 }
 
-/* 1. Scenic Landscape Image (Pemandangan Bulan, Gunung & Danau Lebih Jelas & Elegan) */
+/* 1. Scenic Landscape Image (Pemandangan Bulan, Gunung & Danau Lebih Jelas & Kelihatan Elegan) */
 .aesthetic-bg-image {
   position: absolute;
   inset: 0;
@@ -249,8 +249,8 @@ body {
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
-  opacity: 0.38 !important;
-  filter: saturate(1.3) contrast(1.1);
+  opacity: 0.68 !important;
+  filter: saturate(1.3) contrast(1.15);
   transition: opacity 0.5s ease, background-image 0.3s ease;
   will-change: opacity, background-image;
 }
@@ -259,8 +259,8 @@ body.light-mode .aesthetic-bg-image,
 body.classic-mode .aesthetic-bg-image,
 body.forest-mode .aesthetic-bg-image,
 body.sunset-mode .aesthetic-bg-image {
-  opacity: 0.30 !important;
-  filter: saturate(1.1) contrast(1.05);
+  opacity: 0.58 !important;
+  filter: saturate(1.2) contrast(1.1);
 }
 
 /* 2. Subtle Micro Dot Grid Pattern (Samar-samar & Bersih) */
@@ -627,9 +627,9 @@ section#masterDbPage.page.active,
   height: 100vh !important;
   max-width: 100vw !important;
   max-height: 100vh !important;
-  background: rgba(0, 0, 0, 0.45) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(3.5px) saturate(110%) !important;
+  -webkit-backdrop-filter: blur(3.5px) saturate(110%) !important;
   z-index: 9999999 !important;
   display: none;
   align-items: center !important;
@@ -2402,9 +2402,9 @@ body.design-mode-3d-isometric .dashboardTable th {
   display: none;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, 0.6) !important;
-  backdrop-filter: blur(8px) saturate(120%) !important;
-  -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(3.5px) saturate(110%) !important;
+  -webkit-backdrop-filter: blur(3.5px) saturate(110%) !important;
   z-index: 99999;
   padding: 16px;
 }
@@ -2727,9 +2727,10 @@ body.design-mode-3d-isometric .dashboardTable th {
 
 #popupTambahToko {
   display: none;
-  align-items: flex-start !important;
+  align-items: center !important;
   justify-content: center !important;
-  padding-top: 4px !important;
+  padding: 1cm 1mm !important;
+  box-sizing: border-box !important;
 }
 
 #popupTambahToko.show {
@@ -2738,15 +2739,16 @@ body.design-mode-3d-isometric .dashboardTable th {
 
 #popupTambahToko .popupBox {
   width: 480px !important;
-  max-width: 92vw !important;
-  max-height: 88vh !important;
+  max-width: calc(100vw - 2mm) !important;
+  max-height: calc(100vh - 2cm) !important;
   overflow: hidden !important;
-  margin: 0 auto !important;
+  margin: 1cm auto !important;
   padding: 0 !important;
   border-radius: 5px !important;
   box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;
   display: flex !important;
   flex-direction: column !important;
+  box-sizing: border-box !important;
 }
 
 #popupTambahToko .popupBody {
@@ -3046,9 +3048,9 @@ table th,
   bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(0, 0, 0, 0.65) !important;
-  backdrop-filter: blur(6px) !important;
-  -webkit-backdrop-filter: blur(6px) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(3.5px) saturate(110%) !important;
+  -webkit-backdrop-filter: blur(3.5px) saturate(110%) !important;
   display: none;
   align-items: center !important;
   justify-content: center !important;
@@ -3708,6 +3710,29 @@ table th,
     padding-left: 2mm !important;
     padding-right: 2mm !important;
     padding-bottom: 2mm !important;
+  }
+
+  #popupTambahToko {
+    padding-top: 1cm !important;
+    padding-bottom: 1cm !important;
+    padding-left: 1mm !important;
+    padding-right: 1mm !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  #popupTambahToko .popupBox {
+    width: calc(100vw - 2mm) !important;
+    max-width: calc(100vw - 2mm) !important;
+    min-width: calc(100vw - 2mm) !important;
+    height: calc(100vh - 2cm) !important;
+    max-height: calc(100vh - 2cm) !important;
+    margin-top: 1cm !important;
+    margin-bottom: 1cm !important;
+    margin-left: 1mm !important;
+    margin-right: 1mm !important;
+    box-sizing: border-box !important;
   }
 
   #popupTambahToko .popupBody {
