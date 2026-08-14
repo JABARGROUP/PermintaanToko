@@ -818,8 +818,8 @@
         <button type="button" class="popupClose" onclick="if(typeof window.tutupModalTambahToko==='function') window.tutupModalTambahToko(); else if(typeof tutupModalTambahToko==='function') tutupModalTambahToko();" style="cursor: pointer; background: transparent; border: none; color: #ffffff; font-size: 28px; font-weight: 900; line-height: 1; margin: 0; padding: 0 4px; outline: none;" title="TUTUP">&times;</button>
       </div>
 
-      <!-- POPUP BODY (CONTAINER TANPA SCROLL, FORM TERKUNCI DIAM) -->
-      <div class="popupBody" style="padding: 16px 18px 18px 18px; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
+      <!-- POPUP BODY (CONTAINER TANPA SCROLL, FORM TERKUNCI DIAM - 1MM LEFT RIGHT BOUNDARY) -->
+      <div class="popupBody" style="padding: 10px 1mm 1mm 1mm !important; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
         
           <!-- PILIH AREA TOKO, INPUT NAMA TOKO BARU & TOMBOL SIMPAN (1 BARIS RAPI - TINGGI DISEDANGKAN & COMFORTABLE) -->
           <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 14px; width: 100%; flex-wrap: nowrap; box-sizing: border-box;">
@@ -847,15 +847,15 @@
           </div>
         </div>
 
-        <!-- HANYA BAGIAN TABEL DI BAWAH INI YANG MEMILIKI FITUR SCROLLING -->
-        <div style="flex: 1; max-height: 280px; min-height: 140px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-header); -webkit-overflow-scrolling: touch;">
+        <!-- HANYA BAGIAN TABEL DI BAWAH INI YANG MEMILIKI FITUR SCROLLING (1MM MARGIN KANAN KIRI & BAWAH) -->
+        <div style="flex: 1; max-height: 280px; min-height: 140px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-header); -webkit-overflow-scrolling: touch; margin: 0 1mm 1mm 1mm; box-sizing: border-box;">
           <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
             <thead style="position: sticky; top: 0; z-index: 10;">
-              <tr style="background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
-                <th style="padding: 8px; text-align: left;">NAMA TOKO</th>
-                <th style="padding: 8px; text-align: center;">AREA</th>
-                <th style="padding: 8px; text-align: center;">KODE TOKO</th>
-                <th style="padding: 8px; text-align: center;">AKSI</th>
+              <tr style="background: var(--primary); color: #ffffff; border-bottom: 1px solid var(--border-color);">
+                <th style="padding: 8px 1mm; text-align: center; font-weight: 800; color: #ffffff;">NAMA TOKO</th>
+                <th style="padding: 8px 1mm; text-align: center; font-weight: 800; color: #ffffff;">AREA</th>
+                <th style="padding: 8px 1mm; text-align: center; font-weight: 800; color: #ffffff;">KODE TOKO</th>
+                <th style="padding: 8px 1mm; text-align: center; font-weight: 800; color: #ffffff;">AKSI</th>
               </tr>
             </thead>
             <tbody id="daftarTokoTableBody">

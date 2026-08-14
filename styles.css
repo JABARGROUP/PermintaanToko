@@ -2920,11 +2920,38 @@ div[id*="Modal"] {
 }
 
 #popupTambahToko .popupBody {
-  padding: 16px 2mm 2mm 2mm !important;
+  padding: 10px 1mm 1mm 1mm !important;
   overflow: hidden !important;
   flex: 1 !important;
   display: flex !important;
   flex-direction: column !important;
+}
+
+#popupTambahToko table thead tr {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+#popupTambahToko table th {
+  padding-left: 1mm !important;
+  padding-right: 1mm !important;
+  text-align: center !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  box-sizing: border-box !important;
+}
+
+#popupTambahToko table td {
+  padding-left: 1mm !important;
+  padding-right: 1mm !important;
+  box-sizing: border-box !important;
+}
+
+#popupTambahToko .popupBody > div:last-child {
+  margin-bottom: 1mm !important;
+  margin-left: 1mm !important;
+  margin-right: 1mm !important;
+  box-sizing: border-box !important;
 }
 
 #popupTambahToko .popupHeader {
