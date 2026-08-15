@@ -3441,11 +3441,19 @@ async function pushCentralCloudDB(target = null) {
           catatan: r.catatan || '',
           items: r.items || [],
           photos: r.photos || [],
+          artemis_photos: r.artemisPhotos || [],
           status: r.status,
           service_approve: !!r.serviceApprove,
+          service_user_name: r.serviceUserName || '',
+          service_ttd: r.serviceTTD || '',
+          dm_user_name: r.dmUserName || '',
+          dm_ttd: r.dmTTD || '',
+          toko_ttd: r.tokoTTD || r.pemohonTTD || '',
           created_by: r.createdBy || '',
           created_at: r.createdAt || '',
-          user_id: r.userId || ''
+          user_id: r.userId || '',
+          log: r.log || [],
+          updated_at: new Date().toISOString()
         })).filter(p => p.no_surat);
 
         if (supaPayloads.length > 0) {
@@ -14320,44 +14328,50 @@ async function checkSupabaseDeltaSentinel() {
       .select('no_surat, updated_at')
       .not('no_surat', 'like', '__SYSTEM_%')
       .order('updated_at', { ascending: false })
-      .limit(1);
+      .limit(3);
 
     if (error || !Array.isArray(latestRows) || latestRows.length === 0) return;
 
-    const latest = latestRows[0];
-    const serverTs = latest.updated_at || '';
-    if (!serverTs) return;
+    let hasNewChanges = false;
+    for (const latest of latestRows) {
+      const serverTs = latest.updated_at || '';
+      if (!serverTs) continue;
 
-    if (!lastSentinelTimestamp) {
-      lastSentinelTimestamp = serverTs;
-      appStorage.setItem('SUPABASE_SENTINEL_LAST_TS', serverTs);
-      return;
-    }
+      if (!lastSentinelTimestamp) {
+        lastSentinelTimestamp = serverTs;
+        appStorage.setItem('SUPABASE_SENTINEL_LAST_TS', serverTs);
+        continue;
+      }
 
-    if (serverTs > lastSentinelTimestamp) {
-      lastSentinelTimestamp = serverTs;
-      appStorage.setItem('SUPABASE_SENTINEL_LAST_TS', serverTs);
+      if (serverTs > lastSentinelTimestamp) {
+        lastSentinelTimestamp = serverTs;
+        appStorage.setItem('SUPABASE_SENTINEL_LAST_TS', serverTs);
 
-      // Fetch ONLY the single modified/new row from Supabase (Delta Payload)
-      const { data: targetData } = await supabase
-        .from('permintaan_toko')
-        .select('*')
-        .eq('no_surat', latest.no_surat);
+        // Fetch ONLY the single modified/new row from Supabase (Delta Payload)
+        const { data: targetData } = await supabase
+          .from('permintaan_toko')
+          .select('*')
+          .eq('no_surat', latest.no_surat);
 
-      if (Array.isArray(targetData) && targetData.length > 0) {
-        const formatted = formatSupabaseRequestRow(targetData[0]);
-        if (formatted && !formatted.noSurat.startsWith('__SYSTEM_')) {
-          const currentReqs = getRequestsFromDB();
-          const idx = currentReqs.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(formatted.noSurat).trim().toUpperCase());
-          if (idx !== -1) {
-            currentReqs[idx] = { ...currentReqs[idx], ...formatted };
-          } else {
-            currentReqs.unshift(formatted);
+        if (Array.isArray(targetData) && targetData.length > 0) {
+          const formatted = formatSupabaseRequestRow(targetData[0]);
+          if (formatted && !formatted.noSurat.startsWith('__SYSTEM_')) {
+            const currentReqs = getRequestsFromDB();
+            const idx = currentReqs.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(formatted.noSurat).trim().toUpperCase());
+            if (idx !== -1) {
+              currentReqs[idx] = { ...currentReqs[idx], ...formatted };
+            } else {
+              currentReqs.unshift(formatted);
+            }
+            appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(currentReqs));
+            hasNewChanges = true;
           }
-          appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(currentReqs));
-          if (typeof refreshRealtimeUI === 'function') refreshRealtimeUI();
         }
       }
+    }
+
+    if (hasNewChanges && typeof refreshRealtimeUI === 'function') {
+      refreshRealtimeUI();
     }
   } catch(e) {}
 }
