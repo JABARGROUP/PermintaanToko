@@ -14306,3 +14306,80 @@ async function deleteStoreFromSupabase(storeId) {
   } catch(e) {}
 }
 window.deleteStoreFromSupabase = deleteStoreFromSupabase;
+
+// =======================================================================
+// LIGHTWEIGHT SENTINEL DELTA SYNC (50-BYTE CHECK FOR LIVE INTER-DEVICE UPDATES)
+// =======================================================================
+let lastSentinelTimestamp = appStorage.getItem('SUPABASE_SENTINEL_LAST_TS') || '';
+
+async function checkSupabaseDeltaSentinel() {
+  if (typeof supabase === 'undefined' || !supabase) return;
+  try {
+    const { data: latestRows, error } = await supabase
+      .from('permintaan_toko')
+      .select('no_surat, updated_at')
+      .not('no_surat', 'like', '__SYSTEM_%')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    if (error || !Array.isArray(latestRows) || latestRows.length === 0) return;
+
+    const latest = latestRows[0];
+    const serverTs = latest.updated_at || '';
+    if (!serverTs) return;
+
+    if (!lastSentinelTimestamp) {
+      lastSentinelTimestamp = serverTs;
+      appStorage.setItem('SUPABASE_SENTINEL_LAST_TS', serverTs);
+      return;
+    }
+
+    if (serverTs > lastSentinelTimestamp) {
+      lastSentinelTimestamp = serverTs;
+      appStorage.setItem('SUPABASE_SENTINEL_LAST_TS', serverTs);
+
+      // Fetch ONLY the single modified/new row from Supabase (Delta Payload)
+      const { data: targetData } = await supabase
+        .from('permintaan_toko')
+        .select('*')
+        .eq('no_surat', latest.no_surat);
+
+      if (Array.isArray(targetData) && targetData.length > 0) {
+        const formatted = formatSupabaseRequestRow(targetData[0]);
+        if (formatted && !formatted.noSurat.startsWith('__SYSTEM_')) {
+          const currentReqs = getRequestsFromDB();
+          const idx = currentReqs.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(formatted.noSurat).trim().toUpperCase());
+          if (idx !== -1) {
+            currentReqs[idx] = { ...currentReqs[idx], ...formatted };
+          } else {
+            currentReqs.unshift(formatted);
+          }
+          appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(currentReqs));
+          if (typeof refreshRealtimeUI === 'function') refreshRealtimeUI();
+        }
+      }
+    }
+  } catch(e) {}
+}
+window.checkSupabaseDeltaSentinel = checkSupabaseDeltaSentinel;
+
+// Start lightweight 5-second pulse for instant inter-device synchronization
+if (!window._sentinelPulseInterval) {
+  window._sentinelPulseInterval = setInterval(() => {
+    if (typeof checkSupabaseDeltaSentinel === 'function') checkSupabaseDeltaSentinel();
+  }, 5000);
+}
+
+// Trigger sentinel check immediately on window focus or tab visibility change
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', () => {
+    if (typeof checkSupabaseDeltaSentinel === 'function') checkSupabaseDeltaSentinel();
+  });
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && typeof checkSupabaseDeltaSentinel === 'function') {
+      checkSupabaseDeltaSentinel();
+    }
+  });
+}
