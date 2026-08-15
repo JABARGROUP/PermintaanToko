@@ -2597,6 +2597,35 @@ function initSupabaseRealtimeEngine() {
       )
       .on(
         'broadcast',
+        { event: 'user_change' },
+        (event) => {
+          if (event && event.payload) {
+            handleRealtimeUserChange({ eventType: event.payload.action || 'UPDATE', new: event.payload.newUser || null, old: event.payload.oldUser || null });
+          }
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'store_change' },
+        (event) => {
+          if (event && event.payload) {
+            handleRealtimeStoreChange({ eventType: event.payload.action || 'UPDATE', new: event.payload.newStore || null, old: event.payload.oldStore || null });
+          }
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'master_db_reset' },
+        (event) => {
+          if (typeof syncAllDataToCache === 'function') {
+            syncAllDataToCache().then(() => {
+              if (typeof refreshRealtimeUI === 'function') refreshRealtimeUI();
+            });
+          }
+        }
+      )
+      .on(
+        'broadcast',
         { event: 'request_change' },
         (event) => {
           if (event && event.payload) {
@@ -2723,6 +2752,66 @@ function initSupabaseRealtimeEngine() {
   }
 }
 window.initSupabaseRealtimeEngine = initSupabaseRealtimeEngine;
+
+// UNIFIED REALTIME BROADCAST SIGNAL TRANSMITTER FOR ALL DATABASE OPERATIONS
+function notifySupabaseDataChanged(tableOrEvent, dataPayload) {
+  if (typeof supabase === 'undefined' || !supabase) return;
+
+  try {
+    const channel = supabase.channel('public_realtime_sync');
+    const evt = String(tableOrEvent || '').trim().toLowerCase();
+
+    if (evt === 'users' || evt === 'user' || evt === 'user_change') {
+      channel.send({
+        type: 'broadcast',
+        event: 'user_change',
+        payload: {
+          action: 'UPDATE',
+          newUser: dataPayload || null,
+          time: Date.now()
+        }
+      }).catch(e => console.warn(e));
+    } else if (evt === 'toko_list' || evt === 'stores' || evt === 'store_change') {
+      channel.send({
+        type: 'broadcast',
+        event: 'store_change',
+        payload: {
+          action: 'UPDATE',
+          newStore: dataPayload || null,
+          time: Date.now()
+        }
+      }).catch(e => console.warn(e));
+    } else if (evt === 'requests' || evt === 'request' || evt === 'request_change' || evt === 'permintaan_toko') {
+      channel.send({
+        type: 'broadcast',
+        event: 'request_change',
+        payload: {
+          action: 'UPDATE',
+          newRow: dataPayload || null,
+          noSurat: dataPayload ? (dataPayload.no_surat || dataPayload.noSurat) : '',
+          time: Date.now()
+        }
+      }).catch(e => console.warn(e));
+    } else if (evt === 'master_db' || evt === 'master' || evt === 'reset' || evt === 'master_db_reset') {
+      channel.send({
+        type: 'broadcast',
+        event: 'master_db_reset',
+        payload: {
+          time: Date.now()
+        }
+      }).catch(e => console.warn(e));
+    } else if (evt === 'config' || evt === 'config_change' || evt === 'theme') {
+      channel.send({
+        type: 'broadcast',
+        event: 'config_change',
+        payload: dataPayload || { time: Date.now() }
+      }).catch(e => console.warn(e));
+    }
+  } catch(err) {
+    console.warn('[NOTIFY REALTIME BROADCAST NOTICE]:', err);
+  }
+}
+window.notifySupabaseDataChanged = notifySupabaseDataChanged;
 
 // AUTOMATIC WAKE-UP & REALTIME SYNC ON TAB FOCUS / VISIBILITY CHANGE (SCREEN UNLOCK / TAB SWITCH)
 if (typeof document !== 'undefined' && document.addEventListener) {
@@ -12036,6 +12125,7 @@ async function simpanUserData() {
               store_code: storeCode || generateStoreCode(fullName),
               created_by: currentUser ? currentUser.fullName : 'ADMIN'
             }).catch(e => console.warn(e));
+            if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('toko_list', { id: users[idx].id, fullName, area, storeCode });
           }
           if (typeof syncSupabaseStoresToLocalCache === 'function') {
             await syncSupabaseStoresToLocalCache().catch(() => {});
@@ -12249,6 +12339,10 @@ function hapusUser(userId) {
             if (u.fullName) {
               await supabase.from('toko_list').delete().eq('full_name', u.fullName);
             }
+            if (typeof notifySupabaseDataChanged === 'function') {
+              notifySupabaseDataChanged('users', { id: u.id, username: u.username });
+              notifySupabaseDataChanged('toko_list', { id: u.id, fullName: u.fullName });
+            }
           } catch (sbErr) {
             console.warn('[SUPABASE DELETE USER NOTICE]:', sbErr);
           }
@@ -12447,6 +12541,7 @@ function hapusMultiMasterDb() {
         if (typeof supabase !== 'undefined' && supabase) {
           try {
             await supabase.from('permintaan_toko').delete().in('no_surat', noSuratList);
+            if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('master_db_reset');
           } catch(sbErr1) {}
         }
 
@@ -13096,6 +13191,7 @@ function simpanTokoBaru() {
               store_code: newCode,
               created_by: currentUser.fullName
             });
+            if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('toko_list', { id: editStoreId, fullName: namaToko, area: targetArea });
           } catch (e) {
             console.warn('[SUPABASE TOKO_LIST UPDATE WARNING]:', e);
           }
@@ -13210,7 +13306,9 @@ function simpanTokoBaru() {
               area: newUserAcc.area,
               created_at: newUserAcc.createdAt
             });
+            if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('users', newUserAcc);
           }
+          if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('toko_list', newStore);
           console.log('⚡ [SUPABASE STORE SUCCESS]: Data toko berhasil disimpan ke Supabase!');
         } catch (sbErr) {
           console.warn('[SUPABASE STORE SAVE WARNING]:', sbErr);
@@ -13311,6 +13409,10 @@ function hapusTokoCustom(id, btnElement) {
             await supabase.from('toko_list').delete().eq('full_name', name);
             await supabase.from('users').delete().eq('id', id);
             await supabase.from('users').delete().eq('full_name', name);
+            if (typeof notifySupabaseDataChanged === 'function') {
+              notifySupabaseDataChanged('toko_list', { id, fullName: name });
+              notifySupabaseDataChanged('users', { id, fullName: name });
+            }
           } catch (sbErr) {
             console.warn('[SUPABASE DELETE STORE NOTICE]:', sbErr);
           }
