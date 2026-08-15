@@ -2382,6 +2382,20 @@ function initSupabaseRealtimeEngine() {
       .channel('public_realtime_sync')
       .on(
         'broadcast',
+        { event: 'data_changed' },
+        async (event) => {
+          if (event && event.payload && event.payload.noSurat) {
+            try {
+              const { data } = await supabase.from('permintaan_toko').select('*').eq('no_surat', event.payload.noSurat);
+              if (Array.isArray(data) && data.length > 0) {
+                handleRealtimePermintaanToko({ eventType: 'UPDATE', new: data[0] });
+              }
+            } catch(e) {}
+          }
+        }
+      )
+      .on(
+        'broadcast',
         { event: 'config_change' },
         (event) => {
           if (event && event.payload) {
