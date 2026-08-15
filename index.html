@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260815_1210">
-  <script src="app.js?v=20260815_1210"></script>
+  <link rel="stylesheet" href="styles.css?v=20260815_1218">
+  <script src="app.js?v=20260815_1218"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -95,7 +95,7 @@
           <button type="button" id="btnHapusSemuaChatHeader" class="btnHapusChatAllHeader" onclick="hapusSemuaChatAdmin()" title="HAPUS SEMUA CHAT SISTEM (KHUSUS ADMIN)" style="display: none; background: none; border: none; color: #ffffff; opacity: 0.85; cursor: pointer; align-items: center;">
             <span class="material-symbols-rounded" style="font-size: 20px;">delete_forever</span>
           </button>
-          <button type="button" class="chatClose" onclick="tutupBantuan()">&times;</button>
+          <button type="button" class="chatClose" onclick="tutupBantuan()" title="TUTUP CHAT SUPPORT" style="font-weight: 900 !important; font-size: 26px !important; color: #ffffff !important;">&times;</button>
         </div>
       </div>
 
@@ -108,7 +108,7 @@
           <div style="font-weight:700; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
             <span class="material-symbols-rounded" style="color:var(--primary); font-size:18px;">contacts</span> PILIH TOKO / USER
           </div>
-          <button type="button" onclick="tutupUserPickerChat()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px; line-height:1; font-weight:bold;">&times;</button>
+          <button type="button" onclick="tutupUserPickerChat()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:26px; line-height:1; font-weight:900;" title="TUTUP">&times;</button>
         </div>
         <input type="text" id="cariUserChatInput" placeholder="Cari nama toko / user / area..." style="width:100%; padding:8px 12px; border-radius: 5px; border:1px solid var(--border-color); background:var(--input-bg, #fff); color:var(--text-main); margin-bottom:8px; font-size:12px;" oninput="filterListUserChat(this.value)">
         <div id="listUserChatContainer" style="flex:1; overflow-y:auto;"></div>
@@ -121,7 +121,7 @@
             <div style="font-weight:700; font-size:13px; color:#d97706; display:flex; align-items:center; gap:6px;">
               <span class="material-symbols-rounded" style="font-size:18px;">campaign</span> SIARKAN KE SEMUA TOKO
             </div>
-            <button type="button" onclick="tutupBroadcastChatModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px; font-weight:bold;">&times;</button>
+            <button type="button" onclick="tutupBroadcastChatModal()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:26px; font-weight:900;" title="TUTUP">&times;</button>
           </div>
           <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px;">Pesan ini akan dikirimkan secara serentak ke seluruh Toko & Sales.</p>
           <textarea id="pesanBroadcastChatInput" rows="3" placeholder="Tulis pesan siaran di sini..." style="width:100%; padding:8px 10px; border-radius: 5px; border:1px solid var(--border-color); background:var(--input-bg, #fff); color:var(--text-main); font-size:12px; resize:none; margin-bottom:12px; box-sizing:border-box;"></textarea>

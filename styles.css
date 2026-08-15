@@ -7240,4 +7240,29 @@ button.btnBatal:active {
     padding-right: 1mm !important;
     padding-bottom: 1mm !important;
   }
+
+  #popupTambahToko .popupBody > div:last-child {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    max-height: 250px !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  #popupTambahToko table {
+    width: max-content !important;
+    min-width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+
+  #popupTambahToko table th,
+  #popupTambahToko table td {
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    -webkit-line-clamp: none !important;
+    display: table-cell !important;
+    line-height: normal !important;
+    padding: 8px 10px !important;
+  }
 }
