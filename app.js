@@ -7963,11 +7963,13 @@ function tolakServiceModal(noSurat, roleType) {
   const elRole = document.getElementById('rejectRoleType');
   const elReason = document.getElementById('rejectReason');
   const elTitle = document.getElementById('rejectTitle');
+  const elSub = document.getElementById('rejectSubTitle');
 
   if (elNo) elNo.value = noSurat;
   if (elRole) elRole.value = roleType;
   if (elReason) elReason.value = '';
   if (elTitle) elTitle.textContent = `TOLAK PERMINTAAN`;
+  if (elSub) elSub.textContent = `MASUKKAN ALASAN PENOLAKAN:`;
   
   const modal = document.getElementById('rejectOverlay');
   if (modal) modal.style.display = 'flex';
@@ -8594,7 +8596,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         }
       }
       
-      if (role === 'DM' && req.serviceApprove) {
+      if (role === 'DM' && req.status === 'PENDING' && req.serviceApprove) {
         actionButtons.push(`
           <button type="button" class="btnIcon btnApprove btnIconOnly" title="APPROVE" onclick="tutupDetailBarangV2(); approveDM('${req.noSurat}');">
             <span class="material-symbols-rounded">check_circle</span>
@@ -14388,3 +14390,468 @@ document.addEventListener('wheel', function(e) {
     zoomImage(step);
   }
 }, { passive: false });
+
+// ==========================================================================
+// GEMINI AI DOKUMEN PDF AUTO-FILL ENGINE
+// ==========================================================================
+const DEFAULT_GEMINI_API_KEY = "AQ.Ab8RN6L4ea9jImnOkdhtaZhPWn3b-HbLpKV5R9TXtfxZvy_lOQ";
+
+function getGeminiApiKey() {
+  const stored = appStorage.getItem('GEMINI_API_KEY');
+  if (!stored || stored.includes('JU_mOm7_T88bTlgWtMVxMXTP3AOn5wcPtc78RABOVzgw')) {
+    appStorage.setItem('GEMINI_API_KEY', DEFAULT_GEMINI_API_KEY);
+    return DEFAULT_GEMINI_API_KEY;
+  }
+  return stored;
+}
+
+function triggerUploadPdfAutoFill() {
+  const inputEl = document.getElementById('inputPdfAutoFill');
+  if (inputEl) {
+    inputEl.click();
+  }
+}
+window.triggerUploadPdfAutoFill = triggerUploadPdfAutoFill;
+
+async function prosesPdfAutoFillGemini(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    showNotif('BERKAS HARUS BERFORMAT PDF (.pdf)!', 'warning');
+    event.target.value = '';
+    return;
+  }
+
+  let apiKey = String(getGeminiApiKey() || '').trim().replace(/["']/g, '');
+
+  if (!apiKey) {
+    showNotif('GEMINI API KEY BELUM DIATUR! KLIK IKON 🔑 UNTUK MENGATUR.', 'warning');
+    event.target.value = '';
+    return;
+  }
+
+  showLoading('✨ GEMINI AI SEDANG MEMBACA DOKUMEN PDF...');
+
+  try {
+    // 1. Convert PDF to base64
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = reader.result;
+        const b64 = res.split(',')[1];
+        resolve(b64);
+      };
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+
+    // 2. Discover available model names dynamically
+    let availableModelNames = [];
+    try {
+      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        if (listData && Array.isArray(listData.models)) {
+          availableModelNames = listData.models.map(m => m.name.replace(/^models\//, ''));
+          console.log('[GEMINI DYNAMIC MODELS DISCOVERED]:', availableModelNames);
+        }
+      }
+    } catch (eList) {
+      console.warn('[GEMINI LIST MODELS FAIL]:', eList);
+    }
+
+    const promptText = `
+Anda adalah sistem pengurai data dokumen permintaan toko / barang yang sangat teliti.
+Tolong baca seluruh isi dokumen PDF ini dan uraikan datanya secara akurat.
+Kembalikan hasilnya HANYA dalam format JSON murni TANPA pembungkus markdown (tanpa \`\`\`json atau \`\`\`).
+
+Format JSON wajib persis seperti berikut:
+{
+  "toko": "NAMA TOKO",
+  "jenis": "DEFAULT atau DUS",
+  "catatan": "Catatan atau keterangan jika ada",
+  "items": [
+    {
+      "typeBarang": "Nama / Tipe Barang",
+      "noSeri": "Nomor Seri Barang",
+      "noSeriDus": "Nomor Seri Dus jika ada",
+      "permintaanBarang": "Deskripsi atau Nama Barang Permintaan",
+      "alasan": "Alasan Permintaan",
+      "qty": 1
+    }
+  ]
+}
+`;
+
+    // Payload for generateContent API
+    const generatePayload = {
+      contents: [
+        {
+          parts: [
+            { text: promptText },
+            {
+              inlineData: {
+                mimeType: "application/pdf",
+                data: base64Data
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    // Payload for Interactions API
+    const interactionPayload = {
+      model: "gemini-3.7-flash",
+      input: [
+        { text: promptText },
+        {
+          inline_data: {
+            mime_type: "application/pdf",
+            data: base64Data
+          }
+        }
+      ]
+    };
+
+    // Exclude special-purpose non-text models (audio, tts, image, video, embedding)
+    const textPdfSupported = availableModelNames.filter(m => {
+      const lower = String(m || '').toLowerCase();
+      return !lower.includes('tts') && 
+             !lower.includes('audio') && 
+             !lower.includes('image') && 
+             !lower.includes('embedding') && 
+             !lower.includes('veo') && 
+             !lower.includes('imagen') &&
+             !lower.includes('aqa') &&
+             !lower.includes('lyria');
+    });
+
+    const modelCandidates = [
+      'gemini-3.7-flash',
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-pro-latest',
+      'gemini-3-flash-preview',
+      ...textPdfSupported,
+      'gemini-flash',
+      'gemini-pro'
+    ];
+    const uniqueModelNames = [...new Set(modelCandidates)];
+
+    const requestsToTry = [];
+
+    // 1. Add generateContent endpoints for active 3.x models first (highest reliability)
+    uniqueModelNames.forEach(mod => {
+      requestsToTry.push({
+        url: `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${apiKey}`,
+        options: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(generatePayload)
+        },
+        type: 'generateContent'
+      });
+      requestsToTry.push({
+        url: `https://generativelanguage.googleapis.com/v1/models/${mod}:generateContent?key=${apiKey}`,
+        options: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(generatePayload)
+        },
+        type: 'generateContent'
+      });
+    });
+
+    // 2. Add Interactions API endpoints
+    ['gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-flash-latest'].forEach(mod => {
+      requestsToTry.push({
+        url: `https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`,
+        options: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...interactionPayload, model: mod })
+        },
+        type: 'interaction'
+      });
+    });
+
+    let response = null;
+    let rawText = '';
+    let lastErrorMsg = '';
+
+    for (const reqObj of requestsToTry) {
+      try {
+        const res = await fetch(reqObj.url, reqObj.options);
+        if (res.ok) {
+          const resJson = await res.json();
+          if (reqObj.type === 'interaction') {
+            rawText = (resJson.output && resJson.output[0] && resJson.output[0].text) ||
+                      (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content && resJson.candidates[0].content.parts && resJson.candidates[0].content.parts[0] && resJson.candidates[0].content.parts[0].text);
+          } else {
+            rawText = resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content && resJson.candidates[0].content.parts && resJson.candidates[0].content.parts[0] && resJson.candidates[0].content.parts[0].text;
+          }
+
+          if (rawText) {
+            response = res;
+            console.log(`[GEMINI AI SUCCESS]: Connected via ${reqObj.url.split('?')[0]}`);
+            break;
+          }
+        } else {
+          const errRes = await res.json().catch(() => ({}));
+          lastErrorMsg = (errRes.error && errRes.error.message) || `HTTP ${res.status}`;
+          console.warn(`[GEMINI TRY NOTICE] ${reqObj.url.split('?')[0]} failed:`, lastErrorMsg);
+        }
+      } catch (e) {
+        lastErrorMsg = e.message || String(e);
+      }
+    }
+
+    if (!response || !rawText) {
+      throw new Error(lastErrorMsg || 'Gagal terhubung ke Gemini AI.');
+    }
+
+    const cleanJsonStr = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsedData = JSON.parse(cleanJsonStr);
+
+    applyParsedDataToForm(parsedData);
+
+    hideLoading();
+    showNotif('✨ AI BERHASIL MEMBACA PDF! FORM PERMINTAAN TERISI OTOMATIS.', 'info');
+  } catch (err) {
+    hideLoading();
+    console.error('[GEMINI AUTO-FILL ERROR]:', err);
+    showNotif('GAGAL MEMBACA PDF (AI): ' + (err.message || err), 'warning');
+  } finally {
+    event.target.value = '';
+  }
+}
+
+// Shared helper to fill Form Permintaan Toko from parsed object
+function applyParsedDataToForm(parsedData) {
+  if (!parsedData) return;
+
+  // 1. Toko
+  if (parsedData.toko) {
+    const tokoSelect = document.getElementById('toko');
+    if (tokoSelect) {
+      const targetToko = String(parsedData.toko).trim().toUpperCase();
+      let matchedVal = '';
+      Array.from(tokoSelect.options).forEach(opt => {
+        const optVal = String(opt.value || '').trim().toUpperCase();
+        if (optVal && (optVal === targetToko || optVal.includes(targetToko) || targetToko.includes(optVal))) {
+          matchedVal = opt.value;
+        }
+      });
+      if (matchedVal) {
+        tokoSelect.value = matchedVal;
+      }
+    }
+  }
+
+  // 2. Jenis
+  const jenisEl = document.getElementById('jenisPermintaan');
+  if (jenisEl) {
+    const isDus = String(parsedData.jenis || '').toUpperCase().includes('DUS');
+    jenisEl.value = isDus ? 'DUS' : 'DEFAULT';
+    if (typeof window.gantiJenis === 'function') {
+      window.gantiJenis();
+    }
+  }
+
+  // 3. Catatan
+  if (parsedData.catatan) {
+    const catEl = document.getElementById('catatan');
+    if (catEl) catEl.value = parsedData.catatan;
+  }
+
+  // 4. Items (Detail Rows)
+  const detailContainer = document.getElementById('detailContainer');
+  if (detailContainer) {
+    detailContainer.innerHTML = '';
+    const items = Array.isArray(parsedData.items) && parsedData.items.length > 0 ? parsedData.items : [parsedData];
+
+    items.forEach(item => {
+      tambahRow();
+      const row = detailContainer.lastElementChild;
+      if (row) {
+        const inpType = row.querySelector('.typeBarang');
+        const inpSeri = row.querySelector('.seriBarang');
+        const inpNama = row.querySelector('.namaBarang');
+        const inpSeriDus = row.querySelector('.seriDusBarang');
+        const inpAlasan = row.querySelector('.alasan');
+        const inpQty = row.querySelector('.qty');
+
+        if (inpType) inpType.value = item.typeBarang || item.tipeBarang || item.type || item.tipe || '';
+        if (inpSeri) inpSeri.value = item.noSeri || item.seriBarang || item.sn || item.serial || '';
+        if (inpNama) inpNama.value = item.permintaanBarang || item.namaBarang || item.permintaan || item.deskripsi || '';
+        if (inpSeriDus) inpSeriDus.value = item.noSeriDus || item.seriDusBarang || item.seriDus || item.snDus || '';
+        if (inpAlasan) inpAlasan.value = item.alasan || item.alasanPermintaan || '';
+        if (inpQty) inpQty.value = item.qty || item.jumlah || 1;
+
+        if (inpSeri && inpSeri.value && typeof lookupTypeRow === 'function') {
+          lookupTypeRow(inpSeri);
+        }
+      }
+    });
+  }
+}
+window.applyParsedDataToForm = applyParsedDataToForm;
+
+// ==========================================================================
+// EXCEL FORM AUTO-FILL ENGINE
+// ==========================================================================
+function triggerUploadExcelAutoFill() {
+  const inputEl = document.getElementById('inputExcelAutoFill');
+  if (inputEl) {
+    inputEl.click();
+  }
+}
+window.triggerUploadExcelAutoFill = triggerUploadExcelAutoFill;
+
+function downloadTemplateExcelPermintaan() {
+  const templateData = [
+    {
+      "TOKO": "TOKO DEMO SBY",
+      "JENIS PERMINTAAN": "DEFAULT",
+      "TYPE BARANG": "LAPTOP CORE I5",
+      "NO SERI": "SN123456789",
+      "NO SERI DUS": "",
+      "PERMINTAAN BARANG": "GANTI UNIT BARU",
+      "ALASAN": "BARANG RUSAK / MATI TOTAL",
+      "QTY": 1,
+      "CATATAN": "Catatan tambahan jika ada"
+    }
+  ];
+
+  if (typeof XLSX === 'undefined') {
+    showNotif('LIBRARY XLSX BELUM SIAP!', 'error');
+    return;
+  }
+
+  const worksheet = XLSX.utils.json_to_sheet(templateData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "PermintaanToko");
+  XLSX.writeFile(workbook, "TEMPLATE_INPUT_PERMINTAAN_TOKO.xlsx");
+}
+window.downloadTemplateExcelPermintaan = downloadTemplateExcelPermintaan;
+
+async function prosesExcelAutoFill(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const validExts = ['.xlsx', '.xls', '.csv'];
+  const fileName = file.name.toLowerCase();
+  if (!validExts.some(ext => fileName.endsWith(ext))) {
+    showNotif('BERKAS HARUS BERFORMAT EXCEL (.xlsx, .xls) ATAU CSV!', 'warning');
+    event.target.value = '';
+    return;
+  }
+
+  showLoading('📊 MEMBACA DOKUMEN EXCEL...');
+
+  try {
+    const data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (err) => reject(err);
+      reader.readAsBinaryString(file);
+    });
+
+    if (typeof XLSX === 'undefined') {
+      throw new Error('Library XLSX belum dimuat.');
+    }
+
+    const workbook = XLSX.read(data, { type: 'binary' });
+    const firstSheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[firstSheetName];
+    const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    if (!jsonRows || jsonRows.length === 0) {
+      throw new Error('FILE EXCEL KOSONG ATAU FORMAT TIDAK SESUAI.');
+    }
+
+    let parsedToko = '';
+    let parsedJenis = 'DEFAULT';
+    let parsedCatatan = '';
+    const items = [];
+
+    jsonRows.forEach(row => {
+      const getVal = (possibleKeys) => {
+        for (const k of Object.keys(row)) {
+          const cleanK = k.trim().toLowerCase();
+          if (possibleKeys.some(pk => cleanK === pk.toLowerCase() || cleanK.includes(pk.toLowerCase()))) {
+            return String(row[k] || '').trim();
+          }
+        }
+        return '';
+      };
+
+      if (!parsedToko) parsedToko = getVal(['toko', 'nama toko', 'store']);
+      if (parsedJenis === 'DEFAULT') {
+        const jVal = getVal(['jenis', 'jenis permintaan', 'type permintaan']);
+        if (jVal.toUpperCase().includes('DUS')) parsedJenis = 'DUS';
+      }
+      if (!parsedCatatan) parsedCatatan = getVal(['catatan', 'keterangan', 'notes']);
+
+      const typeBarang = getVal(['type barang', 'tipe barang', 'type', 'tipe', 'nama barang']);
+      const noSeri = getVal(['no seri', 'nomor seri', 'sn', 'serial', 'seri barang']);
+      const noSeriDus = getVal(['no seri dus', 'nomor seri dus', 'sn dus', 'seri dus']);
+      const permintaanBarang = getVal(['permintaan barang', 'permintaan', 'barang permintaan', 'deskripsi']);
+      const alasan = getVal(['alasan', 'alasan permintaan', 'reason']);
+      const qtyVal = getVal(['qty', 'jumlah', 'quantity']);
+      const qty = parseInt(qtyVal, 10) || 1;
+
+      if (typeBarang || noSeri || permintaanBarang || alasan) {
+        items.push({
+          typeBarang,
+          noSeri,
+          noSeriDus,
+          permintaanBarang,
+          alasan,
+          qty
+        });
+      }
+    });
+
+    if (items.length === 0) {
+      throw new Error('TIDAK DITEMUKAN BARIS DATA BARANG DALAM EXCEL.');
+    }
+
+    applyParsedDataToForm({
+      toko: parsedToko,
+      jenis: parsedJenis,
+      catatan: parsedCatatan,
+      items: items
+    });
+
+    hideLoading();
+    showNotif(`BERHASIL MEMBACA EXCEL! ${items.length} BARANG TERISI KEDALAM FORM.`, 'info');
+  } catch (err) {
+    hideLoading();
+    showNotif('GAGAL MEMBACA EXCEL: ' + (err.message || String(err)), 'warning');
+  } finally {
+    event.target.value = '';
+  }
+}
+window.prosesExcelAutoFill = prosesExcelAutoFill;
+
+function aturGeminiApiKey() {
+  const currentKey = getGeminiApiKey();
+  const inputKey = prompt('MASUKKAN / UBAH GEMINI API KEY:', currentKey);
+  if (inputKey !== null) {
+    const cleanKey = inputKey.trim();
+    if (cleanKey) {
+      appStorage.setItem('GEMINI_API_KEY', cleanKey);
+      showNotif('GEMINI API KEY BERHASIL DISIMPAN!', 'info');
+    } else {
+      appStorage.removeItem('GEMINI_API_KEY');
+      showNotif('GEMINI API KEY DIHAPUS (MENGGUNAKAN KEY DEFAULT).', 'info');
+    }
+  }
+}
+window.aturGeminiApiKey = aturGeminiApiKey;

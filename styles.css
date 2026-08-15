@@ -2760,11 +2760,15 @@ div[id*="Modal"] {
   width: 440px !important;
   max-width: 90vw !important;
   margin: auto !important;
-  border-radius: 5px !important;
+  border-radius: 8px !important;
   overflow: hidden !important;
   background: var(--bg-box) !important;
   border: 1px solid var(--border-color) !important;
   box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
 /* SCANNER POPUP MODAL (#scannerModal) - EXACT 2MM SCREEN MARGIN & 2MM INNER CAMERA GAP ON MOBILE HP */
 #scannerModal {
   display: none;
@@ -3076,17 +3080,17 @@ table th,
 
 .btnBatal,
 .confirmButton .btnBatal { 
-  background: #ef4444 !important; 
+  background: #64748b !important; 
   color: #fff !important; 
   border: none !important;
 }
 
 .btnBatal:hover,
 .confirmButton .btnBatal:hover {
-  background: #dc2626 !important;
+  background: #475569 !important;
 }
 
-.btnHapus { background: #dc2626; color: #fff; }
+.btnHapus { background: #dc2626 !important; color: #fff !important; }
 
 /* POPUP TAMBAH USER BARU: ELEVATED POSITION & BOLD THEME-COLORED CLOSE X */
 #popupUserForm.popupOverlay,
@@ -5673,51 +5677,62 @@ div.rowHighlightOrange {
   padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
-  background: #cbd5e1 !important;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.45) !important;
-  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
   overflow: hidden !important;
-  box-sizing: border-box !important;
+  background: var(--bg-box) !important;
+  border: 1px solid var(--border-color) !important;
 }
 
 #pdfModal .popupHeader {
-  position: sticky !important;
-  top: 0 !important;
   flex-shrink: 0 !important;
-  z-index: 999999 !important;
-  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
   padding: 12px 18px !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.2) !important;
   border-radius: 5px 5px 0 0 !important;
 }
 
-#pdfDocumentContent {
+#pdfModal .popupHeader span {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#pdfModal .popupContent {
   flex: 1 !important;
   overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  padding: 0 !important;
-  background: #cbd5e1 !important;
+  padding: 16px !important;
+  background: var(--bg-body, #f1f5f9) !important;
   display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  box-sizing: border-box !important;
-  border-radius: 0 0 5px 5px !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+#pdfDocumentContent {
+  width: 100% !important;
+  max-width: 760px !important;
+  display: flex !important;
+  justify-content: center !important;
 }
 
 #pdfDocumentContent .pdf-paper {
   width: 100% !important;
-  max-width: 100% !important;
-  min-height: 100% !important;
+  max-width: 720px !important;
+  min-height: 980px !important;
   height: auto !important;
-  margin: 0 !important;
-  padding: 24px 28px 40px 28px !important;
-  box-sizing: border-box !important;
+  padding: 32px 32px 48px 32px !important;
   background: #ffffff !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 4px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #cbd5e1 !important;
 }
 
 .btnPrintHeader {
@@ -5755,18 +5770,17 @@ div.rowHighlightOrange {
 /* MOBILE PHONE SCREENS: REDUCED LEFT/RIGHT SIZE (COMPACT WITH SIDE GAPS) */
 @media (max-width: 768px) {
   #pdfModal {
-    padding: 10px 4mm !important;
+    padding: 4px !important;
   }
 
   #pdfModal .popupBox {
-    width: calc(100vw - 8mm) !important;
-    max-width: calc(100vw - 8mm) !important;
-    min-width: calc(100vw - 8mm) !important;
-    height: calc(100vh - 20px) !important;
-    height: calc(100dvh - 20px) !important;
-    max-height: calc(100vh - 20px) !important;
-    max-height: calc(100dvh - 20px) !important;
-    border-radius: 6px !important;
+    width: 98vw !important;
+    max-width: 98vw !important;
+    height: calc(100vh - 8px) !important;
+    height: calc(100dvh - 8px) !important;
+    max-height: calc(100vh - 8px) !important;
+    max-height: calc(100dvh - 8px) !important;
+    border-radius: 5px !important;
     margin: auto !important;
   }
 
@@ -5779,7 +5793,7 @@ div.rowHighlightOrange {
   }
 
   #pdfDocumentContent {
-    padding: 6px !important;
+    padding: 4px !important;
     width: 100% !important;
   }
 
@@ -5788,18 +5802,37 @@ div.rowHighlightOrange {
     max-width: 100% !important;
     min-height: 100% !important;
     height: auto !important;
-    padding: 14px 10px 40px 10px !important;
+    padding: 10px 8px 30px 8px !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    font-size: 9.5px !important;
   }
 
-  #pdfDocumentContent table {
-    font-size: 10.5px !important;
+  #pdfDocumentContent .pdf-paper div[style*="font-size: 20px"],
+  #pdfDocumentContent .pdf-paper div[style*="font-size: 21px"] {
+    font-size: 13.5px !important;
+    padding: 8px 10px !important;
+    margin-bottom: 12px !important;
   }
 
-  #pdfDocumentContent th,
-  #pdfDocumentContent td {
-    padding: 5px 6px !important;
+  #pdfDocumentContent table.pdf-info-grid {
+    font-size: 9.5px !important;
+    margin-bottom: 8px !important;
+  }
+
+  #pdfDocumentContent table.pdf-info-grid td {
+    padding: 2px 2px !important;
+    font-size: 9.5px !important;
+  }
+
+  #pdfDocumentContent .pdf-table-responsive table {
+    font-size: 9px !important;
+  }
+
+  #pdfDocumentContent .pdf-table-responsive th,
+  #pdfDocumentContent .pdf-table-responsive td {
+    padding: 4px 3px !important;
+    font-size: 9px !important;
   }
 }
 
