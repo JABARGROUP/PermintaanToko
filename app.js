@@ -13696,27 +13696,15 @@ window.downloadTemplateExcelPermintaan = downloadTemplateExcelPermintaan;
 // ==========================================================================
 
 const GEMINI_API_KEY_STORAGE_KEY = 'gemini_api_key';
-const DEFAULT_GEMINI_API_KEY = 'AQ.Ab8RN6IISGsBiwanoScrwxY4h4xR9qDPa55ZfBx8Vceqp2Z5eg';
+const DEFAULT_GEMINI_API_KEY = 'AQ.Ab8RN6KdS4OQtmbAvlubA3f4BzI6Jeo1V5vBY1-Rsl97Ibv0Hw';
 
 function getGeminiApiKey() {
-  const stored = localStorage.getItem(GEMINI_API_KEY_STORAGE_KEY) || localStorage.getItem('GEMINI_API_KEY');
-  if (stored && stored.trim()) return stored.trim();
   return DEFAULT_GEMINI_API_KEY;
 }
 window.getGeminiApiKey = getGeminiApiKey;
 
 function aturGeminiApiKey() {
-  const currentKey = getGeminiApiKey();
-  const inputKey = prompt('MASUKKAN GEMINI API KEY:', currentKey || '');
-  if (inputKey !== null) {
-    if (inputKey.trim()) {
-      localStorage.setItem(GEMINI_API_KEY_STORAGE_KEY, inputKey.trim());
-      if (typeof showNotif === 'function') showNotif('GEMINI API KEY BERHASIL DISIMPAN!', 'success');
-    } else {
-      localStorage.removeItem(GEMINI_API_KEY_STORAGE_KEY);
-      if (typeof showNotif === 'function') showNotif('GEMINI API KEY DI-RESET KE DEFAULT.', 'info');
-    }
-  }
+  if (typeof showNotif === 'function') showNotif('GEMINI API KEY SUDAH TERPASANG PATEN!', 'info');
 }
 window.aturGeminiApiKey = aturGeminiApiKey;
 
@@ -13989,7 +13977,7 @@ async function prosesPdfAutoFillGemini(event) {
 
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
-    aturGeminiApiKey();
+    // aturGeminiApiKey disabled
     event.target.value = '';
     return;
   }
@@ -14048,7 +14036,7 @@ Format JSON wajib persis seperti berikut:
       ]
     };
 
-    const uniqueModelNames = Array.isArray(modelCandidates) ? modelCandidates : ['gemini-3.6-flash', 'gemini-3.5-flash'];
+    const uniqueModelNames = Array.isArray(modelCandidates) ? modelCandidates : ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 
     const requestsToTry = [];
     uniqueModelNames.forEach(mod => {
@@ -14066,10 +14054,17 @@ Format JSON wajib persis seperti berikut:
 
     let response = null;
     let rawText = '';
+    let isUnauthorized = false;
 
     for (const reqObj of requestsToTry) {
       try {
         const res = await fetch(reqObj.url, reqObj.options);
+        if (res.status === 401 || res.status === 400) {
+          const errData = await res.json().catch(() => ({}));
+          if (errData && errData.error && (errData.error.code === 401 || errData.error.code === 400 || String(errData.error.message).includes('API key'))) {
+            isUnauthorized = true;
+          }
+        }
         if (res.ok) {
           const resJson = await res.json();
           if (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content) {
@@ -14082,6 +14077,13 @@ Format JSON wajib persis seperti berikut:
           }
         }
       } catch (e) {}
+    }
+
+    if (isUnauthorized && (!response || !rawText)) {
+      if (typeof hideLoading === 'function') hideLoading();
+      if (typeof showNotif === 'function') showNotif('GEMINI API KEY TIDAK VALID / EXPIRED (401 Unauthorized). SILAHKAN MASUKKAN API KEY TERBARU DARI GOOGLE AI STUDIO!', 'warning');
+      // aturGeminiApiKey disabled
+      return;
     }
 
     if (!response || !rawText) {
@@ -14119,7 +14121,7 @@ async function prosesGambarAutoFillGemini(event) {
 
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
-    aturGeminiApiKey();
+    // aturGeminiApiKey disabled
     event.target.value = '';
     return;
   }
@@ -14178,7 +14180,7 @@ Format JSON wajib persis seperti berikut:
       ]
     };
 
-    const uniqueModelNames = Array.isArray(modelCandidates) ? modelCandidates : ['gemini-3.6-flash', 'gemini-3.5-flash'];
+    const uniqueModelNames = Array.isArray(modelCandidates) ? modelCandidates : ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 
     const requestsToTry = [];
     uniqueModelNames.forEach(mod => {
@@ -14196,10 +14198,17 @@ Format JSON wajib persis seperti berikut:
 
     let response = null;
     let rawText = '';
+    let isUnauthorized = false;
 
     for (const reqObj of requestsToTry) {
       try {
         const res = await fetch(reqObj.url, reqObj.options);
+        if (res.status === 401 || res.status === 400) {
+          const errData = await res.json().catch(() => ({}));
+          if (errData && errData.error && (errData.error.code === 401 || errData.error.code === 400 || String(errData.error.message).includes('API key'))) {
+            isUnauthorized = true;
+          }
+        }
         if (res.ok) {
           const resJson = await res.json();
           if (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content) {
@@ -14212,6 +14221,13 @@ Format JSON wajib persis seperti berikut:
           }
         }
       } catch (e) {}
+    }
+
+    if (isUnauthorized && (!response || !rawText)) {
+      if (typeof hideLoading === 'function') hideLoading();
+      if (typeof showNotif === 'function') showNotif('GEMINI API KEY TIDAK VALID / EXPIRED (401 Unauthorized). SILAHKAN MASUKKAN API KEY TERBARU DARI GOOGLE AI STUDIO!', 'warning');
+      // aturGeminiApiKey disabled
+      return;
     }
 
     if (!response || !rawText) {
@@ -14312,7 +14328,8 @@ function extractFirstValidJSON(text) {
 window.extractFirstValidJSON = extractFirstValidJSON;
 
 async function getBestActiveGeminiModel(apiKey) {
-  const defaultPriority = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-flash-latest'];
+  const defaultPriority = ['gemini-flash-latest', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite', 'gemini-2.5-pro'];
+  if (!apiKey) return defaultPriority;
   try {
     const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
     if (listRes.ok) {
