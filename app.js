@@ -5944,7 +5944,7 @@ function getAccessibleRequests() {
   const requests = getRequestsFromDB();
   if (!currentUser) return [];
 
-  const role = (currentUser.category || '').toUpperCase();
+  const role = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
   if (
     role === 'ADMIN' ||
     role === 'DM' ||
@@ -6128,7 +6128,8 @@ function updateStoreDropdownOptions(selectedStoreName = '', filterKeyword = '') 
   }
 
   const allStores = getStoresFromDB();
-  let areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
+  const userRole = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
+  let areaStores = (userRole === 'DM' || currentUser.area === 'ALL') 
     ? allStores 
     : allStores.filter(s => s && isAreaMatch(currentUser.area, s.area));
 
@@ -6957,7 +6958,7 @@ function bukaRiwayat(status) {
 
 function isPdfButtonAllowed(req) {
   if (!req || !currentUser) return false;
-  const role = String(currentUser.category || '').toUpperCase();
+  const role = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
   const isAdmin = typeof checkIsAdminUser === 'function' ? checkIsAdminUser() : (role === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
   
   // TOMBOL PDF TIDAK DIBERIKAN UNTUK ROLE TOKO DAN SALES
@@ -7014,7 +7015,7 @@ function filterRiwayat() {
   const tbody = document.getElementById('riwayatData');
   if (!thead || !tbody) return;
 
-  const role = currentUser ? currentUser.category : '';
+  const role = currentUser ? String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase() : '';
 
   thead.innerHTML = `
     <tr>
@@ -12865,7 +12866,8 @@ function loadDaftarTokoModal(filterKeyword = '') {
   tbody.innerHTML = '';
 
   const allStores = getStoresFromDB();
-  let areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
+  const userRole = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
+  let areaStores = (userRole === 'DM' || currentUser.area === 'ALL') 
     ? allStores 
     : allStores.filter(s => isAreaMatch(currentUser.area, s.area));
 
