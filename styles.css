@@ -4086,7 +4086,7 @@ table th,
     white-space: nowrap !important;
   }
 
-  .popupBox, .confirmBox, .popupNotif, .rejectBoxPopup, .akunBox {
+  .popupBox, .confirmBox, .popupNotif, .akunBox {
     width: 94vw !important;
     max-width: 94vw !important;
     max-height: 90vh !important;
@@ -7277,7 +7277,10 @@ button.btnBatal:active {
   #popupTambahToko .popupBody > div:last-child {
     overflow-x: auto !important;
     overflow-y: auto !important;
-    max-height: 250px !important;
+    flex: 1 !important;
+    height: 100% !important;
+    max-height: none !important;
+    margin-bottom: 0 !important;
     -webkit-overflow-scrolling: touch !important;
   }
 
@@ -7319,3 +7322,281 @@ button.btnBatal:active {
   transform: translateY(-1px) !important;
 }
 
+
+/* MOBILE SPECIFIC NOTIFICATION & DETAIL POPUP COMPACT HEIGHT ADJUSTMENT */
+@media screen and (max-width: 768px) {
+  html body #popupDetailBarangV2 .popupBoxDetailV2,
+  html body #popupDetail .popupBoxDetail,
+  html body .popupBoxDetailV2,
+  html body .popupBoxDetail {
+    max-height: calc(80vh - 20px) !important;
+  }
+  html body #popupDetailBarangV2 .tableCardV2.tableWrap,
+  html body #popupDetail .tableWrap,
+  html body .tableCardV2.tableWrap {
+    max-height: calc(80vh - 110px) !important;
+  }
+  html body #popupNotifList .popupNotifCard {
+    max-height: calc(65vh - 20px) !important;
+  }
+  html body #popupNotifList #notifListBody {
+    max-height: 42vh !important;
+  }
+  html body #popupNotif .popupNotifCard,
+  html body #popupNotifCard {
+    max-height: calc(78vh - 80px) !important;
+  }
+}
+
+
+/* PERFECT REJECT POPUP 3MM SPACING SYSTEM (PADDING 0 ON CONTAINER, EXACT 3MM ON BODY & TEXTAREA) */
+html body .rejectBoxPopup,
+html body #rejectOverlay .rejectBoxPopup,
+.rejectBoxPopup {
+  padding: 0 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  background: var(--bg-box) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html body .rejectHeaderPopup,
+html body #rejectOverlay .rejectHeaderPopup,
+.rejectHeaderPopup {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  box-sizing: border-box !important;
+}
+
+html body .rejectBodyPopup,
+html body #rejectOverlay .rejectBodyPopup,
+.rejectBodyPopup {
+  width: 100% !important;
+  padding: 3mm !important;
+  box-sizing: border-box !important;
+}
+
+html body #rejectReason,
+html body #rejectOverlay #rejectReason,
+#rejectReason {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 8px 10px !important;
+  margin-top: 4px !important;
+  margin-bottom: 3mm !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  resize: vertical !important;
+}
+
+html body .confirmButton,
+html body #rejectOverlay .confirmButton,
+.rejectBodyPopup .confirmButton {
+  gap: 3mm !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media screen and (max-width: 768px) {
+  html body #rejectOverlay,
+  #rejectOverlay {
+    padding: 2mm !important;
+    padding-bottom: calc(52px + 2mm) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+  html body #rejectOverlay .rejectBoxPopup,
+  html body .rejectBoxPopup,
+  .rejectBoxPopup {
+    width: calc(100vw - 4mm) !important;
+    max-width: calc(100vw - 4mm) !important;
+    margin: auto 2mm !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+  }
+  html body #rejectOverlay .rejectHeaderPopup,
+  html body .rejectHeaderPopup,
+  .rejectHeaderPopup {
+    width: 100% !important;
+    padding: 10px 3mm !important;
+    box-sizing: border-box !important;
+  }
+  html body #rejectOverlay .rejectBodyPopup,
+  html body .rejectBodyPopup,
+  .rejectBodyPopup {
+    width: 100% !important;
+    padding: 3mm !important;
+    box-sizing: border-box !important;
+  }
+  html body #rejectOverlay #rejectReason,
+  html body #rejectReason,
+  #rejectReason {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 8px 10px !important;
+    margin-top: 4px !important;
+    margin-bottom: 3mm !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+    display: block !important;
+    resize: vertical !important;
+  }
+  html body #rejectOverlay .confirmButton,
+  html body .rejectBodyPopup .confirmButton,
+  .confirmButton {
+    gap: 3mm !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* NAMA TOKO IN TAMBAH TOKO MODAL: MAX 2 TO 3 LINES ON HP MOBILE */
+#popupTambahToko table td:first-child {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  max-width: 140px !important;
+  min-width: 100px !important;
+}
+
+#popupTambahToko table td:first-child .namaTokoWrap,
+.namaTokoWrap {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  line-height: 1.3 !important;
+  max-height: calc(1.3em * 3) !important;
+}
+
+/* EXACT 2MM BOTTOM GAP FROM TABLE BOUNDARY TO POPUP BOTTOM WALL (#popupTambahToko) */
+html body #popupTambahToko .popupBody,
+#popupTambahToko .popupBody {
+  padding-bottom: 2mm !important;
+}
+
+html body #popupTambahToko .popupBody > div:last-child,
+#popupTambahToko .popupBody > div:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* EXACT 2MM BOTTOM GAP FROM TABLE BOUNDARY TO POPUP BOTTOM WALL (#popupTambahToko) */
+html body #popupTambahToko .popupBody,
+#popupTambahToko .popupBody {
+  padding-top: 10px !important;
+  padding-left: 3mm !important;
+  padding-right: 3mm !important;
+  padding-bottom: 2mm !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html body #popupTambahToko .popupBody > div:last-child,
+#popupTambahToko .popupBody > div:last-child {
+  flex: 1 !important;
+  height: 100% !important;
+  max-height: none !important;
+  margin-bottom: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* REJECT POPUP TOP RIGHT CLOSE BUTTON FOR MOBILE & DESKTOP */
+html body .rejectHeaderPopup,
+html body #rejectOverlay .rejectHeaderPopup,
+.rejectHeaderPopup {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+html body .rejectHeaderPopup .popupClose,
+html body #rejectOverlay .rejectHeaderPopup .popupClose,
+.rejectHeaderPopup .popupClose {
+  margin-left: auto !important;
+  cursor: pointer !important;
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  padding: 0 4px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+}
+
+/* =============================================================================
+   MODAL POPUP GEMINI API KEY - RESPONSIVE HP DENGAN JARAK 2MM KE LAYAR
+   ============================================================================= */
+#modalGeminiApiKey {
+  padding: 2mm !important;
+  box-sizing: border-box !important;
+}
+
+#modalGeminiApiKey .modalKeyBox {
+  width: calc(100vw - 4mm) !important;
+  max-width: 460px !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 768px) {
+  #modalGeminiApiKey {
+    padding: 2mm !important;
+  }
+  #modalGeminiApiKey .modalKeyBox {
+    width: calc(100vw - 4mm) !important;
+    max-width: calc(100vw - 4mm) !important;
+    border-radius: 12px !important;
+  }
+  #modalGeminiApiKey .modalKeyHeader {
+    padding: 10px 12px !important;
+  }
+  #modalGeminiApiKey .modalKeyHeader span {
+    font-size: 12px !important;
+  }
+  #modalGeminiApiKey .modalKeyBody {
+    padding: 12px 10px !important;
+    gap: 10px !important;
+  }
+  #modalGeminiApiKey .modalKeyActions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    justify-content: space-between !important;
+  }
+  #modalGeminiApiKey .btnKosongkanKey {
+    padding: 8px 10px !important;
+    font-size: 11px !important;
+    flex: 1 1 auto !important;
+    text-align: center !important;
+  }
+  #modalGeminiApiKey .modalKeyBtnRight {
+    display: flex !important;
+    gap: 6px !important;
+    flex: 1 1 auto !important;
+    justify-content: flex-end !important;
+  }
+  #modalGeminiApiKey .modalKeyBtnRight button {
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+  }
+}

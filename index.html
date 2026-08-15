@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260815_1525">
-  <script src="app.js?v=20260815_2120"></script>
+  <link rel="stylesheet" href="styles.css?v=20260816_0308">
+  <script src="app.js?v=20260816_0308"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -295,8 +295,9 @@
             <button type="button" onclick="downloadTemplateExcelPermintaan()" title="Download Format Template Excel" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3); border-radius: 6px; padding: 6px 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
               <span class="material-symbols-rounded" style="font-size: 18px;">download_for_offline</span>
             </button>
-            <button type="button" onclick="aturGeminiApiKey()" title="Pengaturan Gemini API Key" style="display: none !important; background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 6px 8px; cursor: pointer; align-items: center; justify-content: center;">
-              <span class="material-symbols-rounded" style="font-size: 18px;">key</span>
+            <button type="button" id="btnGeminiApiKey" onclick="aturGeminiApiKey()" title="Masukkan Google Gemini AI API Key (Hanya Diisi Sekali Saja)" style="background: linear-gradient(135deg, #f59e0b, #d97706) !important; color: #ffffff !important; border: none !important; border-radius: 6px !important; padding: 7px 14px !important; font-weight: 800 !important; font-size: 11.5px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35) !important; transition: all 0.2s ease !important;">
+              <span class="material-symbols-rounded" style="font-size: 18px; color: #ffffff !important;">key</span>
+              <span id="labelGeminiApiKey">KEY AI</span>
             </button>
           </div>
           <input type="file" id="inputPdfAutoFill" accept="application/pdf,.pdf" style="display: none;" onchange="prosesPdfAutoFillGemini(event)">
@@ -836,7 +837,7 @@
       </div>
 
       <!-- POPUP BODY (CONTAINER TANPA SCROLL, FORM TERKUNCI DIAM) -->
-      <div class="popupBody" style="padding: 16px 18px 18px 18px; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
+      <div class="popupBody" style="padding: 12px 14px 2mm 14px; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
         
         <!-- ELEMENT ATAS TERKUNCI (DIAM) -->
         <div style="flex-shrink: 0;">
@@ -870,7 +871,7 @@
           </div>
         </div>
 
-        <div style="flex: 1; max-height: 220px; min-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); -webkit-overflow-scrolling: touch;">
+        <div style="flex: 1; min-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); -webkit-overflow-scrolling: touch; margin-bottom: 0;">
           <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; position: relative;">
             <thead style="position: sticky; top: 0; z-index: 50; background: var(--primary);">
               <tr style="background: var(--primary); color: #ffffff;">
@@ -935,32 +936,32 @@
   </div>
 
   <!-- 5. POPUP REJECT REASON MODAL (HALF SCREEN COMPACT CARD) -->
-  <div id="rejectOverlay" class="popupOverlay" style="z-index: 500000; display: none; align-items: center !important; justify-content: center !important;">
-    <div class="rejectBoxPopup" style="width: 440px !important; max-width: 92vw !important; margin: auto !important; border-radius: 8px !important; overflow: hidden !important; background: var(--bg-box) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important; display: flex !important; flex-direction: column !important;">
+  <div id="rejectOverlay" class="popupOverlay" style="z-index: 500000; display: none; align-items: center; justify-content: center;">
+    <div class="rejectBoxPopup">
       
       <!-- HEADER POPUP (ATAS / TOP HEADER) -->
-      <div class="rejectHeaderPopup" style="width: 100% !important; background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: #ffffff !important; padding: 12px 16px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; flex-shrink: 0 !important; box-sizing: border-box !important;">
+      <div class="rejectHeaderPopup" style="display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #ffffff;">
           <span class="material-symbols-rounded" style="font-size: 20px;">cancel</span>
           <span id="rejectTitle">TOLAK PERMINTAAN</span>
         </span>
-        <button type="button" class="popupClose" onclick="closeReject()" style="background: transparent !important; border: none !important; color: #ffffff !important; font-size: 26px !important; font-weight: 900 !important; line-height: 1 !important; cursor: pointer !important; padding: 0 4px !important; margin: 0 !important; outline: none !important;" title="TUTUP">&times;</button>
+        <button type="button" class="popupClose" onclick="closeReject()" style="background: transparent; border: none; color: #ffffff; font-size: 26px; font-weight: 900; line-height: 1; cursor: pointer; padding: 0 4px; margin: 0; outline: none;" title="TUTUP">&times;</button>
       </div>
 
       <!-- BODY POPUP (DI BAWAH HEADER) -->
-      <div class="rejectBodyPopup" style="width: 100% !important; padding: 16px !important; display: flex !important; flex-direction: column !important; box-sizing: border-box !important; background: var(--bg-box) !important; color: var(--text-main) !important;">
+      <div class="rejectBodyPopup">
         <input type="hidden" id="rejectNoSurat">
         <input type="hidden" id="rejectRoleType">
 
         <!-- KOTAK TULISAN ALASAN -->
-        <p id="rejectSubTitle" style="font-size: 12px !important; color: var(--text-muted) !important; margin-bottom: 6px !important; font-weight: 700 !important; text-transform: uppercase !important;">MASUKKAN ALASAN PENOLAKAN:</p>
+        <p id="rejectSubTitle" style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 700; text-transform: uppercase;">MASUKKAN ALASAN PENOLAKAN:</p>
         
-        <textarea id="rejectReason" rows="3" placeholder="Tuliskan alasan penolakan..." style="width: 100% !important; border-radius: 6px !important; padding: 10px 12px !important; font-size: 12.5px !important; border: 1px solid var(--border-color) !important; background: var(--bg-body) !important; color: var(--text-main) !important; margin-bottom: 14px !important; resize: vertical !important; box-sizing: border-box !important; outline: none !important; min-height: 80px !important;"></textarea>
+        <textarea id="rejectReason" rows="3" placeholder="Tuliskan alasan penolakan..."></textarea>
 
         <!-- TOMBOL TIDAK & YA (DI BAWAH KOTAK ALASAN) -->
-        <div class="confirmButton" style="display: flex !important; flex-direction: row !important; gap: 10px !important; width: 100% !important; align-items: center !important; justify-content: center !important;">
-          <button type="button" class="btnBatal" onclick="closeReject()" style="flex: 1 !important; height: 38px !important; border-radius: 6px !important; font-weight: 700 !important; font-size: 12.5px !important; cursor: pointer !important; background: #64748b !important; color: #ffffff !important; border: none !important; text-align: center !important; display: flex !important; align-items: center !important; justify-content: center !important;">TIDAK</button>
-          <button type="button" class="btnHapus" onclick="kirimReject()" style="flex: 1 !important; height: 38px !important; border-radius: 6px !important; font-weight: 700 !important; font-size: 12.5px !important; cursor: pointer !important; background: #dc2626 !important; color: #ffffff !important; border: none !important; text-align: center !important; display: flex !important; align-items: center !important; justify-content: center !important;">YA</button>
+        <div class="confirmButton">
+          <button type="button" class="btnBatal" onclick="closeReject()">TIDAK</button>
+          <button type="button" class="btnHapus" onclick="kirimReject()">YA</button>
         </div>
       </div>
 
@@ -970,25 +971,25 @@
   <!-- ========================================== -->
   <!-- MODAL PILIH TEMPLATE EXCEL DUS / DEFAULT   -->
   <!-- ========================================== -->
-  <div id="excelTemplateOverlay" class="popupOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center;">
-    <div class="rejectBoxPopup" style="width: 380px; max-width: 92vw; background: var(--bg-box); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color);">
+  <div id="excelTemplateOverlay" class="popupOverlay modalBackdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center; padding: 2mm; box-sizing: border-box;">
+    <div class="modalBox" style="width: 100%; max-width: 400px; background: var(--bg-box); border-radius: 14px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); box-sizing: border-box; margin: 0 auto; animation: popIn 0.2s ease-out;">
       <!-- HEADER POPUP -->
-      <div class="rejectHeaderPopup" style="background: #0284c7; color: #ffffff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;">
         <span style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13.5px; letter-spacing: 0.5px;">
           <span class="material-symbols-rounded" style="font-size: 20px;">download_for_offline</span>
           <span>DOWNLOAD TEMPLATE EXCEL</span>
         </span>
-        <button type="button" onclick="closeExcelTemplateModal()" style="background: transparent !important; border: none !important; color: #ffffff !important; font-size: 24px !important; font-weight: 900 !important; cursor: pointer !important; padding: 0 !important; margin: 0 !important; line-height: 1 !important;" title="TUTUP">&times;</button>
+        <button type="button" onclick="closeExcelTemplateModal()" class="popupClose" style="color: #ffffff !important; font-size: 26px !important; font-weight: 900 !important; background: transparent !important; border: none !important; cursor: pointer !important; padding: 0 !important; margin: 0 !important; line-height: 1 !important;" title="TUTUP">&times;</button>
       </div>
 
       <!-- BODY POPUP -->
-      <div style="padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; background: var(--bg-box); color: var(--text-main);">
-        <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 2px 0; font-weight: 700; text-transform: uppercase; text-align: center;">
+      <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--bg-box); color: var(--text-main); box-sizing: border-box;">
+        <p style="font-size: 11.5px; color: var(--text-muted); margin: 0 0 2px 0; font-weight: 700; text-transform: uppercase; text-align: center;">
           PILIH JENIS PERMINTAAN TEMPLATE:
         </p>
 
         <!-- TOMBOL OPTION DUS -->
-        <button type="button" onclick="unduhTemplateExcelProses('DUS')" style="width: 100%; padding: 12px 14px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1.5px solid rgba(59, 130, 246, 0.35); border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease;">
+        <button type="button" onclick="unduhTemplateExcelProses('DUS')" style="width: 100%; padding: 12px 14px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1.5px solid rgba(59, 130, 246, 0.35); border-radius: 8px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease; box-sizing: border-box;">
           <span style="display: flex; align-items: center; gap: 8px;">
             <span class="material-symbols-rounded" style="font-size: 20px;">inventory_2</span>
             <span>JENIS DUS (DENGAN SN DUS)</span>
@@ -997,7 +998,7 @@
         </button>
 
         <!-- TOMBOL OPTION DEFAULT -->
-        <button type="button" onclick="unduhTemplateExcelProses('DEFAULT')" style="width: 100%; padding: 12px 14px; background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease;">
+        <button type="button" onclick="unduhTemplateExcelProses('DEFAULT')" style="width: 100%; padding: 12px 14px; background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 8px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease; box-sizing: border-box;">
           <span style="display: flex; align-items: center; gap: 8px;">
             <span class="material-symbols-rounded" style="font-size: 20px;">widgets</span>
             <span>JENIS DEFAULT (TANPA SN DUS)</span>
@@ -1006,7 +1007,7 @@
         </button>
 
         <!-- BATAL -->
-        <button type="button" onclick="closeExcelTemplateModal()" style="margin-top: 2px; width: 100%; height: 36px; background: #64748b; color: #ffffff; border: none; border-radius: 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        <button type="button" onclick="closeExcelTemplateModal()" style="margin-top: 4px; width: 100%; height: 36px; background: var(--bg-body); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
           BATAL
         </button>
       </div>
@@ -1420,5 +1421,50 @@
       <div id="miniCenterLoadingText" class="miniLoadingText">MEMPROSES...</div>
     </div>
   </div>
+
+  <!-- ==========================================================================
+       MODAL POPUP GEMINI AI API KEY (RESPONSIF HP JARAK 2MM KE LAYAR)
+       ========================================================================== -->
+  <div id="modalGeminiApiKey" class="modalBackdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 99999; justify-content: center; align-items: center; backdrop-filter: blur(4px); padding: 2mm; box-sizing: border-box;">
+    <div class="modalBox modalKeyBox" style="background: var(--bg-box, #ffffff); border-radius: 14px; width: 100%; max-width: 480px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 1px solid var(--border-color); overflow: hidden; animation: popIn 0.2s ease-out; box-sizing: border-box; margin: 0 auto;">
+      <div class="modalKeyHeader" style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 12px 16px; color: #ffffff; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13.5px;">
+          <span class="material-symbols-rounded" style="font-size: 20px;">key</span>
+          <span>PENGATURAN / UBAH GEMINI API KEY</span>
+        </div>
+        <button type="button" onclick="tutupModalGeminiApiKey()" class="popupClose" style="color: #ffffff !important; font-weight: 900 !important; font-size: 26px !important; background: transparent !important; border: none !important; cursor: pointer; line-height: 1; padding: 0;" title="TUTUP">&times;</button>
+      </div>
+      <div class="modalKeyBody" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box;">
+        <p style="margin: 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.5;">Masukan KEY AI ,buat key di <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" style="color: #f59e0b; font-weight: 700; text-decoration: underline;">https://aistudio.google.com/</a></p>
+        <div style="width: 100%; box-sizing: border-box;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-main); margin: 0;">GOOGLE GEMINI API KEY:</label>
+            <button type="button" onclick="document.getElementById('inputGeminiApiKeyVal').value = ''; document.getElementById('inputGeminiApiKeyVal').focus();" style="background: none; border: none; color: #ef4444; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: underline;">
+              HAPUS TEKS
+            </button>
+          </div>
+          <div style="position: relative; display: flex; align-items: center; width: 100%; box-sizing: border-box;">
+            <input type="text" id="inputGeminiApiKeyVal" placeholder="Tempel API Key di sini (Contoh: AIzaSy...)" style="width: 100%; height: 42px; padding: 8px 38px 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-family: monospace; font-size: 12.5px; outline: none; box-sizing: border-box;">
+            <button type="button" onclick="toggleShowGeminiApiKey()" title="Lihat / Sembunyikan Key" style="position: absolute; right: 6px; background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; padding: 4px;">
+              <span id="iconToggleGeminiKey" class="material-symbols-rounded" style="font-size: 20px;">visibility</span>
+            </button>
+          </div>
+        </div>
+        <div class="modalKeyActions" style="display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-top: 4px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
+          <button type="button" onclick="hapusGeminiApiKeyPermanen()" class="btnKosongkanKey" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 9px 12px; font-weight: 700; font-size: 11.5px; cursor: pointer; white-space: nowrap;">
+            KOSONGKAN KEY
+          </button>
+          <div class="modalKeyBtnRight" style="display: flex; gap: 6px; align-items: center;">
+            <button type="button" onclick="tutupModalGeminiApiKey()" style="background: var(--bg-body); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 9px 14px; font-weight: 700; font-size: 11.5px; cursor: pointer; white-space: nowrap;">BATAL</button>
+            <button type="button" onclick="simpanGeminiApiKeyDariModal()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: none; border-radius: 8px; padding: 9px 16px; font-weight: 800; font-size: 11.5px; cursor: pointer; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35); white-space: nowrap;">SIMPAN PERUBAHAN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+    </div>
+  </div>
+  </div>
+
 </body>
 </html>
