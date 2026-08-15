@@ -1604,7 +1604,7 @@ async function simpanAdminReminderTime() {
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(sysRow, { onConflict: 'no_surat' });
+      await supabase.from('permintaan_toko').upsert(sysRow, { onConflict: 'id' });
     } catch(err) {
       console.warn('[SUPABASE REMINDER TIME ERROR]:', err);
     }
@@ -2734,12 +2734,14 @@ function handleRealtimePermintaanToko(payload) {
       return;
     }
 
+    const normKey = (s) => String(s || '').replace(/[\/\.\_\s]/g, '').toUpperCase();
     const requests = getRequestsFromDB();
 
     if (eventType === 'INSERT') {
       const newRow = formatSupabaseRequestRow(payload.new);
       if (newRow && !newRow.noSurat.startsWith('__SYSTEM_') && isRequestVisibleToCurrentUser(newRow)) {
-        const existsIdx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(newRow.noSurat).trim().toUpperCase());
+        const nKey = normKey(newRow.noSurat || newRow.id);
+        const existsIdx = requests.findIndex(r => r && (normKey(r.noSurat) === nKey || normKey(r.id) === nKey));
         if (existsIdx === -1) {
           requests.unshift(newRow);
         } else {
@@ -2751,7 +2753,8 @@ function handleRealtimePermintaanToko(payload) {
     } else if (eventType === 'UPDATE') {
       const updatedRow = formatSupabaseRequestRow(payload.new);
       if (updatedRow && !updatedRow.noSurat.startsWith('__SYSTEM_')) {
-        const idx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(updatedRow.noSurat).trim().toUpperCase());
+        const uKey = normKey(updatedRow.noSurat || updatedRow.id);
+        const idx = requests.findIndex(r => r && (normKey(r.noSurat) === uKey || normKey(r.id) === uKey));
         if (idx !== -1) {
           requests[idx] = { ...requests[idx], ...updatedRow };
           appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
@@ -2765,7 +2768,8 @@ function handleRealtimePermintaanToko(payload) {
     } else if (eventType === 'DELETE') {
       const delNoSurat = payload.old ? (payload.old.no_surat || payload.old.noSurat || payload.old.id) : null;
       if (delNoSurat) {
-        const filtered = requests.filter(r => r && String(r.noSurat).trim().toUpperCase() !== String(delNoSurat).trim().toUpperCase());
+        const dKey = normKey(delNoSurat);
+        const filtered = requests.filter(r => r && normKey(r.noSurat) !== dKey && normKey(r.id) !== dKey);
         appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(filtered));
         refreshRealtimeUI();
       }
@@ -2953,7 +2957,14 @@ function handleRealtimeStoreChange(payload) {
 }
 
 function refreshRealtimeUI() {
-  if (currentUser) {
+  let user = currentUser;
+  if (!user) {
+    try {
+      const s = appStorage.getItem(SESSION_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(SESSION_KEY) : null);
+      if (s) user = JSON.parse(s);
+    } catch(e) {}
+  }
+  if (user) {
     if (typeof loadDashboard === 'function') loadDashboard();
     if (typeof loadRiwayat === 'function') loadRiwayat();
     const hasCheckedMaster = document.querySelectorAll('.masterDbCheckbox:checked').length > 0;
@@ -3458,10 +3469,10 @@ async function pushCentralCloudDB(target = null) {
 
         if (supaPayloads.length > 0) {
           try {
-            const { error } = await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'no_surat' });
+            const { error } = await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'id' });
             if (error) {
               console.warn('[SUPABASE PUSH REQUESTS NOTICE]:', error.message);
-              await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'no_surat' });
+              await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'id' });
             } else {
               console.log('⚡ [SUPABASE PUSH SUCCESS]: Requests synced to Supabase!');
             }
@@ -3644,7 +3655,7 @@ async function pushCentralCloudDB(target = null) {
                 created_by: 'SYSTEM',
                 created_at: new Date().toISOString()
               };
-              await supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'no_surat' });
+              await supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'id' });
             } catch(e) {}
           }
         } catch(chatErr) {}
@@ -3793,7 +3804,7 @@ async function setFeaturePhotosEnabled(enabled) {
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(photoSystemRow, { onConflict: 'no_surat' });
+      await supabase.from('permintaan_toko').upsert(photoSystemRow, { onConflict: 'id' });
 
       // SIMPAN JUGA KE TABEL LOOKUP
       try {
@@ -6398,7 +6409,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       };
 
       if (typeof supabase !== 'undefined' && supabase) {
-        supabase.from('permintaan_toko').upsert(supaEditRow, { onConflict: 'no_surat' }).then(({ error }) => {
+        supabase.from('permintaan_toko').upsert(supaEditRow, { onConflict: 'id' }).then(({ error }) => {
           if (error) console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
         }).catch(e => console.warn(e));
       }
@@ -6564,7 +6575,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     };
 
     if (typeof supabase !== 'undefined' && supabase) {
-      supabase.from('permintaan_toko').upsert(supaNewRow, { onConflict: 'no_surat' }).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(supaNewRow, { onConflict: 'id' }).then(({ error }) => {
         if (error) console.warn('[SUPABASE SAVE NOTICE]:', error.message);
       }).catch(e => console.warn(e));
     }
@@ -9913,7 +9924,7 @@ async function pushChatToSupabase(allChats, newChatObj) {
       created_by: 'SYSTEM',
       created_at: new Date().toISOString()
     };
-    supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'no_surat' }).then(({ error }) => {
+    supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'id' }).then(({ error }) => {
       if (error) console.warn('[SUPABASE permintaan_toko CHAT UPSERT NOTICE]:', error.message);
       else console.log('⚡ [SUPABASE permintaan_toko CHAT SUCCESS]: Chat berhasil disiarkan via permintaan_toko!');
     }).catch(e => console.warn(e));
@@ -10841,7 +10852,7 @@ function hapusSemuaChatAdmin() {
               created_by: 'SYSTEM',
               created_at: new Date().toISOString()
             };
-            await supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'no_surat' });
+            await supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'id' });
           } catch(sbErr) {
             console.warn('[SUPABASE CHAT DELETE NOTICE]:', sbErr);
           }
