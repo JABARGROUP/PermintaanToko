@@ -1384,27 +1384,7 @@ function formatDateDDMMYYYYString(input) {
   return str;
 }
 
-function getRequestsFromDB() {
-  return JSON.parse(appStorage.getItem(REQUESTS_DB_KEY) || '[]');
-}
-
-function saveRequestsToDB(requests) {
-  appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
-  if (typeof pushCentralCloudDB === 'function') {
-    pushCentralCloudDB();
-  }
-}
-
-function getUsersFromDB() {
-  return JSON.parse(appStorage.getItem(USERS_DB_KEY) || '[]');
-}
-
-function saveUsersToDB(users, targetUser = null) {
-  appStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-  if (typeof pushCentralCloudDB === 'function') {
-    pushCentralCloudDB(targetUser ? (targetUser.type ? targetUser : { type: 'USER', data: targetUser }) : null);
-  }
-}
+// Merged storage functions below
 
 // APP INITIALIZATION
 document.addEventListener('DOMContentLoaded', async () => {
