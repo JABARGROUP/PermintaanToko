@@ -2600,7 +2600,9 @@ function initSupabaseRealtimeEngine() {
         { event: 'request_change' },
         (event) => {
           if (event && event.payload) {
-            if (event.payload.newRow) {
+            if (event.payload.action === 'DELETE' && event.payload.noSurat) {
+              handleRealtimePermintaanToko({ eventType: 'DELETE', old: { no_surat: event.payload.noSurat } });
+            } else if (event.payload.newRow) {
               handleRealtimePermintaanToko({ eventType: event.payload.action || 'UPDATE', new: event.payload.newRow });
             }
             if (typeof syncSupabaseIncremental === 'function') {
@@ -2702,14 +2704,49 @@ function initSupabaseRealtimeEngine() {
         }
       )
       .subscribe((status) => {
-        window.isSupabaseOnline = true;
-        updateGlobalConnectionDotStatus();
+        if (status === 'SUBSCRIBED') {
+          window.isSupabaseOnline = true;
+          updateGlobalConnectionDotStatus();
+          if (typeof syncSupabaseIncremental === 'function') {
+            syncSupabaseIncremental().catch(() => {});
+          }
+        } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          window.isSupabaseOnline = false;
+          updateGlobalConnectionDotStatus();
+          setTimeout(() => {
+            if (typeof initSupabaseRealtimeEngine === 'function') initSupabaseRealtimeEngine();
+          }, 3000);
+        }
       });
   } catch (err) {
     console.warn('[SUPABASE REALTIME INIT NOTICE]:', err);
   }
 }
 window.initSupabaseRealtimeEngine = initSupabaseRealtimeEngine;
+
+// AUTOMATIC WAKE-UP & REALTIME SYNC ON TAB FOCUS / VISIBILITY CHANGE (SCREEN UNLOCK / TAB SWITCH)
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      if (typeof initSupabaseRealtimeEngine === 'function') initSupabaseRealtimeEngine();
+      if (typeof syncSupabaseIncremental === 'function') syncSupabaseIncremental().catch(() => {});
+    }
+  });
+  window.addEventListener('focus', () => {
+    if (typeof syncSupabaseIncremental === 'function') syncSupabaseIncremental().catch(() => {});
+  });
+}
+
+// SILENT BACKGROUND SYNC SAFETY NET WHILE TAB IS ACTIVE (EVERY 15 SECONDS)
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    if (!document.hidden && typeof currentUser !== 'undefined' && currentUser) {
+      if (typeof syncSupabaseIncremental === 'function') {
+        syncSupabaseIncremental().catch(() => {});
+      }
+    }
+  }, 15000);
+}
 
 // Helper: Format raw row from Supabase permintaan_toko
 function formatSupabaseRequestRow(row) {
@@ -7861,7 +7898,9 @@ function prosesSimpanDoneDenganBuktiArtemis() {
               artemis_photos: requests[idx].artemisPhotos,
               log: requests[idx].log,
               updated_at: new Date().toISOString()
-            }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn('[SUPABASE DONE UPDATE NOTICE]:', e));
+            }).eq('no_surat', noSurat).then(() => {
+              if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', requests[idx]);
+            }, (e) => console.warn('[SUPABASE DONE UPDATE NOTICE]:', e));
           }
           if (typeof dbFirestore !== 'undefined' && dbFirestore) {
             dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -7923,7 +7962,9 @@ function batalApproveService(noSurat) {
           status: 'PENDING',
           log: requests[idx].log,
           updated_at: new Date().toISOString()
-        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
+        }).eq('no_surat', noSurat).then(() => {
+          if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', requests[idx]);
+        }, (e) => console.warn(e));
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
         dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -7971,11 +8012,14 @@ function batalApproveDM(noSurat) {
       if (typeof supabase !== 'undefined' && supabase) {
         supabase.from('permintaan_toko').update({
           status: 'PENDING',
-          dm_user_name: '',
-          dm_ttd: '',
+          service_approve: false,
+          service_user_name: '',
+          service_ttd: '',
           log: requests[idx].log,
           updated_at: new Date().toISOString()
-        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
+        }).eq('no_surat', noSurat).then(() => {
+          if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', requests[idx]);
+        }, (e) => console.warn(e));
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
         dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -8050,7 +8094,9 @@ function kirimReject() {
         catatan: requests[idx].catatan,
         log: requests[idx].log,
         updated_at: new Date().toISOString()
-      }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
+      }).eq('no_surat', noSurat).then(() => {
+        if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', requests[idx]);
+      }, (e) => console.warn(e));
     }
     if (typeof dbFirestore !== 'undefined' && dbFirestore) {
       dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -8226,7 +8272,9 @@ function hapusData(noSurat) {
             items: currentReqs[idx].items,
             log: currentReqs[idx].log,
             updated_at: new Date().toISOString()
-          }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
+          }).eq('no_surat', noSurat).then(() => {
+            if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', currentReqs[idx]);
+          }, (e) => console.warn(e));
         }
         if (typeof dbFirestore !== 'undefined' && dbFirestore) {
           dbFirestore.collection('requests').doc(docId).set(currentReqs[idx], { merge: true }).catch(e => console.warn(e));
@@ -12455,7 +12503,10 @@ function hapusDataMaster(noSurat) {
       if (typeof supabase !== 'undefined' && supabase) {
         supabase.from('permintaan_toko').delete().eq('no_surat', noSurat).then(({ error }) => {
           if (error) console.warn('[SUPABASE DELETE NOTICE]:', error.message);
-          else console.log('⚡ [SUPABASE DELETE SUCCESS]:', noSurat);
+          else {
+            console.log('⚡ [SUPABASE DELETE SUCCESS]:', noSurat);
+            if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('DELETE', { noSurat });
+          }
         });
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
