@@ -2717,23 +2717,22 @@ function formatSupabaseRequestRow(row) {
 // Check if user has permission to see request
 function isRequestVisibleToCurrentUser(r) {
   if (!currentUser || !r) return true;
-  const cat = String(currentUser.category || '').toUpperCase();
-  const userArea = String(currentUser.area || '').toUpperCase();
+  const cat = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
+  const userArea = String(currentUser.area || '').trim().toUpperCase();
 
-  if (cat === 'ADMIN') return true;
+  if (cat === 'ADMIN' || cat === 'DM') return true;
+
   if (cat === 'SERVICE') {
     if (userArea === 'ALL' || userArea === 'TSM') return true;
-    return String(r.area || '').toUpperCase() === userArea;
+    return isAreaMatch(userArea, r.area);
   }
-  if (cat === 'DM') {
-    if (userArea === 'ALL') return true;
-    return String(r.area || '').toUpperCase() === userArea;
-  }
-  if (cat === 'TOKO') {
+
+  if (cat === 'TOKO' || cat === 'GBJ') {
     if (r.userId && currentUser.id && String(r.userId) === String(currentUser.id)) return true;
     if (r.toko && currentUser.fullName && String(r.toko).trim().toUpperCase() === String(currentUser.fullName).trim().toUpperCase()) return true;
-    return false;
+    return isAreaMatch(userArea, r.area);
   }
+
   return true;
 }
 
@@ -5492,6 +5491,7 @@ async function bukaMainApp() {
     // Jalankan Realtime Listener & Sinkronisasi Delta (updated_at) di latar belakang
     initSupabaseRealtimeEngine();
     syncSupabaseIncremental().catch(e => console.warn(e));
+    if (typeof startGlobalRealtimeLoop === 'function') startGlobalRealtimeLoop();
   } else {
     // ----------------------------------------------------
     // KONDISI B: DATA LOKAL KOSONG (MISAL PERANGKAT BARU)
@@ -5507,6 +5507,7 @@ async function bukaMainApp() {
     if (typeof loadRiwayat === 'function') loadRiwayat();
 
     initSupabaseRealtimeEngine();
+    if (typeof startGlobalRealtimeLoop === 'function') startGlobalRealtimeLoop();
   }
 
   if (typeof setupBottomMenuAutoHide === 'function') {
