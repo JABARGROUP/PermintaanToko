@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260815_1203">
-  <script src="app.js?v=20260815_1203"></script>
+  <link rel="stylesheet" href="styles.css?v=20260815_1210">
+  <script src="app.js?v=20260815_1210"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -864,15 +864,14 @@
           </div>
         </div>
 
-        <!-- HANYA BAGIAN TABEL DI BAWAH INI YANG MEMILIKI FITUR SCROLLING -->
-        <div style="flex: 1; max-height: 220px; min-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-header); -webkit-overflow-scrolling: touch;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-            <thead style="position: sticky; top: 0; z-index: 10;">
-              <tr style="background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
-                <th style="padding: 8px; text-align: left;">NAMA TOKO</th>
-                <th style="padding: 8px; text-align: center;">AREA</th>
-                <th style="padding: 8px; text-align: center;">KODE TOKO</th>
-                <th style="padding: 8px; text-align: center;">AKSI</th>
+        <div style="flex: 1; max-height: 220px; min-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); -webkit-overflow-scrolling: touch;">
+          <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; position: relative;">
+            <thead style="position: sticky; top: 0; z-index: 50; background: var(--primary);">
+              <tr style="background: var(--primary); color: #ffffff;">
+                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: left; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.15);">NAMA TOKO</th>
+                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: center; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.15);">AREA</th>
+                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: center; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.15);">KODE TOKO</th>
+                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: center; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.15);">AKSI</th>
               </tr>
             </thead>
             <tbody id="daftarTokoTableBody">

@@ -7189,6 +7189,31 @@ button.btnBatal:active {
   border-radius: 4px 4px 0 0 !important;
 }
 
+#popupTambahToko table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+#popupTambahToko table thead {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  background: var(--primary) !important;
+}
+
+#popupTambahToko table th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  padding: 10px 8px !important;
+  white-space: nowrap !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.15) !important;
+}
+
 /* ==========================================================================
    MEDIA QUERY KHUSUS HP (@media max-width: 768px)
    ========================================================================== */
