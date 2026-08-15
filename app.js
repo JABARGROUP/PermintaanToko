@@ -3412,12 +3412,13 @@ async function syncSupabaseThemeToLocalCache() {
 }
 window.syncSupabaseThemeToLocalCache = syncSupabaseThemeToLocalCache;
 
-async function pushCentralCloudDB() {
+async function pushCentralCloudDB(target = null) {
   try {
-    const requests = getRequestsFromDB();
+    const sourceData = target ? (Array.isArray(target) ? target : [target]) : getRequestsFromDB();
     if (typeof supabase !== 'undefined' && supabase) {
       try {
-        const supaPayloads = requests.map(r => ({
+        const supaPayloads = sourceData.map(r => ({
+          id: String(r.noSurat || '').replace(/[\/\.]/g, '_'),
           no_surat: r.noSurat,
           tanggal: r.tanggal,
           toko: r.toko,
@@ -3431,16 +3432,17 @@ async function pushCentralCloudDB() {
           created_by: r.createdBy || '',
           created_at: r.createdAt || '',
           user_id: r.userId || ''
-        }));
+        })).filter(p => p.no_surat);
+
         if (supaPayloads.length > 0) {
-          const supaPayloadsWithId = supaPayloads.map(p => ({
-            id: String(p.no_surat || '').replace(/[\/\.]/g, '_'),
-            ...p
-          }));
           try {
-            const { error } = await supabase.from('permintaan_toko').upsert(supaPayloadsWithId);
-            if (error) console.warn('[SUPABASE PUSH REQUESTS NOTICE]:', error.message);
-            else console.log('⚡ [SUPABASE PUSH SUCCESS]: All requests synced to Supabase!');
+            const { error } = await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'no_surat' });
+            if (error) {
+              console.warn('[SUPABASE PUSH REQUESTS NOTICE]:', error.message);
+              await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'id' });
+            } else {
+              console.log('⚡ [SUPABASE PUSH SUCCESS]: Requests synced to Supabase!');
+            }
           } catch(sbErr) {
             console.warn('[SUPABASE PUSH EXCEPTION]:', sbErr);
           }
@@ -6447,11 +6449,16 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     }
 
     let autoServiceTTD = '';
+    let serviceUserNameVal = '';
+    if (currentUser && currentUser.category === 'SERVICE') {
+      serviceUserNameVal = currentUser.fullName || currentUser.username || '';
+    }
     if (isDMUser) {
       const users = getUsersFromDB();
       const areaSvcUser = users.find(u => u && u.category === 'SERVICE' && isAreaMatch(u.area, targetArea));
       if (areaSvcUser) {
         autoServiceTTD = areaSvcUser.ttd || ttdMap[areaSvcUser.id] || ttdMap[areaSvcUser.username] || ttdMap[areaSvcUser.fullName] || ttdMap['SERVICE_' + targetArea] || '';
+        serviceUserNameVal = areaSvcUser.fullName || areaSvcUser.username || '';
       } else {
         autoServiceTTD = ttdMap['SERVICE_' + targetArea] || '';
       }
@@ -6493,7 +6500,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
 
     // 1. SIMPAN LOKAL SECARA INSTAN (0 ms)
     requests.unshift(newRecord);
-    saveRequestsToDB(requests);
+    saveRequestsToDB(requests, newRecord);
 
     // 2. MUNCULKAN NOTIFIKASI LANGSUNG DI AWAL & PINDAH HALAMAN
     showNotif(`PERMINTAAN #${noSurat} DATA BERHASIL DISIMPAN!`, 'success');
@@ -7718,6 +7725,7 @@ function hapusData(noSurat) {
 
         // 1. SIMPAN LOKAL SECARA INSTAN (0 ms)
         saveRequestsToDB(currentReqs);
+        deleteRequestFromSupabase(noSurat);
         showNotif(`PERMINTAAN #${noSurat} BERHASIL DIHAPUS!`, 'warning');
         if (typeof loadRiwayat === 'function') loadRiwayat();
         if (typeof loadDashboard === 'function') loadDashboard();
@@ -14235,3 +14243,52 @@ async function getBestActiveGeminiModel(apiKey) {
   return defaultPriority;
 }
 window.getBestActiveGeminiModel = getBestActiveGeminiModel;
+
+function saveStoresToDB(stores, targetStore = null) {
+  appStorage.setItem(TOKO_DB_KEY, JSON.stringify(stores));
+
+  const isSupabaseConfigured = typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && !SUPABASE_URL.includes('YOUR_SUPABASE');
+  if (isSupabaseConfigured && typeof supabase !== 'undefined' && supabase) {
+    try {
+      const sourceStores = targetStore ? (Array.isArray(targetStore) ? targetStore : [targetStore]) : stores;
+      const supaStores = sourceStores.map(s => ({
+        id: s.id,
+        full_name: s.fullName,
+        area: s.area,
+        created_by: s.createdBy || 'ADMIN',
+        updated_at: new Date().toISOString()
+      })).filter(s => s.id);
+
+      if (supaStores.length > 0) {
+        supabase.from('toko_list').upsert(supaStores, { onConflict: 'id' }).then(({ error }) => {
+          if (error) console.warn('[SUPABASE STORE SYNC NOTICE]:', error.message);
+        });
+      }
+    } catch(e) {}
+  }
+}
+window.saveStoresToDB = saveStoresToDB;
+
+async function deleteRequestFromSupabase(noSurat) {
+  if (!noSurat || typeof supabase === 'undefined' || !supabase) return;
+  try {
+    await supabase.from('permintaan_toko').delete().eq('no_surat', noSurat);
+  } catch(e) {}
+}
+window.deleteRequestFromSupabase = deleteRequestFromSupabase;
+
+async function deleteUserFromSupabase(username) {
+  if (!username || typeof supabase === 'undefined' || !supabase) return;
+  try {
+    await supabase.from('users').delete().eq('username', username);
+  } catch(e) {}
+}
+window.deleteUserFromSupabase = deleteUserFromSupabase;
+
+async function deleteStoreFromSupabase(storeId) {
+  if (!storeId || typeof supabase === 'undefined' || !supabase) return;
+  try {
+    await supabase.from('toko_list').delete().eq('id', storeId);
+  } catch(e) {}
+}
+window.deleteStoreFromSupabase = deleteStoreFromSupabase;
