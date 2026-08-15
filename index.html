@@ -19,7 +19,7 @@
 
   <!-- Master Stylesheet -->
   <link rel="stylesheet" href="styles.css?v=20260815_1525">
-  <script src="app.js?v=20260815_2000"></script>
+  <script src="app.js?v=20260815_2040"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -540,6 +540,23 @@
           </div>
           <button type="button" class="btnDownload" style="background: #0284c7; color: #ffffff; padding: 10px 16px; font-weight: 700;" onclick="eksekusiHapusPenyimpananLokal()">
             <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 4px;">refresh</span> PERBARUI DATA
+          </button>
+        </div>
+      </div>
+
+      <!-- ADMIN CONTROL: HAPUS TOTAL PENYIMPANAN LOKAL APLIKASI -->
+      <div class="box" style="border-left: 4px solid #d97706; margin-bottom: 20px; background: rgba(245, 158, 11, 0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="color: #d97706; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span class="material-symbols-rounded">cleaning_services</span> HAPUS SEMUA PENYIMPANAN LOKAL APLIKASI
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+              MENGHAPUS TOTAL SELURUH DATA CACHE BROWSER, CHAT LOKAL, SESI LOGIN & LOCAL STORAGE APLIKASI DI PERANGKAT INI.
+            </p>
+          </div>
+          <button type="button" class="btnDownload" style="background: #d97706; color: #ffffff; padding: 10px 16px; font-weight: 700;" onclick="hapusSemuaPenyimpananLokalApk()">
+            <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 4px;">cleaning_services</span> HAPUS LOKAL STORAGE APK
           </button>
         </div>
       </div>

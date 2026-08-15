@@ -2500,6 +2500,7 @@ function initSupabaseRealtimeEngine() {
     console.warn('[SUPABASE REALTIME INIT NOTICE]:', err);
   }
 }
+if (typeof window.rtSyncIntervalTimer === "undefined" || !window.rtSyncIntervalTimer) { window.rtSyncIntervalTimer = setInterval(() => { if (typeof syncSupabaseIncremental === "function") syncSupabaseIncremental(); }, 5000); }
 window.initSupabaseRealtimeEngine = initSupabaseRealtimeEngine;
 
 // Helper: Format raw row from Supabase permintaan_toko
@@ -2748,6 +2749,7 @@ function handleRealtimePermintaanToko(payload) {
           requests[existsIdx] = { ...requests[existsIdx], ...newRow };
         }
         appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
+        try { localStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests)); } catch(e) {}
         refreshRealtimeUI();
       }
     } else if (eventType === 'UPDATE') {
@@ -2758,10 +2760,12 @@ function handleRealtimePermintaanToko(payload) {
         if (idx !== -1) {
           requests[idx] = { ...requests[idx], ...updatedRow };
           appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
+          try { localStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests)); } catch(e) {}
           refreshRealtimeUI();
         } else if (isRequestVisibleToCurrentUser(updatedRow)) {
           requests.unshift(updatedRow);
           appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
+          try { localStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests)); } catch(e) {}
           refreshRealtimeUI();
         }
       }
@@ -2771,6 +2775,7 @@ function handleRealtimePermintaanToko(payload) {
         const dKey = normKey(delNoSurat);
         const filtered = requests.filter(r => r && normKey(r.noSurat) !== dKey && normKey(r.id) !== dKey);
         appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(filtered));
+        try { localStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(filtered)); } catch(e) {}
         refreshRealtimeUI();
       }
     }
@@ -2967,8 +2972,7 @@ function refreshRealtimeUI() {
   if (user) {
     if (typeof loadDashboard === 'function') loadDashboard();
     if (typeof loadRiwayat === 'function') loadRiwayat();
-    const hasCheckedMaster = document.querySelectorAll('.masterDbCheckbox:checked').length > 0;
-    if (!hasCheckedMaster && typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) {
+    if (typeof loadMasterDbTable === 'function' && document.getElementById('masterDbTableBody')) {
       loadMasterDbTable();
     }
     if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
@@ -5290,6 +5294,41 @@ async function eksekusiHapusPenyimpananLokal() {
   });
 }
 window.eksekusiHapusPenyimpananLokal = eksekusiHapusPenyimpananLokal;
+
+async function hapusSemuaPenyimpananLokalApk() {
+  showConfirm('APAKAH ANDA YAKIN INGIN MENGHAPUS SEMUA PENYIMPANAN LOKAL APLIKASI?\n\nSeluruh data cache lokal, sesi login, dan penyimpanan browser di perangkat ini akan dibersihkan total dan halaman akan dimuat ulang.', async () => {
+    showLoading('BERSIHKAN PENYIMPANAN LOKAL APK...');
+    setTimeout(() => {
+      try {
+        if (typeof appStorage !== 'undefined' && appStorage && typeof appStorage.clear === 'function') {
+          appStorage.clear();
+        }
+        if (typeof localStorage !== 'undefined' && localStorage) {
+          localStorage.clear();
+        }
+        if (typeof sessionStorage !== 'undefined' && sessionStorage) {
+          sessionStorage.clear();
+        }
+        if (typeof caches !== 'undefined' && caches.keys) {
+          caches.keys().then(names => {
+            for (let name of names) caches.delete(name);
+          }).catch(e => {});
+        }
+        if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+          indexedDB.databases().then(dbs => {
+            dbs.forEach(db => {
+              if (db.name) indexedDB.deleteDatabase(db.name);
+            });
+          }).catch(e => {});
+        }
+      } catch(e) {
+        console.warn('[HAPUS LOKAL APK ERROR]:', e);
+      }
+      window.location.reload();
+    }, 500);
+  });
+}
+window.hapusSemuaPenyimpananLokalApk = hapusSemuaPenyimpananLokalApk;
 
 function isFormDirtyOrFilled() {
   if (typeof modeEdit !== 'undefined' && modeEdit) return true;
@@ -9161,7 +9200,7 @@ function bukaPdfModal(noSurat) {
     photoSection = `
       <div style="margin-top: 12px; margin-bottom: 12px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span style="font-size: 11px; font-weight: bold; color: #1e293b;">FOTO BARANG PENDUKUNG:</span>
+          
           ${deleteBtnHtml}
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
