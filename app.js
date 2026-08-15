@@ -2500,7 +2500,8 @@ function initSupabaseRealtimeEngine() {
     console.warn('[SUPABASE REALTIME INIT NOTICE]:', err);
   }
 }
-if (typeof window.rtSyncIntervalTimer === "undefined" || !window.rtSyncIntervalTimer) { window.rtSyncIntervalTimer = setInterval(() => { if (typeof syncSupabaseIncremental === "function") syncSupabaseIncremental(); }, 5000); }
+// Auto-sync interval timer disabled per user directive
+window.rtSyncIntervalTimer = null;
 window.initSupabaseRealtimeEngine = initSupabaseRealtimeEngine;
 
 // Helper: Format raw row from Supabase permintaan_toko
