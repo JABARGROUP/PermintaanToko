@@ -2371,6 +2371,8 @@ function initSupabaseRealtimeEngine() {
               const { data } = await supabase.from('permintaan_toko').select('*').eq('no_surat', event.payload.noSurat);
               if (Array.isArray(data) && data.length > 0) {
                 handleRealtimePermintaanToko({ eventType: 'UPDATE', new: data[0] });
+              } else {
+                handleRealtimePermintaanToko({ eventType: 'DELETE', old: { no_surat: event.payload.noSurat } });
               }
             } catch(e) {}
           }
@@ -2558,6 +2560,23 @@ function isRequestVisibleToCurrentUser(r) {
   }
   return true;
 }
+
+function broadcastRealtimeDataChange(noSurat) {
+  if (!noSurat) return;
+  const list = Array.isArray(noSurat) ? noSurat : [noSurat];
+  list.forEach(ns => {
+    if (ns && !String(ns).startsWith('__SYSTEM_') && supabaseRealtimeChannel) {
+      try {
+        supabaseRealtimeChannel.send({
+          type: 'broadcast',
+          event: 'data_changed',
+          payload: { noSurat: String(ns) }
+        });
+      } catch(e) {}
+    }
+  });
+}
+window.broadcastRealtimeDataChange = broadcastRealtimeDataChange;
 
 // REALTIME: Handle permintaan_toko changes (INSERT, UPDATE, DELETE)
 function handleRealtimePermintaanToko(payload) {
@@ -3445,6 +3464,13 @@ async function pushCentralCloudDB(target = null) {
               await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'no_surat' });
             } else {
               console.log('⚡ [SUPABASE PUSH SUCCESS]: Requests synced to Supabase!');
+            }
+            if (typeof broadcastRealtimeDataChange === 'function') {
+              supaPayloads.forEach(p => {
+                if (p.no_surat && !p.no_surat.startsWith('__SYSTEM_')) {
+                  broadcastRealtimeDataChange(p.no_surat);
+                }
+              });
             }
           } catch(sbErr) {
             console.warn('[SUPABASE PUSH EXCEPTION]:', sbErr);
@@ -11707,6 +11733,7 @@ function hapusDataMaster(noSurat) {
         supabase.from('permintaan_toko').delete().eq('no_surat', noSurat).then(({ error }) => {
           if (error) console.warn('[SUPABASE DELETE NOTICE]:', error.message);
           else console.log('⚡ [SUPABASE DELETE SUCCESS]:', noSurat);
+          if (typeof broadcastRealtimeDataChange === 'function') broadcastRealtimeDataChange(noSurat);
         });
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
