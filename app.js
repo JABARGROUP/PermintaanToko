@@ -1604,7 +1604,7 @@ async function simpanAdminReminderTime() {
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(sysRow, { onConflict: 'id' });
+      await safeSupabaseUpsertPermintaan(sysRow);
     } catch(err) {
       console.warn('[SUPABASE REMINDER TIME ERROR]:', err);
     }
@@ -3438,6 +3438,37 @@ async function syncSupabaseThemeToLocalCache() {
 }
 window.syncSupabaseThemeToLocalCache = syncSupabaseThemeToLocalCache;
 
+
+async function safeSupabaseUpsertPermintaan(payload) {
+  if (typeof supabase === 'undefined' || !supabase) return { error: { message: 'Supabase client not initialized' } };
+  const rows = Array.isArray(payload) ? payload : [payload];
+  if (!rows.length) return { data: [], error: null };
+
+  const preparedRows = rows.map(r => {
+    const ns = r.no_surat || r.noSurat || r.id || '';
+    const cleanId = String(r.id || ns).replace(/[\/\.\s]/g, '_');
+    return {
+      ...r,
+      id: cleanId,
+      no_surat: ns
+    };
+  });
+
+  // Tier 1: Try onConflict 'no_surat' (Matches PostgreSQL unique constraint "permintaan_toko_no_surat_key")
+  try {
+    const res1 = await supabase.from('permintaan_toko').upsert(preparedRows, { onConflict: 'no_surat' });
+    if (!res1.error) return res1;
+  } catch(e) {}
+
+  // Tier 2: Standard upsert (No on_conflict query param to avoid 400 Bad Request)
+  try {
+    return await supabase.from('permintaan_toko').upsert(preparedRows);
+  } catch(e) {
+    return { error: { message: String(e) } };
+  }
+}
+window.safeSupabaseUpsertPermintaan = safeSupabaseUpsertPermintaan;
+
 async function pushCentralCloudDB(target = null) {
   try {
     const sourceData = target ? (Array.isArray(target) ? target : [target]) : getRequestsFromDB();
@@ -3469,10 +3500,10 @@ async function pushCentralCloudDB(target = null) {
 
         if (supaPayloads.length > 0) {
           try {
-            const { error } = await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'id' });
+            const { error } = await safeSupabaseUpsertPermintaan(supaPayloads);
             if (error) {
               console.warn('[SUPABASE PUSH REQUESTS NOTICE]:', error.message);
-              await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'id' });
+              await safeSupabaseUpsertPermintaan(supaPayloads);
             } else {
               console.log('⚡ [SUPABASE PUSH SUCCESS]: Requests synced to Supabase!');
             }
@@ -3655,7 +3686,7 @@ async function pushCentralCloudDB(target = null) {
                 created_by: 'SYSTEM',
                 created_at: new Date().toISOString()
               };
-              await supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'id' });
+              await safeSupabaseUpsertPermintaan(systemChatRow);
             } catch(e) {}
           }
         } catch(chatErr) {}
@@ -3804,7 +3835,7 @@ async function setFeaturePhotosEnabled(enabled) {
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(photoSystemRow, { onConflict: 'id' });
+      await safeSupabaseUpsertPermintaan(photoSystemRow);
 
       // SIMPAN JUGA KE TABEL LOOKUP
       try {
@@ -6409,7 +6440,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       };
 
       if (typeof supabase !== 'undefined' && supabase) {
-        supabase.from('permintaan_toko').upsert(supaEditRow, { onConflict: 'id' }).then(({ error }) => {
+        safeSupabaseUpsertPermintaan(supaEditRow).then(({ error }) => {
           if (error) console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
         }).catch(e => console.warn(e));
       }
@@ -6575,7 +6606,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     };
 
     if (typeof supabase !== 'undefined' && supabase) {
-      supabase.from('permintaan_toko').upsert(supaNewRow, { onConflict: 'id' }).then(({ error }) => {
+      safeSupabaseUpsertPermintaan(supaNewRow).then(({ error }) => {
         if (error) console.warn('[SUPABASE SAVE NOTICE]:', error.message);
       }).catch(e => console.warn(e));
     }
@@ -9924,7 +9955,7 @@ async function pushChatToSupabase(allChats, newChatObj) {
       created_by: 'SYSTEM',
       created_at: new Date().toISOString()
     };
-    supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'id' }).then(({ error }) => {
+    safeSupabaseUpsertPermintaan(systemChatRow).then(({ error }) => {
       if (error) console.warn('[SUPABASE permintaan_toko CHAT UPSERT NOTICE]:', error.message);
       else console.log('⚡ [SUPABASE permintaan_toko CHAT SUCCESS]: Chat berhasil disiarkan via permintaan_toko!');
     }).catch(e => console.warn(e));
@@ -10852,7 +10883,7 @@ function hapusSemuaChatAdmin() {
               created_by: 'SYSTEM',
               created_at: new Date().toISOString()
             };
-            await supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'id' });
+            await safeSupabaseUpsertPermintaan(systemChatRow);
           } catch(sbErr) {
             console.warn('[SUPABASE CHAT DELETE NOTICE]:', sbErr);
           }
