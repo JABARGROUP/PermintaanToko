@@ -415,8 +415,10 @@ async function setGlobalAdminTheme(themeName) {
       try {
         try {
           await supabase.from('lookup').upsert({
+            key: 'global_theme',
+            value: { theme: valStr },
             updated_at: new Date().toISOString()
-          });
+          }, { onConflict: 'key' });
         } catch (e) {}
 
         const themeRow = {
@@ -3428,7 +3430,6 @@ async function pushCentralCloudDB(target = null) {
           service_ttd: r.serviceTTD || '',
           dm_user_name: r.dmUserName || '',
           dm_ttd: r.dmTTD || '',
-          toko_ttd: r.tokoTTD || r.pemohonTTD || '',
           created_by: r.createdBy || '',
           created_at: r.createdAt || '',
           user_id: r.userId || '',
@@ -3441,7 +3442,7 @@ async function pushCentralCloudDB(target = null) {
             const { error } = await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'no_surat' });
             if (error) {
               console.warn('[SUPABASE PUSH REQUESTS NOTICE]:', error.message);
-              await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'id' });
+              await supabase.from('permintaan_toko').upsert(supaPayloads, { onConflict: 'no_surat' });
             } else {
               console.log('⚡ [SUPABASE PUSH SUCCESS]: Requests synced to Supabase!');
             }
@@ -3598,7 +3599,6 @@ async function pushCentralCloudDB(target = null) {
               await supabase.from('lookup').upsert({
                 key: 'chat_messages',
                 value: JSON.stringify(currentChats),
-                type: 'CHAT',
                 updated_at: new Date().toISOString()
               }, { onConflict: 'key' });
             } catch(e) {}
@@ -6372,7 +6372,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       };
 
       if (typeof supabase !== 'undefined' && supabase) {
-        supabase.from('permintaan_toko').upsert(supaEditRow).then(({ error }) => {
+        supabase.from('permintaan_toko').upsert(supaEditRow, { onConflict: 'no_surat' }).then(({ error }) => {
           if (error) console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
         }).catch(e => console.warn(e));
       }
@@ -6530,8 +6530,6 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       service_ttd: newRecord.serviceTTD || '',
       dm_user_name: '',
       dm_ttd: '',
-      toko_ttd: newRecord.tokoTTD || '',
-      pemohon_ttd: newRecord.pemohonTTD || '',
       created_by: newRecord.createdBy || '',
       created_at: newRecord.createdAt || '',
       user_id: newRecord.userId || '',
@@ -6540,7 +6538,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     };
 
     if (typeof supabase !== 'undefined' && supabase) {
-      supabase.from('permintaan_toko').upsert(supaNewRow).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(supaNewRow, { onConflict: 'no_surat' }).then(({ error }) => {
         if (error) console.warn('[SUPABASE SAVE NOTICE]:', error.message);
       }).catch(e => console.warn(e));
     }
@@ -9725,7 +9723,7 @@ function simpanTTD() {
           r.pemohonTTD = png;
           reqsChanged = true;
           if (typeof supabase !== 'undefined' && supabase) {
-            supabase.from('permintaan_toko').update({ pemohon_ttd: png }).eq('no_surat', r.noSurat).then(() => {}, () => {});
+            // pemohon_ttd signature is managed in users table
           }
         }
       });
@@ -9759,7 +9757,6 @@ function simpanTTD() {
         supabase.from('lookup').upsert({
           key: 'SYSTEM_TTD_MAP',
           value: JSON.stringify(ttdMap),
-          type: 'TTD',
           updated_at: new Date().toISOString()
         }).then(() => {}, () => {});
 
@@ -9867,7 +9864,6 @@ async function pushChatToSupabase(allChats, newChatObj) {
     supabase.from('lookup').upsert({
       key: 'chat_messages',
       value: JSON.stringify(allChats),
-      type: 'CHAT',
       updated_at: new Date().toISOString()
     }, { onConflict: 'key' }).then(({ error }) => {
       if (error) console.warn('[SUPABASE lookup chat UPSERT NOTICE]:', error.message);
@@ -9976,22 +9972,7 @@ function startActiveChatRefresh() {
     activeChatRefreshInterval = null;
   }
   refreshActiveChatUI();
-
-  // Fallback sync ringan (setiap 5 detik hanya saat popup bantuan terbuka)
-  // WebSocket Supabase Realtime tetap menjadi jalur instan utama (hemat bandwidth)
-  activeChatRefreshInterval = setInterval(async () => {
-    const popupBantuan = document.getElementById('popupBantuan');
-    if (!popupBantuan || (!popupBantuan.classList.contains('show') && popupBantuan.style.display !== 'block')) {
-      stopActiveChatRefresh();
-      return;
-    }
-
-    if (typeof supabase !== 'undefined' && supabase) {
-      await fetchChatFromSupabase();
-    } else {
-      refreshActiveChatUI();
-    }
-  }, 5000);
+  // Auto-polling chat interval disabled per user directive
 }
 
 function stopActiveChatRefresh() {
@@ -10816,7 +10797,6 @@ function hapusSemuaChatAdmin() {
             await supabase.from('lookup').upsert({
               key: 'chat_messages',
               value: JSON.stringify([]),
-              type: 'CHAT',
               updated_at: new Date().toISOString()
             }, { onConflict: 'key' });
           } catch(e) {}
@@ -14357,23 +14337,12 @@ async function checkSupabaseDeltaSentinel() {
 }
 window.checkSupabaseDeltaSentinel = checkSupabaseDeltaSentinel;
 
-// Start lightweight 5-second pulse for instant inter-device synchronization
+// Background auto-fetching sentinel pulse disabled per user directive
+window._sentinelPulseInterval = null;
+/*
 if (!window._sentinelPulseInterval) {
   window._sentinelPulseInterval = setInterval(() => {
     if (typeof checkSupabaseDeltaSentinel === 'function') checkSupabaseDeltaSentinel();
   }, 5000);
 }
-
-// Trigger sentinel check immediately on window focus or tab visibility change
-if (typeof window !== 'undefined') {
-  window.addEventListener('focus', () => {
-    if (typeof checkSupabaseDeltaSentinel === 'function') checkSupabaseDeltaSentinel();
-  });
-}
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && typeof checkSupabaseDeltaSentinel === 'function') {
-      checkSupabaseDeltaSentinel();
-    }
-  });
-}
+*/
