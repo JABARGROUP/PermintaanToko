@@ -7270,22 +7270,30 @@ function attachPhotoPanListeners() {
 
   const handleStart = (clientX, clientY, isInteractiveTarget) => {
     if (isInteractiveTarget) return;
-    if (viewerCurrentZoom > 1) {
+    if (viewerCurrentZoom > 1.01 || currentZoom > 1.01) {
       isPanningViewerActive = true;
       startPanX = clientX;
       startPanY = clientY;
       basePanX = viewerPanX;
       basePanY = viewerPanY;
-      img.style.cursor = 'grabbing';
+      if (img) img.style.cursor = 'grabbing';
+    } else {
+      isPanningViewerActive = false;
+      viewerPanX = 0;
+      viewerPanY = 0;
+      panX = 0;
+      panY = 0;
     }
   };
 
   const handleMove = (clientX, clientY, e) => {
-    if (isPanningViewerActive && viewerCurrentZoom > 1) {
+    if (isPanningViewerActive && (viewerCurrentZoom > 1.01 || currentZoom > 1.01)) {
       const dx = clientX - startPanX;
       const dy = clientY - startPanY;
       viewerPanX = basePanX + dx;
       viewerPanY = basePanY + dy;
+      panX = viewerPanX;
+      panY = viewerPanY;
       updateImageTransform(false);
       if (e && e.cancelable) e.preventDefault();
     }
@@ -10227,7 +10235,7 @@ function simpanTTD() {
     }
     
     pushCentralCloudDB();
-    showNotif('TANDA TANGAN DIGITAL BERHASIL DISIMPAN & DI-UPLOAD KE SUPABASE!', 'success');
+    showNotif('Tanda Tangan berhasil di simpan', 'success');
     tutupTTD();
   });
 }
@@ -12886,10 +12894,10 @@ function loadDaftarTokoModal(filterKeyword = '') {
     const code = s.storeCode || generateStoreCode(s.fullName);
     const areaBadge = s.area || 'BDG';
     tr.innerHTML = `
-      <td style="padding: 8px; font-weight: 600;">${s.fullName}</td>
-      <td style="padding: 8px; text-align: center; font-weight: 700; color: #0284c7;">${areaBadge}</td>
-      <td style="padding: 8px; text-align: center; color: var(--primary); font-weight: 700;">${code}</td>
-      <td style="padding: 8px; text-align: center; white-space: nowrap;">
+      <td style="padding: 8px 12px; font-weight: 600; white-space: normal !important; word-break: break-word !important; overflow-wrap: break-word !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; max-height: 2.7em;">${s.fullName}</td>
+      <td style="padding: 8px 8px; text-align: center; font-weight: 700; color: #0284c7; white-space: nowrap !important;">${areaBadge}</td>
+      <td style="padding: 8px 8px; text-align: center; color: var(--primary); font-weight: 700; white-space: nowrap !important;">${code}</td>
+      <td style="padding: 8px 8px; text-align: center; white-space: nowrap !important;">
         <button type="button" class="btnIcon btnEdit" onclick="editTokoCustom('${s.id}')" title="EDIT TOKO" style="margin-right: 4px;"><span class="material-symbols-rounded">edit</span></button>
         <button type="button" class="btnIcon btnDelete" id="btnHapusToko_${s.id}" onclick="hapusTokoCustom('${s.id}', this)" title="HAPUS TOKO"><span class="material-symbols-rounded">delete</span></button>
       </td>
@@ -14145,9 +14153,16 @@ var viewerPanY = 0;
 function applyImageTransform(animate = false) {
   const img = document.getElementById('viewerImage');
   if (!img) return;
+  if (!currentZoom || isNaN(currentZoom) || currentZoom <= 1.01) {
+    currentZoom = 1;
+    panX = 0;
+    panY = 0;
+    viewerPanX = 0;
+    viewerPanY = 0;
+  }
   img.style.transition = animate ? 'transform 0.18s cubic-bezier(0.25, 1, 0.5, 1)' : 'none';
   img.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${currentZoom}) rotate(${currentRotation}deg)`;
-  img.style.cursor = currentZoom > 1 ? (isPanningImage ? 'grabbing' : 'grab') : 'default';
+  img.style.cursor = currentZoom > 1.01 ? (isPanningImage ? 'grabbing' : 'grab') : 'default';
   viewerCurrentZoom = currentZoom;
   viewerPanX = panX;
   viewerPanY = panY;
@@ -14161,6 +14176,8 @@ function zoomImage(step) {
     currentZoom = 1;
     panX = 0;
     panY = 0;
+    viewerPanX = 0;
+    viewerPanY = 0;
   }
   applyImageTransform(true);
 }
@@ -14170,6 +14187,8 @@ function resetZoom() {
   currentZoom = 1;
   panX = 0;
   panY = 0;
+  viewerPanX = 0;
+  viewerPanY = 0;
   currentRotation = 0;
   isPanningImage = false;
   applyImageTransform(true);
@@ -14298,6 +14317,10 @@ function initImagePanListeners() {
     if (e.target.closest('button') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar') || e.target.closest('#navViewerLeft') || e.target.closest('#navViewerRight')) {
       return;
     }
+    if (currentZoom <= 1.01 || viewerCurrentZoom <= 1.01) {
+      isPanningImage = false;
+      return;
+    }
 
     isPanningImage = true;
     startPointerX = e.clientX;
@@ -14313,7 +14336,7 @@ function initImagePanListeners() {
   };
 
   const onPointerMove = (e) => {
-    if (!isPanningImage) return;
+    if (!isPanningImage || currentZoom <= 1.01 || viewerCurrentZoom <= 1.01) return;
     e.preventDefault();
 
     const dx = e.clientX - startPointerX;

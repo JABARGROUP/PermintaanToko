@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260815_0958">
-  <script src="app.js?v=20260815_0958"></script>
+  <link rel="stylesheet" href="styles.css?v=20260815_1151">
+  <script src="app.js?v=20260815_1151"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -819,54 +819,72 @@
     </div>
   </div>
 
-  <!-- 7. POPUP TAMBAH TOKO BARU (DENGAN HEADER RESMI & PADDING ISI 4MM) -->
-  <div id="popupTambahToko" class="popupOverlay" onclick="if(event.target === this || event.target.id === 'popupTambahToko') { if(typeof window.tutupModalTambahToko==='function') window.tutupModalTambahToko(); else if(typeof tutupModalTambahToko==='function') tutupModalTambahToko(); }" style="display: none; position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; height: 100dvh !important; background: rgba(0,0,0,0.75) !important; backdrop-filter: blur(4px) !important; z-index: 999999 !important; padding: 1cm 1mm !important; box-sizing: border-box !important; align-items: center !important; justify-content: center !important; overflow: hidden !important;">
-    <div class="popupBox" style="width: 560px !important; max-width: calc(100vw - 2mm) !important; height: calc(100vh - 2cm) !important; height: calc(100dvh - 2cm) !important; max-height: calc(100vh - 2cm) !important; max-height: calc(100dvh - 2cm) !important; min-height: 0 !important; margin: auto !important; border-radius: 5px !important; background: var(--bg-box) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important; box-sizing: border-box !important; display: flex !important; flex-direction: column !important; overflow: hidden !important;">
+  <!-- POPUP TAMBAH TOKO MODAL (UNTUK SEMUA USER - OTOMATIS MASUK AREA USER & GENERATE 2 DIGIT KODE TOKO) -->
+  <div id="popupTambahToko" class="popupOverlay" onclick="if(event.target === this || event.target.id === 'popupTambahToko') { if(typeof window.tutupModalTambahToko==='function') window.tutupModalTambahToko(); else if(typeof tutupModalTambahToko==='function') tutupModalTambahToko(); }" style="display: none; align-items: flex-start !important; justify-content: center !important; padding-top: 4px !important;">
+    <div class="popupBox" style="width: 480px !important; max-width: 92vw !important; max-height: 88vh !important; overflow: hidden !important; margin: 0 auto !important; padding: 0 !important; border-radius: 5px !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important; display: flex !important; flex-direction: column !important;">
       
-      <!-- HEADER RESMI POPUP TAMBAH TOKO -->
-      <div class="popupHeader" style="flex: 0 0 auto !important; margin: 0 !important; padding: 4mm !important; background: var(--primary) !important; color: #ffffff !important; display: flex !important; align-items: center !important; justify-content: space-between !important; border-radius: 4px 4px 0 0 !important; box-sizing: border-box !important;">
-        <span style="display: flex; align-items: center; gap: 8px; color: #ffffff; font-weight: 800; font-size: 13px; letter-spacing: 0.5px;">
-          <span class="material-symbols-rounded" style="font-size: 18px; color: #ffffff;">store</span> KELOLA &amp; TAMBAH TOKO BARU
-        </span>
-        <button type="button" class="popupClose" onclick="if(typeof window.tutupModalTambahToko==='function') window.tutupModalTambahToko(); else if(typeof tutupModalTambahToko==='function') tutupModalTambahToko();" style="cursor: pointer; background: transparent; border: none; color: #ffffff; font-size: 22px; font-weight: 900; line-height: 1; margin: 0; padding: 0 4px; outline: none;" title="TUTUP">&times;</button>
+      <!-- HEADER (DIAM / FIXED) -->
+      <div class="popupHeader" style="background: linear-gradient(135deg, #0284c7, #0369a1); margin: 0; padding: 14px 18px; border-radius: 4px 4px 0 0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+        <span style="display: flex; align-items: center; gap: 6px; color: #ffffff; font-weight: 800; font-size: 14px;"><span class="material-symbols-rounded">store</span> KELOLA / TAMBAH TOKO BARU</span>
+        <button type="button" class="popupClose" onclick="if(typeof window.tutupModalTambahToko==='function') window.tutupModalTambahToko(); else if(typeof tutupModalTambahToko==='function') tutupModalTambahToko();" style="cursor: pointer; background: transparent; border: none; color: #ffffff; font-size: 28px; font-weight: 900; line-height: 1; margin: 0; padding: 0 4px; outline: none;" title="TUTUP">&times;</button>
       </div>
 
-      <!-- POPUP BODY (3MM PADDING & 3MM JARAK DARI STYLES.CSS) -->
-      <div class="popupBody" style="padding: 3mm !important; box-sizing: border-box !important; flex: 1 1 auto !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important;">
+      <!-- POPUP BODY (CONTAINER TANPA SCROLL, FORM TERKUNCI DIAM) -->
+      <div class="popupBody" style="padding: 16px 18px 18px 18px; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
         
-        <!-- PILIH AREA TOKO, INPUT NAMA TOKO BARU & TOMBOL SIMPAN -->
-        <div style="display: flex; gap: 6px; align-items: center; width: 100%; flex-wrap: nowrap; box-sizing: border-box; flex: 0 0 auto !important; margin-bottom: 3mm !important;">
-          <select id="selectAreaTokoBaru" style="width: 80px; flex-shrink: 0; height: 40px; padding: 4px 6px; font-weight: 800; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--primary); font-size: 12px; text-transform: uppercase; cursor: pointer; text-align: center; box-sizing: border-box;"></select>
-          <input type="text" id="inputNamaTokoBaru" placeholder="NAMA TOKO BARU..." style="flex: 1; min-width: 0; height: 40px; padding: 6px 10px; text-transform: uppercase; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 12px; box-sizing: border-box;" onkeypress="if(event.key==='Enter') simpanTokoBaru()">
-          <button type="button" id="btnSimpanTokoBaru" class="btnDownload" style="background: var(--primary); white-space: nowrap; padding: 0 14px; height: 40px; border-radius: 5px; font-weight: 800; font-size: 12px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; border: none; cursor: pointer; color: #fff;" onclick="simpanTokoBaru()">
-            <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span> SIMPAN
-          </button>
-        </div>
+        <!-- ELEMENT ATAS TERKUNCI (DIAM) -->
+        <div style="flex-shrink: 0;">
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px;">
+            PILIH AREA UNTUK TOKO BARU DENGAN KODE TOKO 2 DIGIT OTOMATIS:
+          </p>
 
-        <!-- LABEL & KOLOM PENCARIAN DAFTAR TOKO -->
-        <div style="flex: 0 0 auto !important; margin-bottom: 3mm !important;">
-          <div style="position: relative; display: flex; align-items: center;">
-            <span class="material-symbols-rounded" style="position: absolute; left: 10px; font-size: 18px; color: var(--text-muted); pointer-events: none;">search</span>
-            <input type="text" id="cariTokoModalInput" placeholder="CARI TOKO DI TABEL (NAMA / KODE / AREA)..." style="width: 100%; height: 36px; padding: 6px 30px 6px 34px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 12px; text-transform: uppercase; box-sizing: border-box;" oninput="filterDaftarTokoModal(this.value)">
-            <button type="button" id="btnHapusCariTokoModal" onclick="resetCariTokoModal()" title="Hapus Pencarian" style="position: absolute; right: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; padding: 2px; align-items: center;">
-              <span class="material-symbols-rounded" style="font-size: 16px;">cancel</span>
+          <!-- PILIH AREA TOKO & INPUT NAMA TOKO BARU -->
+          <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+            <select id="selectAreaTokoBaru" style="min-width: 110px; padding: 10px; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--primary); font-size: 12px;"></select>
+            <input type="text" id="inputNamaTokoBaru" placeholder="MASUKKAN NAMA TOKO BARU..." style="flex: 1; min-width: 180px; padding: 10px; text-transform: uppercase; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main);" onkeypress="if(event.key==='Enter') simpanTokoBaru()">
+            <button type="button" id="btnSimpanTokoBaru" class="btnDownload" style="background: #16a34a; white-space: nowrap; padding: 0 16px; border-radius: 8px;" onclick="simpanTokoBaru()">
+              <span class="material-symbols-rounded" style="vertical-align: middle;">save</span> SIMPAN
             </button>
+          </div>
+
+          <!-- UPLOAD EXCEL SEKALIGUS (KOLOM A = NAMA TOKO, KOLOM B = AREA) - HANYA UNTUK LOGIN ADMIN -->
+          <div id="boxUploadExcelTokoModal" style="display: none; background: var(--bg-body); border: 1px dashed var(--primary); padding: 10px; border-radius: 10px; margin-bottom: 12px; text-align: center;">
+            <input type="file" id="excelTokoModalFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="prosesUploadExcelToko(event)">
+            <button type="button" class="btnDownload" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 11.5px; padding: 10px 14px; width: 100%; border-radius: 8px; cursor: pointer; justify-content: center;" onclick="document.getElementById('excelTokoModalFileInput').click()">
+              <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">upload_file</span> UPLOAD FILE EXCEL DAFTAR TOKO (A = NAMA, B = AREA)
+            </button>
+          </div>
+
+          <!-- LABEL DAFTAR TOKO (DIAM) -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="font-size: 11px; font-weight: bold; color: var(--primary);">DAFTAR TOKO TERDAFTAR DI AREA ANDA:</div>
+          </div>
+
+          <!-- KOLOM PENCARIAN DAFTAR TOKO MODAL -->
+          <div style="margin-bottom: 8px; position: relative;">
+            <div style="position: relative; display: flex; align-items: center;">
+              <span class="material-symbols-rounded" style="position: absolute; left: 10px; font-size: 17px; color: var(--text-muted); pointer-events: none;">search</span>
+              <input type="text" id="cariTokoModalInput" placeholder="CARI TOKO DI TABEL (NAMA / KODE / AREA)..." style="width: 100%; padding: 7px 30px 7px 32px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 11.5px; text-transform: uppercase;" oninput="filterDaftarTokoModal(this.value)">
+              <button type="button" id="btnHapusCariTokoModal" onclick="resetCariTokoModal()" title="Hapus Pencarian" style="position: absolute; right: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; padding: 2px; align-items: center;">
+                <span class="material-symbols-rounded" style="font-size: 16px;">cancel</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- TABEL DAFTAR TOKO (FLEX 1 1 0PX, OVERFLOW-Y AUTO, TINGGI TEPAT SAMPAI BATAS 4MM BAWAH) -->
-        <div class="table-container" style="flex: 1 1 0px !important; min-height: 0 !important; height: auto !important; max-height: 100% !important; overflow-y: auto !important; overflow-x: hidden !important; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-header); -webkit-overflow-scrolling: touch; margin: 0 !important; box-sizing: border-box !important;">
+        <!-- HANYA BAGIAN TABEL DI BAWAH INI YANG MEMILIKI FITUR SCROLLING -->
+        <div style="flex: 1; max-height: 220px; min-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-header); -webkit-overflow-scrolling: touch;">
           <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
             <thead style="position: sticky; top: 0; z-index: 10;">
-              <tr style="background: var(--primary); color: #ffffff; border-bottom: 1px solid var(--border-color);">
-                <th style="padding: 8px 10px; text-align: left; font-weight: 800; color: #ffffff;">NAMA TOKO</th>
-                <th style="padding: 8px 6px; text-align: center; font-weight: 800; color: #ffffff; width: 65px;">AREA</th>
-                <th style="padding: 8px 8px; text-align: center; font-weight: 800; color: #ffffff; width: 85px;">KODE TOKO</th>
-                <th style="padding: 8px 6px; text-align: center; font-weight: 800; color: #ffffff; width: 80px;">AKSI</th>
+              <tr style="background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
+                <th style="padding: 8px; text-align: left;">NAMA TOKO</th>
+                <th style="padding: 8px; text-align: center;">AREA</th>
+                <th style="padding: 8px; text-align: center;">KODE TOKO</th>
+                <th style="padding: 8px; text-align: center;">AKSI</th>
               </tr>
             </thead>
             <tbody id="daftarTokoTableBody">
-              <!-- Dynamic Rows via JS -->
+              <!-- Dynamic Rows -->
             </tbody>
           </table>
         </div>
@@ -988,12 +1006,13 @@
 
   <!-- 7. POPUP DIGITAL SIGNATURE (TTD) MODAL -->
   <div id="popupTTD" class="popupTTD popupOverlay">
-    <div class="ttdBox">
-      <h3 style="color: var(--primary); margin-bottom: 4px; font-size: 15px; font-weight: 800;">TANDA TANGAN DIGITAL (TTD)</h3>
-      <div class="ttdInfo" style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">GAMBAR TTD DI CANVAS ATAU AMBIL FOTO TTD KERTAS</div>
+    <div class="ttdBox" style="position: relative !important; padding: 4mm !important; box-sizing: border-box !important;">
+      <button type="button" class="popupClose popupCloseTTD" onclick="tutupTTD()" title="TUTUP" style="position: absolute !important; top: 6px !important; right: 8px !important; background: transparent !important; border: none !important; color: var(--primary) !important; font-size: 26px !important; font-weight: 900 !important; line-height: 1 !important; cursor: pointer !important; padding: 0 6px !important; z-index: 20 !important;">&times;</button>
+      <h3 style="color: var(--primary); margin-bottom: 4px; font-size: 15px; font-weight: 800; padding-right: 24px;">TANDA TANGAN DIGITAL (TTD)</h3>
+      <div class="ttdInfo" style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px; padding-right: 24px;">GAMBAR TTD DI CANVAS ATAU AMBIL FOTO TTD KERTAS</div>
 
-      <div style="position: relative; width: 100%; box-sizing: border-box; overflow: hidden; padding: 2px;">
-        <canvas id="canvasTTD" style="width: 100% !important; max-width: 100% !important; height: 220px !important; border: 2px dashed var(--primary) !important; border-radius: 5px !important; background: #ffffff !important; display: block !important; box-sizing: border-box !important; margin: 0 auto 10px auto !important; touch-action: none;"></canvas>
+      <div style="position: relative; width: 100%; box-sizing: border-box; overflow: hidden; margin-bottom: 4mm;">
+        <canvas id="canvasTTD" style="width: 100% !important; max-width: 100% !important; height: 220px !important; border: 2px dashed var(--primary) !important; border-radius: 5px !important; background: #ffffff !important; display: block !important; box-sizing: border-box !important; margin: 0 auto !important; touch-action: none;"></canvas>
 
         <button type="button" onclick="pilihFotoTTD()" title="AMBIL / UPLOAD FOTO TTD DARI KAMERA/KERTAS" style="position: absolute; right: 10px; top: 10px; background: var(--primary); color: #ffffff; border: none; border-radius: 5px; padding: 6px 12px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 10; transition: transform 0.2s;">
           <span class="material-symbols-rounded" style="font-size: 17px;">photo_camera</span> FOTO TTD
@@ -1002,10 +1021,10 @@
         <input type="file" id="fotoTTDInput" accept="image/png, image/jpeg, image/jpg, image/webp, image/heic, image/heif, image/*" onchange="prosesFotoKeTTD(event)" style="display:none;">
       </div>
 
-      <div class="ttdButton" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-        <button type="button" class="btnBack" onclick="tutupTTD()" style="flex: 1; min-width: 80px; height: 38px; border-radius: 5px; font-weight: 700;">BATAL</button>
-        <button type="button" class="btnSecondary" onclick="hapusTTD()" style="flex: 1; min-width: 90px; height: 38px; border-radius: 5px; font-weight: 700;">BERSIHKAN</button>
-        <button type="button" class="btnPrimary" onclick="simpanTTD()" style="flex: 1.2; min-width: 110px; height: 38px; border-radius: 5px; font-weight: 700;">SIMPAN TTD</button>
+      <div class="ttdButton" style="display: flex; gap: 8px; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; flex-wrap: nowrap;">
+        <button type="button" class="btnBack" onclick="tutupTTD()" style="flex: 1 1 0px !important; width: 0 !important; min-width: 0 !important; height: 38px !important; border-radius: 5px; font-weight: 800; background: #dc2626 !important; color: #ffffff !important; border: none !important; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box !important;">BATAL</button>
+        <button type="button" class="btnSecondary" onclick="hapusTTD()" style="flex: 1 1 0px !important; width: 0 !important; min-width: 0 !important; height: 38px !important; border-radius: 5px; font-weight: 800; background: var(--primary) !important; color: #ffffff !important; border: none !important; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box !important;">HAPUS</button>
+        <button type="button" class="btnPrimary" onclick="simpanTTD()" style="flex: 1 1 0px !important; width: 0 !important; min-width: 0 !important; height: 38px !important; border-radius: 5px; font-weight: 800; background: var(--primary) !important; color: #ffffff !important; border: none !important; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box !important;">SIMPAN</button>
       </div>
     </div>
   </div>

@@ -3007,6 +3007,7 @@ table th,
 
 /* ALL POPUP CLOSE BUTTONS (THEME ADAPTIVE 'X') */
 .popupClose,
+.popupCloseTTD,
 .closeViewer,
 .chatClose,
 .popupCloseV2,
@@ -3015,7 +3016,7 @@ table th,
 .detailHeader button {
   background: transparent !important;
   border: none !important;
-  color: var(--text-main) !important;
+  color: var(--primary) !important;
   font-size: 26px !important;
   font-weight: 900 !important;
   line-height: 1 !important;
@@ -3238,10 +3239,12 @@ table th,
   display: flex !important;
 }
 
+#popupTTD .ttdBox,
+.popupTTD .ttdBox,
 .ttdBox {
   width: 540px !important;
   max-width: 94vw !important;
-  padding: 20px 18px !important;
+  padding: 4mm !important;
   text-align: center !important;
   border-radius: 5px !important;
   background: var(--bg-box) !important;
@@ -4079,7 +4082,7 @@ table th,
     white-space: nowrap !important;
   }
 
-  .popupBox, .confirmBox, .popupNotif, .rejectBoxPopup, .akunBox, .ttdBox {
+  .popupBox, .confirmBox, .popupNotif, .rejectBoxPopup, .akunBox {
     width: 94vw !important;
     max-width: 94vw !important;
     max-height: 90vh !important;
@@ -4121,9 +4124,8 @@ table th,
   }
 
   #popupTambahToko .popupBody {
-    padding-left: 2mm !important;
-    padding-right: 2mm !important;
-    padding-bottom: 2mm !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   #popupDetail .popupBoxDetail,
@@ -7140,513 +7142,15 @@ button.btnBatal:active {
    POPUP TAMBAH TOKO: JARAK 1MM DARI LAYAR HP & PADDING 2MM SEMUA SISI ISI
    ========================================================================== */
 @media (max-width: 768px) {
-  #popupTambahToko {
-    padding: 1mm !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-sizing: border-box !important;
-  }
-
-  #popupTambahToko .popupBox {
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
-    min-width: calc(100vw - 2mm) !important;
-    height: calc(100vh - 2mm) !important;
-    max-height: calc(100vh - 2mm) !important;
-    margin: 1mm auto !important;
-    border-radius: 5px !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-  }
-
-  #popupTambahToko .popupBody {
-    padding: 2mm !important;
-    box-sizing: border-box !important;
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-  }
-
-  #popupTambahToko .popupBody > div:first-child {
-    margin-bottom: 2mm !important;
-  }
-
-  #popupTambahToko .popupBody .table-container {
-    margin-bottom: 0 !important;
-    border-radius: 5px !important;
-    box-sizing: border-box !important;
-  }
-}
 
 /* ==========================================================================
-   POPUP TAMBAH TOKO: TABEL TINGGI PENUH SAMPAI BATAS BAWAH (2MM JARAK SISI)
-   ========================================================================== */
-#popupTambahToko .popupBody {
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
-}
-
-#popupTambahToko .popupBody > div:has(#daftarTokoTableBody),
-#popupTambahToko .popupBody > div:has(#tbodyDaftarToko),
-#popupTambahToko .popupBody .table-container,
-#popupTambahToko .popupBody div[style*="overflow-y: auto"] {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  height: 100% !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  box-sizing: border-box !important;
-  margin: 0 !important;
-}
-
-@media (max-width: 768px) {
-  #popupTambahToko {
-    padding: 1mm !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-sizing: border-box !important;
-  }
-
-  #popupTambahToko .popupBox {
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
-    min-width: calc(100vw - 2mm) !important;
-    height: calc(100vh - 2mm) !important;
-    max-height: calc(100vh - 2mm) !important;
-    margin: 1mm auto !important;
-    border-radius: 5px !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-  }
-
-  #popupTambahToko .popupBody {
-    padding: 2mm !important;
-    box-sizing: border-box !important;
-    flex: 1 1 auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  #popupTambahToko .popupBody > div:first-child {
-    flex-shrink: 0 !important;
-    margin-bottom: 2mm !important;
-  }
-
-  #popupTambahToko .popupBody > div:has(#daftarTokoTableBody),
-  #popupTambahToko .popupBody > div:has(#tbodyDaftarToko),
-  #popupTambahToko .popupBody .table-container,
-  #popupTambahToko .popupBody div[style*="overflow-y: auto"] {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    height: 100% !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    margin: 0 !important;
-    border-radius: 5px !important;
-    box-sizing: border-box !important;
-  }
-}
-
-/* ==========================================================================
-   POPUP TAMBAH TOKO: JARAK ATAS BAWAH 1CM DENGAN LAYAR HP, KANAN KIRI 1MM
-   ========================================================================== */
-@media (max-width: 768px) {
-  #popupTambahToko {
-    padding-top: 1cm !important;
-    padding-bottom: 1cm !important;
-    padding-left: 1mm !important;
-    padding-right: 1mm !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-sizing: border-box !important;
-  }
-
-  #popupTambahToko .popupBox {
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
-    min-width: calc(100vw - 2mm) !important;
-    height: calc(100vh - 2cm) !important;
-    max-height: calc(100vh - 2cm) !important;
-    margin-top: 1cm !important;
-    margin-bottom: 1cm !important;
-    margin-left: 1mm !important;
-    margin-right: 1mm !important;
-    border-radius: 5px !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-  }
-
-  #popupTambahToko .popupBody {
-    padding: 2mm !important;
-    box-sizing: border-box !important;
-    flex: 1 1 auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  #popupTambahToko .popupBody > div:first-child {
-    flex-shrink: 0 !important;
-    margin-bottom: 2mm !important;
-  }
-
-  #popupTambahToko .popupBody .table-container,
-  #popupTambahToko .popupBody > div:has(#daftarTokoTableBody),
-  #popupTambahToko .popupBody > div:has(#tbodyDaftarToko),
-  #popupTambahToko .popupBody div[style*="overflow-y: auto"] {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    height: 100% !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    margin: 0 !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: 5px !important;
-    box-sizing: border-box !important;
-  }
-}
-
-/* ==========================================================================
-   POPUP TAMBAH TOKO: PC & HP SAMA (JARAK ATAS BAWAH 1CM, PADDING ISI 5MM)
+   MASTER POPUP TAMBAH TOKO BARU (#popupTambahToko) - REPLICATED FROM REFERENCE
    ========================================================================== */
 #popupTambahToko {
   display: none;
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  background: rgba(0, 0, 0, 0.75) !important;
-  backdrop-filter: blur(4px) !important;
-  z-index: 999999 !important;
-  padding-top: 1cm !important;
-  padding-bottom: 1cm !important;
-  padding-left: 1mm !important;
-  padding-right: 1mm !important;
-  align-items: center !important;
+  align-items: flex-start !important;
   justify-content: center !important;
-  box-sizing: border-box !important;
-}
-
-#popupTambahToko.show {
-  display: flex !important;
-}
-
-#popupTambahToko .popupBox {
-  width: 560px !important;
-  max-width: calc(100vw - 2mm) !important;
-  height: calc(100vh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
-  margin: 1cm auto !important;
-  border-radius: 5px !important;
-  background: var(--bg-box) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupHeader {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 100 !important;
-  flex-shrink: 0 !important;
-  margin: 0 !important;
-  padding: 12px 16px !important;
-  background: var(--primary) !important;
-  color: #ffffff !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  border-radius: 5px 5px 0 0 !important;
-  box-sizing: border-box !important;
-}
-
-#popupTambahToko .popupBody {
-  padding: 5mm !important;
-  box-sizing: border-box !important;
-  flex: 1 1 auto !important;
-  display: flex !important;
-  flex-direction: column !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupBody > div:first-child {
-  flex-shrink: 0 !important;
-  margin-bottom: 4mm !important;
-}
-
-#popupTambahToko .popupBody .table-container,
-#popupTambahToko .popupBody > div:has(#daftarTokoTableBody),
-#popupTambahToko .popupBody > div:has(#tbodyDaftarToko),
-#popupTambahToko .popupBody div[style*="overflow-y: auto"] {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  height: 100% !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  margin: 0 !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 5px !important;
-  background: var(--bg-header) !important;
-  box-sizing: border-box !important;
-}
-
-@media (max-width: 768px) {
-  #popupTambahToko .popupBox {
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
-    min-width: calc(100vw - 2mm) !important;
-  }
-}
-
-/* ==========================================================================
-   POPUP TAMBAH TOKO: TINGGI LEBIH SEDANG / COMPACT & PADDING ISI 5MM
-   ========================================================================== */
-#popupTambahToko {
-  display: none;
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  background: rgba(0, 0, 0, 0.75) !important;
-  backdrop-filter: blur(4px) !important;
-  z-index: 999999 !important;
-  padding: 16px 1mm !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-sizing: border-box !important;
-}
-
-#popupTambahToko.show {
-  display: flex !important;
-}
-
-#popupTambahToko .popupBox {
-  width: 560px !important;
-  max-width: calc(100vw - 2mm) !important;
-  height: 520px !important;
-  max-height: 82vh !important;
-  margin: auto !important;
-  border-radius: 5px !important;
-  background: var(--bg-box) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupHeader {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 100 !important;
-  flex-shrink: 0 !important;
-  margin: 0 !important;
-  padding: 12px 16px !important;
-  background: var(--primary) !important;
-  color: #ffffff !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  border-radius: 5px 5px 0 0 !important;
-  box-sizing: border-box !important;
-}
-
-#popupTambahToko .popupBody {
-  padding: 5mm !important;
-  box-sizing: border-box !important;
-  flex: 1 1 auto !important;
-  display: flex !important;
-  flex-direction: column !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupBody > div:first-child {
-  flex-shrink: 0 !important;
-  margin-bottom: 4mm !important;
-}
-
-#popupTambahToko .popupBody .table-container,
-#popupTambahToko .popupBody > div:has(#daftarTokoTableBody),
-#popupTambahToko .popupBody > div:has(#tbodyDaftarToko),
-#popupTambahToko .popupBody div[style*="overflow-y: auto"] {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  height: 100% !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  margin: 0 !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 5px !important;
-  background: var(--bg-header) !important;
-  box-sizing: border-box !important;
-}
-
-@media (max-width: 768px) {
-  #popupTambahToko {
-    padding: 16px 1mm !important;
-  }
-
-  #popupTambahToko .popupBox {
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
-    min-width: calc(100vw - 2mm) !important;
-    height: 500px !important;
-    max-height: 80vh !important;
-    margin: auto !important;
-  }
-}
-
-/* ==========================================================================
-   POPUP TAMBAH TOKO: PAS 1CM DARI LAYAR (TIDAK MELEBIHI LAYAR) & PADDING 5MM
-   ========================================================================== */
-#popupTambahToko {
-  display: none;
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  background: rgba(0, 0, 0, 0.75) !important;
-  backdrop-filter: blur(4px) !important;
-  z-index: 999999 !important;
-  padding: 1cm !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko.show {
-  display: flex !important;
-}
-
-#popupTambahToko .popupBox {
-  width: 560px !important;
-  max-width: 100% !important;
-  height: 100% !important;
-  max-height: calc(100vh - 2cm) !important;
-  max-height: calc(100dvh - 2cm) !important;
-  margin: auto !important;
-  border-radius: 5px !important;
-  background: var(--bg-box) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupHeader {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 100 !important;
-  flex-shrink: 0 !important;
-  margin: 0 !important;
-  padding: 12px 16px !important;
-  background: var(--primary) !important;
-  color: #ffffff !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  border-radius: 5px 5px 0 0 !important;
-  box-sizing: border-box !important;
-}
-
-#popupTambahToko .popupBody {
-  padding: 5mm !important;
-  box-sizing: border-box !important;
-  flex: 1 1 auto !important;
-  display: flex !important;
-  flex-direction: column !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupBody > div:first-child {
-  flex-shrink: 0 !important;
-  margin-bottom: 4mm !important;
-}
-
-#popupTambahToko .popupBody .table-container,
-#popupTambahToko .popupBody > div:has(#daftarTokoTableBody),
-#popupTambahToko .popupBody > div:has(#tbodyDaftarToko),
-#popupTambahToko .popupBody div[style*="overflow-y: auto"] {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  height: 100% !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  margin: 0 !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 5px !important;
-  background: var(--bg-header) !important;
-  box-sizing: border-box !important;
-}
-
-@media (max-width: 768px) {
-  #popupTambahToko {
-    padding: 1cm 1mm !important;
-  }
-
-  #popupTambahToko .popupBox {
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
-    min-width: calc(100vw - 2mm) !important;
-    height: 100% !important;
-    max-height: calc(100vh - 2cm) !important;
-    max-height: calc(100dvh - 2cm) !important;
-    margin: auto !important;
-  }
-}
-
-/* ==========================================================================
-   POPUP TAMBAH TOKO: BULLETPROOF 1CM SCREEN DISTANCE (ANTI-OVERFLOW) & 5MM PADDING
-   ========================================================================== */
-#popupTambahToko {
-  display: none;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  background: rgba(0, 0, 0, 0.75) !important;
-  backdrop-filter: blur(4px) !important;
-  z-index: 999999 !important;
-  padding: 1cm 1mm !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
+  padding-top: 4px !important;
 }
 
 #popupTambahToko.show,
@@ -7656,418 +7160,59 @@ button.btnBatal:active {
 }
 
 #popupTambahToko .popupBox {
-  width: 560px !important;
-  max-width: calc(100vw - 2mm) !important;
-  height: calc(100vh - 2cm) !important;
-  height: calc(100dvh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
-  max-height: calc(100dvh - 2cm) !important;
-  min-height: 0 !important;
-  margin: auto !important;
+  width: 480px !important;
+  max-width: 92vw !important;
+  max-height: 88vh !important;
+  overflow: hidden !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
   border-radius: 5px !important;
-  background: var(--bg-box) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
-  box-sizing: border-box !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;
   display: flex !important;
   flex-direction: column !important;
+}
+
+#popupTambahToko .popupBody {
+  padding: 16px 18px 18px 18px !important;
   overflow: hidden !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 #popupTambahToko .popupHeader {
   position: sticky !important;
   top: 0 !important;
   z-index: 100 !important;
-  flex: 0 0 auto !important;
   flex-shrink: 0 !important;
   margin: 0 !important;
-  padding: 12px 16px !important;
-  background: var(--primary) !important;
-  color: #ffffff !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
   border-radius: 4px 4px 0 0 !important;
-  box-sizing: border-box !important;
-}
-
-#popupTambahToko .popupBody {
-  padding: 5mm !important;
-  box-sizing: border-box !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupBody > div:nth-child(1) {
-  flex: 0 0 auto !important;
-  flex-shrink: 0 !important;
-  margin-bottom: 8px !important;
-}
-
-#popupTambahToko .popupBody > div:nth-child(2) {
-  flex: 0 0 auto !important;
-  flex-shrink: 0 !important;
-  margin-bottom: 8px !important;
-}
-
-#popupTambahToko .table-container,
-#popupTambahToko .popupBody .table-container,
-#popupTambahToko .popupBody > div:has(#daftarTokoTableBody),
-#popupTambahToko .popupBody > div:has(#tbodyDaftarToko),
-#popupTambahToko .popupBody div[style*="overflow-y: auto"] {
-  flex: 1 1 0px !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  height: auto !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-  margin: 0 !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 5px !important;
-  background: var(--bg-header) !important;
-  box-sizing: border-box !important;
-}
-
-@media (max-width: 768px) {
-  #popupTambahToko {
-    padding: 1cm 1mm !important;
-  }
-
-  #popupTambahToko .popupBox {
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
-    min-width: calc(100vw - 2mm) !important;
-    height: calc(100vh - 2cm) !important;
-    height: calc(100dvh - 2cm) !important;
-    max-height: calc(100vh - 2cm) !important;
-    max-height: calc(100dvh - 2cm) !important;
-    margin: auto !important;
-  }
 }
 
 /* ==========================================================================
-   POPUP TAMBAH TOKO: JARAK PINGGIR KANAN KIRI BAWAH ISI DENGAN POPUP 4MM
+   MEDIA QUERY KHUSUS HP (@media max-width: 768px)
    ========================================================================== */
-#popupTambahToko {
-  display: none;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  background: rgba(0, 0, 0, 0.75) !important;
-  backdrop-filter: blur(4px) !important;
-  z-index: 999999 !important;
-  padding: 1cm 1mm !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko.show,
-#popupTambahToko[style*="display: flex"],
-#popupTambahToko[style*="display: block"] {
-  display: flex !important;
-}
-
-#popupTambahToko .popupBox {
-  width: 560px !important;
-  max-width: calc(100vw - 2mm) !important;
-  height: calc(100vh - 2cm) !important;
-  height: calc(100dvh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
-  max-height: calc(100dvh - 2cm) !important;
-  min-height: 0 !important;
-  margin: auto !important;
-  border-radius: 5px !important;
-  background: var(--bg-box) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupHeader {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 100 !important;
-  flex: 0 0 auto !important;
-  flex-shrink: 0 !important;
-  margin: 0 !important;
-  padding: 12px 16px !important;
-  background: var(--primary) !important;
-  color: #ffffff !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  border-radius: 4px 4px 0 0 !important;
-  box-sizing: border-box !important;
-}
-
-#popupTambahToko .popupBody {
-  padding: 4mm !important;
-  box-sizing: border-box !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupBody > div:nth-child(1) {
-  flex: 0 0 auto !important;
-  flex-shrink: 0 !important;
-  margin-bottom: 6px !important;
-}
-
-#popupTambahToko .popupBody > div:nth-child(2) {
-  flex: 0 0 auto !important;
-  flex-shrink: 0 !important;
-  margin-bottom: 6px !important;
-}
-
-#popupTambahToko .table-container,
-#popupTambahToko .popupBody .table-container,
-#popupTambahToko .popupBody > div:has(#daftarTokoTableBody),
-#popupTambahToko .popupBody > div:has(#tbodyDaftarToko),
-#popupTambahToko .popupBody div[style*="overflow-y: auto"] {
-  flex: 1 1 0px !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  height: auto !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-  margin: 0 !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 5px !important;
-  background: var(--bg-header) !important;
-  box-sizing: border-box !important;
-}
-
 @media (max-width: 768px) {
   #popupTambahToko {
-    padding: 1cm 1mm !important;
+    padding-top: 4px !important;
   }
 
   #popupTambahToko .popupBox {
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
-    min-width: calc(100vw - 2mm) !important;
-    height: calc(100vh - 2cm) !important;
-    max-height: calc(100vh - 2cm) !important;
-    margin: auto !important;
-  }
-
-  #popupTambahToko .popupBody {
-    padding: 4mm !important;
-  }
-}
-
-/* ==========================================================================
-   POPUP TAMBAH TOKO: HILANGKAN HEADER, TINGGI TERKUNCI 1CM DARI LAYAR & PADDING 4MM
-   ========================================================================== */
-#popupTambahToko {
-  display: none;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  background: rgba(0, 0, 0, 0.75) !important;
-  backdrop-filter: blur(4px) !important;
-  z-index: 999999 !important;
-  padding: 1cm 1mm !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko.show,
-#popupTambahToko[style*="display: flex"],
-#popupTambahToko[style*="display: block"] {
-  display: flex !important;
-}
-
-#popupTambahToko .popupHeader {
-  display: flex !important;
-  flex: 0 0 auto !important;
-  margin: 0 !important;
-  padding: 4mm !important;
-  background: var(--primary) !important;
-  color: #ffffff !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  border-radius: 4px 4px 0 0 !important;
-  box-sizing: border-box !important;
-}
-
-#popupTambahToko .popupBox {
-  width: 560px !important;
-  max-width: calc(100vw - 2mm) !important;
-  height: calc(100vh - 2cm) !important;
-  height: calc(100dvh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
-  max-height: calc(100dvh - 2cm) !important;
-  min-height: 0 !important;
-  margin: auto !important;
-  border-radius: 5px !important;
-  background: var(--bg-box) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupBody {
-  padding: 3mm !important;
-  box-sizing: border-box !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-#popupTambahToko .popupBody > div:nth-child(1) {
-  flex: 0 0 auto !important;
-  flex-shrink: 0 !important;
-  margin-bottom: 3mm !important;
-}
-
-#popupTambahToko .popupBody > div:nth-child(2) {
-  flex: 0 0 auto !important;
-  flex-shrink: 0 !important;
-  margin-bottom: 3mm !important;
-}
-
-#popupTambahToko .table-container,
-#popupTambahToko .popupBody .table-container,
-#popupTambahToko .popupBody > div:has(#daftarTokoTableBody),
-#popupTambahToko .popupBody > div:has(#tbodyDaftarToko),
-#popupTambahToko .popupBody div[style*="overflow-y: auto"] {
-  flex: 1 1 0px !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  height: auto !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-  margin: 0 !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 5px !important;
-  background: var(--bg-header) !important;
-  box-sizing: border-box !important;
-}
-
-@media (max-width: 768px) {
-  #popupTambahToko {
-    padding: 1cm 1mm !important;
+    width: 94vw !important;
+    max-width: 94vw !important;
+    max-height: 90vh !important;
+    border-radius: 5px !important;
   }
 
   #popupTambahToko .popupHeader {
-    padding: 4mm !important;
-    margin-bottom: 2mm !important;
+    padding: 12px 14px !important;
+    border-radius: 4px 4px 0 0 !important;
   }
 
-  #popupTambahToko .popupBox {
-    width: calc(100vw - 2mm) !important;
-    max-width: calc(100vw - 2mm) !important;
-    min-width: calc(100vw - 2mm) !important;
-    height: calc(100vh - 2cm) !important;
-    height: calc(100dvh - 2cm) !important;
-    max-height: calc(100vh - 2cm) !important;
-    max-height: calc(100dvh - 2cm) !important;
-    margin: auto !important;
-  }
-
-  /* KHUSUS TAMPILAN HP: JARAK ISI DENGAN LEBAR POPUP 3MM */
   #popupTambahToko .popupBody {
-    padding: 3mm !important;
-    padding-top: 2mm !important;
-    padding-left: 3mm !important;
-    padding-right: 3mm !important;
-    padding-bottom: 3mm !important;
-    box-sizing: border-box !important;
-  }
-
-  #popupTambahToko .popupBody > div:nth-child(1) {
-    margin-top: 2mm !important;
-    margin-bottom: 3mm !important;
-  }
-
-  #popupTambahToko .popupBody > div:nth-child(2) {
-    margin-bottom: 3mm !important;
-  }
-
-  /* KHUSUS TAMPILAN HP: JARAK ISI TAMBAH FOTO DENGAN LEBAR POPUP 2MM */
-  #artemisOverlay {
-    padding: 8px 2mm !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-sizing: border-box !important;
-  }
-
-  #artemisOverlay .artemisBoxPopup,
-  .artemisBoxPopup {
-    width: calc(100vw - 4mm) !important;
-    max-width: calc(100vw - 4mm) !important;
-    min-width: calc(100vw - 4mm) !important;
-    margin: auto 2mm !important;
-    border-radius: 5px !important;
-    box-sizing: border-box !important;
-  }
-
-  #artemisOverlay .artemisBodyPopup,
-  .artemisBodyPopup {
-    padding: 2mm !important;
-    box-sizing: border-box !important;
-  }
-
-  #artemisPasteBox {
-    margin: 2mm 0 !important;
-    padding: 10px 2mm !important;
-    border-radius: 5px !important;
-    box-sizing: border-box !important;
-  }
-
-  #artemisPhotoPreviewGrid {
-    padding: 2mm !important;
-    margin-bottom: 2mm !important;
-    gap: 4px !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Upload Foto Pendukung di Input Page pada HP */
-  #sectionUploadFoto .uploadBox,
-  .uploadBox {
-    padding: 2mm !important;
-    box-sizing: border-box !important;
-  }
-
-  #previewArea {
-    padding: 8px 2mm !important;
-    box-sizing: border-box !important;
-  }
-
-  .photo-grid-preview {
-    gap: 4px !important;
-    padding: 2mm 0 0 0 !important;
+    padding: 12px 1mm 1mm 1mm !important;
+    padding-left: 1mm !important;
+    padding-right: 1mm !important;
+    padding-bottom: 1mm !important;
   }
 }
