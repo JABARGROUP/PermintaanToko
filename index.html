@@ -18,8 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260815_1447">
-  <script src="app.js?v=20260815_1447"></script>
+  <link rel="stylesheet" href="styles.css?v=20260815_1525">
+  <script src="app.js?v=20260815_1625"></script>
 
   <!-- Firebase App, Firestore & Realtime Database Web SDK (Compat Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -286,17 +286,21 @@
             <button type="button" onclick="triggerUploadPdfAutoFill()" style="background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; border: none; border-radius: 6px; padding: 7px 14px; font-weight: 700; font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); transition: transform 0.15s ease;">
               <span class="material-symbols-rounded" style="font-size: 18px;">picture_as_pdf</span> INPUT PDF
             </button>
+            <button type="button" onclick="triggerUploadGambarAutoFill()" style="background: linear-gradient(135deg, #7c3aed, #9333ea); color: #ffffff; border: none; border-radius: 6px; padding: 7px 14px; font-weight: 700; font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(147, 51, 234, 0.25); transition: transform 0.15s ease;">
+              <span class="material-symbols-rounded" style="font-size: 18px;">image</span> INPUT GAMBAR
+            </button>
             <button type="button" onclick="triggerUploadExcelAutoFill()" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; border-radius: 6px; padding: 7px 14px; font-weight: 700; font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25); transition: transform 0.15s ease;">
               <span class="material-symbols-rounded" style="font-size: 18px;">table_chart</span> INPUT EXCEL
             </button>
             <button type="button" onclick="downloadTemplateExcelPermintaan()" title="Download Format Template Excel" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3); border-radius: 6px; padding: 6px 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
               <span class="material-symbols-rounded" style="font-size: 18px;">download_for_offline</span>
             </button>
-            <button type="button" onclick="aturGeminiApiKey()" title="Pengaturan Gemini API Key" style="display: none; background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 6px 8px; cursor: pointer; align-items: center; justify-content: center;">
+            <button type="button" onclick="aturGeminiApiKey()" title="Pengaturan Gemini API Key" style="display: none !important; background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 6px 8px; cursor: pointer; align-items: center; justify-content: center;">
               <span class="material-symbols-rounded" style="font-size: 18px;">key</span>
             </button>
           </div>
           <input type="file" id="inputPdfAutoFill" accept="application/pdf,.pdf" style="display: none;" onchange="prosesPdfAutoFillGemini(event)">
+          <input type="file" id="inputGambarAutoFill" accept="image/*,.jpg,.jpeg,.png,.webp,.heic" style="display: none;" onchange="prosesGambarAutoFillGemini(event)">
           <input type="file" id="inputExcelAutoFill" accept=".xlsx,.xls,.csv" style="display: none;" onchange="prosesExcelAutoFill(event)">
         </div>
 
@@ -540,40 +544,7 @@
         </div>
       </div>
 
-      <!-- ADMIN CONTROL TOGGLES (REMINDER PENDING SERVICE & DM) -->
-      <div id="adminReminderControlContainer" class="box" style="border-left: 4px solid #7c3aed; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
-          <div>
-            <h3 style="color: #7c3aed; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span class="material-symbols-rounded">notifications_active</span> PENGATURAN REMINDER OTOMATIS PENDING (SERVICE & DM)
-            </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
-              PENGINGAT WA OTOMATIS: DOKUMEN MENUNGGU APPROVAL SERVICE & DOKUMEN MENUNGGU APPROVAL DM AKAN DIKIRIMKAN SECARA TERKONSOLIDASI SESUAI JADWAL JAM YANG DITENTUKAN.
-            </p>
-          </div>
-          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <span id="reminderFeatureStatusText" style="font-size: 13px; font-weight: 800; color: #10b981;">AKTIF (ON)</span>
-            <button type="button" id="btnToggleReminderFeature" class="btnDownload" style="background: #10b981; height: 38px; padding: 0 16px; font-weight: 700;" onclick="toggleAdminReminderFeature()">
-              <span id="reminderToggleBtnIcon" class="material-symbols-rounded">toggle_on</span> <span id="reminderToggleBtnText">ON / OFF</span>
-            </button>
-          </div>
-        </div>
 
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: rgba(124, 58, 237, 0.04); padding: 12px; border-radius: 5px; border: 1px solid rgba(124, 58, 237, 0.15);">
-          <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px;">
-            <label style="font-size: 12px; font-weight: 800; color: var(--text-main); margin-bottom: 0; white-space: nowrap;">
-              <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; color: #7c3aed;">schedule</span> JADWAL JAM:
-            </label>
-            <input type="text" id="adminReminderTimeInput" placeholder="CONTOH: 09:00 ATAU 08:30, 13:00" style="flex: 1; padding: 10px 12px; font-size: 13px; font-weight: 600; border-radius: 5px; border: 1px solid var(--border-color);">
-          </div>
-          <button type="button" class="btnDownload" style="background: #7c3aed; height: 42px; padding: 0 16px; font-weight: 700;" onclick="simpanAdminReminderTime()">
-            <span class="material-symbols-rounded">save</span> SIMPAN JADWAL
-          </button>
-          <button type="button" class="btnDownload" style="background: #0284c7; height: 42px; padding: 0 16px; font-weight: 800;" onclick="tesKirimAdminReminder()" title="KIRIMKAN REMINDER PENDING SEKARANG JUGA">
-            <span class="material-symbols-rounded">send</span> TES REMINDER SEKARANG
-          </button>
-        </div>
-      </div>
 
       <!-- ADMIN CONTROL: PENGATURAN UPLOAD FOTO (GLOBAL ON / OFF) -->
       <div id="adminPhotoControlContainer" class="box" style="border-left: 4px solid #10b981; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
@@ -979,6 +950,53 @@
     </div>
   </div>
 
+  <!-- ========================================== -->
+  <!-- MODAL PILIH TEMPLATE EXCEL DUS / DEFAULT   -->
+  <!-- ========================================== -->
+  <div id="excelTemplateOverlay" class="popupOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center;">
+    <div class="rejectBoxPopup" style="width: 380px; max-width: 92vw; background: var(--bg-box); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color);">
+      <!-- HEADER POPUP -->
+      <div class="rejectHeaderPopup" style="background: #0284c7; color: #ffffff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+        <span style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13.5px; letter-spacing: 0.5px;">
+          <span class="material-symbols-rounded" style="font-size: 20px;">download_for_offline</span>
+          <span>DOWNLOAD TEMPLATE EXCEL</span>
+        </span>
+        <button type="button" onclick="closeExcelTemplateModal()" style="background: transparent !important; border: none !important; color: #ffffff !important; font-size: 24px !important; font-weight: 900 !important; cursor: pointer !important; padding: 0 !important; margin: 0 !important; line-height: 1 !important;" title="TUTUP">&times;</button>
+      </div>
+
+      <!-- BODY POPUP -->
+      <div style="padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; background: var(--bg-box); color: var(--text-main);">
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 2px 0; font-weight: 700; text-transform: uppercase; text-align: center;">
+          PILIH JENIS PERMINTAAN TEMPLATE:
+        </p>
+
+        <!-- TOMBOL OPTION DUS -->
+        <button type="button" onclick="unduhTemplateExcelProses('DUS')" style="width: 100%; padding: 12px 14px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1.5px solid rgba(59, 130, 246, 0.35); border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease;">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-symbols-rounded" style="font-size: 20px;">inventory_2</span>
+            <span>JENIS DUS (DENGAN SN DUS)</span>
+          </span>
+          <span class="material-symbols-rounded" style="font-size: 18px;">download</span>
+        </button>
+
+        <!-- TOMBOL OPTION DEFAULT -->
+        <button type="button" onclick="unduhTemplateExcelProses('DEFAULT')" style="width: 100%; padding: 12px 14px; background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease;">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-symbols-rounded" style="font-size: 20px;">widgets</span>
+            <span>JENIS DEFAULT (TANPA SN DUS)</span>
+          </span>
+          <span class="material-symbols-rounded" style="font-size: 18px;">download</span>
+        </button>
+
+        <!-- BATAL -->
+        <button type="button" onclick="closeExcelTemplateModal()" style="margin-top: 2px; width: 100%; height: 36px; background: #64748b; color: #ffffff; border: none; border-radius: 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          BATAL
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- 6. POPUP UPLOAD BUKTI PROSES ARTEMIS MODAL (HALF SCREEN COMPACT CARD) -->
   <div id="artemisOverlay" class="popupOverlay" style="z-index: 500000; display: none;">
     <div class="artemisBoxPopup" style="width: 460px !important; max-width: 92vw !important; margin: auto !important; border-radius: 5px !important; overflow: hidden !important; background: var(--bg-box) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;">
@@ -1372,6 +1390,9 @@
     <div class="spinnerBox">
       <div class="spinner"></div>
       <div id="loadingText" class="loadingText" style="display: none;">MEMPROSES...</div>
+      <button type="button" id="btnBatalLoading" onclick="batalProsesLoading()" style="display: none; margin-top: 14px; padding: 7px 20px; background: linear-gradient(135deg, #ef4444, #dc2626); color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.45); text-transform: uppercase; letter-spacing: 0.5px; transition: transform 0.15s ease;">
+        BATAL
+      </button>
     </div>
   </div>
 

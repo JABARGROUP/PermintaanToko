@@ -4,28 +4,10 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_C7-RE-meqDyD8iXvp4COew_9Yhn8SWS
 const SUPABASE_SECRET_KEY = 'sb_secret_9pTnKospBREpQH-QFngvnA_01fidjs7';
 const SUPABASE_JWKS_URL = 'https://vnlylgbkjmztnvjjgpjw.supabase.co/auth/v1/.well-known/jwks.json';
 
-const supabase = (window.supabase && typeof window.supabase.createClient === 'function')
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-        }
-      }
-    })
-  : null;
+const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
 
 window.isFirebaseOnline = true;
 window.isSupabaseOnline = true;
-
-
-// GLOBAL PHOTO VIEWER VARIABLES (HOISTED & SAFE FOR ALL FUNCTIONS)
-var currentViewerPhotos = currentViewerPhotos || [];
-var currentViewerIndex = currentViewerIndex || 0;
-var viewerPhotos = viewerPhotos || [];
-var viewerCurrentIndex = viewerCurrentIndex || 0;
-var viewerCurrentZoom = viewerCurrentZoom || 1;
-var viewerPanX = viewerPanX || 0;
-var viewerPanY = viewerPanY || 0;
 
 function updateGlobalConnectionDotStatus() {
   const dot = document.getElementById('firebaseOnlineDot');
@@ -71,9 +53,8 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
   }
 
   const startTime = performance.now();
-  let latencyMs = 32;
-  let isSbConnected = true;
-  window.isSupabaseOnline = true;
+  let latencyMs = 28;
+  let isSbConnected = false;
 
   let sbReqCount = 0;
   let sbUserCount = 0;
@@ -81,51 +62,40 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
   let sbChatCount = 0;
 
   try {
-    const headers = {
-      'apikey': SUPABASE_PUBLISHABLE_KEY,
-      'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-      'Prefer': 'count=exact'
-    };
+    if (typeof supabase !== 'undefined' && supabase) {
+      const [resReq, resUser, resStore, resChat] = await Promise.allSettled([
+        supabase.from('permintaan_toko').select('*', { count: 'exact', head: true }),
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('toko_list').select('*', { count: 'exact', head: true }),
+        supabase.from('chat_messages').select('*', { count: 'exact', head: true })
+      ]);
 
-    const [rReq, rUser, rStore, rChat] = await Promise.allSettled([
-      fetch(`${SUPABASE_URL}/rest/v1/permintaan_toko?select=*&limit=1`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/users?select=*&limit=1`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/toko_list?select=*&limit=1`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/chat_messages?select=*&limit=1`, { headers })
-    ]);
+      const endTime = performance.now();
+      latencyMs = Math.max(12, Math.round(endTime - startTime));
+      isSbConnected = true;
+      window.isSupabaseOnline = true;
 
-    const endTime = performance.now();
-    latencyMs = Math.max(14, Math.round(endTime - startTime));
-    isSbConnected = true;
-    window.isSupabaseOnline = true;
-
-    const parseCount = (resObj) => {
-      if (resObj.status === 'fulfilled' && resObj.value && resObj.value.ok) {
-        const cr = resObj.value.headers.get('content-range');
-        if (cr && cr.includes('/')) {
-          const parts = cr.split('/');
-          const total = parseInt(parts[1], 10);
-          if (!isNaN(total)) return total;
-        }
+      if (resReq.status === 'fulfilled' && resReq.value && typeof resReq.value.count === 'number') {
+        sbReqCount = resReq.value.count;
       }
-      return 0;
-    };
-
-    sbReqCount = parseCount(rReq);
-    sbUserCount = parseCount(rUser);
-    sbStoreCount = parseCount(rStore);
-    sbChatCount = parseCount(rChat);
+      if (resUser.status === 'fulfilled' && resUser.value && typeof resUser.value.count === 'number') {
+        sbUserCount = resUser.value.count;
+      }
+      if (resStore.status === 'fulfilled' && resStore.value && typeof resStore.value.count === 'number') {
+        sbStoreCount = resStore.value.count;
+      }
+      if (resChat.status === 'fulfilled' && resChat.value && typeof resChat.value.count === 'number') {
+        sbChatCount = resChat.value.count;
+      }
+    }
   } catch(e) {
     console.warn('[SUPABASE METRICS FETCH NOTICE]:', e);
-    isSbConnected = true;
-    window.isSupabaseOnline = true;
   }
 
   // 1. Data Calculation
   const reqs = typeof getRequestsFromDB === 'function' ? getRequestsFromDB() : [];
   const users = typeof getUsersFromDB === 'function' ? getUsersFromDB() : [];
-  const stores = typeof getStoresFromDB === 'function' ? getStoresFromDB() : [];
-
+  
   // Total Storage / Photos calculation
   let totalPhotoBytes = 0;
   reqs.forEach(r => {
@@ -140,7 +110,7 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
   // Total Records across Supabase & Local
   const totalEffectiveReqs = Math.max(reqs.length, sbReqCount);
   const totalEffectiveUsers = Math.max(users.length, sbUserCount);
-  const totalEffectiveStores = Math.max(stores.length, sbStoreCount);
+  const totalEffectiveStores = Math.max(0, sbStoreCount);
   const totalEffectiveChats = Math.max(0, sbChatCount);
 
   // Live DB Size Calculation: Base Postgres (~28.4MB) + dynamic table size
@@ -154,7 +124,8 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
   const egressMB = Math.round((baseEgressMB + dynamicEgressMB) * 10) / 10;
 
   // Live MAU (Monthly Active Users & Stores): Total registered users + stores
-  const activeUserCount = Math.max(totalEffectiveUsers + totalEffectiveStores, 93);
+  const localActiveUserCount = users.filter(u => u && u.username && String(u.username).toUpperCase() !== 'SYSTEM').length;
+  const activeUserCount = Math.max(localActiveUserCount, totalEffectiveUsers + totalEffectiveStores);
 
   // 2. DOM Updates
   const latencyBadge = document.getElementById('usageLatencyBadge');
@@ -162,8 +133,9 @@ async function muatMetrikKapasitasDatabase(isRefresh = false) {
 
   const statusTitle = document.getElementById('usageStatusTitle');
   if (statusTitle) {
-    statusTitle.textContent = 'STATUS: ONLINE (REALTIME AKTIF)';
-    statusTitle.style.color = '#10b981';
+    const isOnline = isSbConnected || !!window.isSupabaseOnline;
+    statusTitle.textContent = isOnline ? 'STATUS: ONLINE (REALTIME AKTIF)' : 'STATUS: OFFLINE / TERPUTUS';
+    statusTitle.style.color = isOnline ? '#10b981' : '#ef4444';
   }
 
   // Update Egress (e.g. 39.8 MB / 5 GB)
@@ -227,97 +199,41 @@ window.muatMetrikKapasitasDatabase = muatMetrikKapasitasDatabase;
 // PARSE PHOTOS HELPER FUNCTION (HANDLES ARRAYS, JSON STRINGS, SINGLE URLS)
 function parsePhotosArray(rawPhotos) {
   if (!rawPhotos) return [];
-
-  const extractUrl = (item) => {
-    if (!item) return '';
-    if (Array.isArray(item)) {
-      for (const el of item) {
-        const u = extractUrl(el);
-        if (u) return u;
-      }
-      return '';
-    }
-    if (typeof item === 'string') {
-      const trimmed = item.trim();
-      if (!trimmed || trimmed === '[object Object]') return '';
-      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          return extractUrl(parsed);
-        } catch (e) {}
-      }
-      return trimmed;
-    }
-    if (typeof item === 'object') {
-      const val = item.url || item.src || item.path || item.link || item.photo || item.uri || item.image || '';
-      return typeof val === 'string' ? val.trim() : '';
-    }
-    const str = String(item).trim();
-    return str === '[object Object]' ? '' : str;
-  };
-
   if (Array.isArray(rawPhotos)) {
-    const list = [];
-    rawPhotos.forEach(p => {
-      if (Array.isArray(p)) {
-        p.forEach(subP => {
-          const u = extractUrl(subP);
-          if (u && u !== '[object Object]') list.push(u);
-        });
-      } else {
-        const u = extractUrl(p);
-        if (u && u !== '[object Object]') list.push(u);
-      }
-    });
-    return list;
+    return rawPhotos.map(p => typeof p === 'string' ? p.trim() : (p ? String(p) : '')).filter(p => p.length > 0);
   }
-
   if (typeof rawPhotos === 'string') {
     const trimmed = rawPhotos.trim();
     if (!trimmed) return [];
-
-    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    if (trimmed.startsWith('[')) {
       try {
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
-          return parsePhotosArray(parsed);
-        } else if (typeof parsed === 'object') {
-          const u = extractUrl(parsed);
-          return u ? [u] : [];
+          return parsed.map(p => typeof p === 'string' ? p.trim() : (p ? String(p) : '')).filter(p => p.length > 0);
         }
       } catch (e) {}
     }
-
-    if (trimmed.includes(',')) {
-      return trimmed.split(',').map(s => extractUrl(s)).filter(Boolean);
+    if (trimmed.startsWith('http') || trimmed.startsWith('data:') || trimmed.startsWith('/')) {
+      return [trimmed];
     }
-
-    const u = extractUrl(trimmed);
-    return u ? [u] : [];
   }
-
-  const singleUrl = extractUrl(rawPhotos);
-  return singleUrl ? [singleUrl] : [];
+  return [];
 }
 window.parsePhotosArray = parsePhotosArray;
 
 // CLEAN KEEP-ALIVE PING (PREVENTS 404 & 401 CONSOLE ERRORS)
 async function pingSupabaseKeepAlive() {
-  window.isSupabaseOnline = true;
   if (supabase) {
     try {
       const res = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
-        headers: {
-          'apikey': SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-        }
+        headers: { 'apikey': SUPABASE_PUBLISHABLE_KEY }
       });
-      window.isSupabaseOnline = true;
+      window.isSupabaseOnline = (res.ok || res.status === 200);
     } catch (e) {
-      window.isSupabaseOnline = true;
+      window.isSupabaseOnline = false;
     }
   } else {
-    window.isSupabaseOnline = true;
+    window.isSupabaseOnline = false;
   }
   updateGlobalConnectionDotStatus();
 }
@@ -384,80 +300,12 @@ function updateBodyClasses(specificTheme) {
   if (typeof updateThemeIcon === 'function') {
     updateThemeIcon();
   }
-  if (typeof applyAppBackground === 'function') {
-    applyAppBackground(null, false);
-  }
 }
 window.updateBodyClasses = updateBodyClasses;
 window.applyThemeToDocument = updateBodyClasses;
 
-// ==========================================================================
-// BACKGROUND SCENERY CHANGER (DISIMPAN DI LOKAL STORAGE PERANGKAT)
-// ==========================================================
-const BG_STORAGE_KEY = 'STORE_BG_IMAGE_CHOICE_V2';
-
-function applyAppBackground(bgChoice, saveToLocal = true) {
-  if (!bgChoice) {
-    try {
-      bgChoice = localStorage.getItem(BG_STORAGE_KEY) || 'bg-scenery-2.jpg';
-    } catch(e) {
-      bgChoice = 'bg-scenery-2.jpg';
-    }
-  }
-
-  if (saveToLocal) {
-    try {
-      localStorage.setItem(BG_STORAGE_KEY, bgChoice);
-    } catch(e) {}
-  }
-
-  const bgEl = document.querySelector('.aesthetic-bg-image');
-  if (bgEl) {
-    if (bgChoice === 'none' || !bgChoice) {
-      bgEl.style.backgroundImage = 'none';
-      bgEl.style.display = 'none';
-    } else {
-      bgEl.style.display = 'block';
-      bgEl.style.backgroundImage = `url('${bgChoice}')`;
-    }
-  }
-
-  document.documentElement.style.setProperty('--app-bg-image', bgChoice === 'none' || !bgChoice ? 'none' : `url('${bgChoice}')`);
-}
-
-function gantiBackgroundApp() {
-  let currentBg = 'bg-scenery-2.jpg';
-  try {
-    currentBg = localStorage.getItem(BG_STORAGE_KEY) || 'bg-scenery-2.jpg';
-  } catch(e) {}
-
-  let nextBg = 'bg-scenery-2.jpg';
-  let nextName = 'Malam Bulan Fantasi';
-
-  if (currentBg === 'bg-scenery-2.jpg') {
-    nextBg = 'bg-scenery.jpg';
-    nextName = 'Danau & Pegunungan';
-  } else if (currentBg === 'bg-scenery.jpg') {
-    nextBg = 'none';
-    nextName = 'Polos / Tanpa Gambar';
-  } else {
-    nextBg = 'bg-scenery-2.jpg';
-    nextName = 'Malam Bulan Fantasi';
-  }
-
-  applyAppBackground(nextBg, true);
-}
-window.applyAppBackground = applyAppBackground;
-window.gantiBackgroundApp = gantiBackgroundApp;
-
-// Auto init background immediately
-try {
-  applyAppBackground(null, false);
-} catch(e) {}
-
 function loadSavedDesignMode() {
   updateBodyClasses();
-  applyAppBackground(null, false);
 }
 
 function toggleDesignMode() {
@@ -567,10 +415,8 @@ async function setGlobalAdminTheme(themeName) {
       try {
         try {
           await supabase.from('lookup').upsert({
-            key: 'global_theme',
-            value: themeName,
             updated_at: new Date().toISOString()
-          }, { onConflict: 'key' });
+          });
         } catch (e) {}
 
         const themeRow = {
@@ -583,13 +429,12 @@ async function setGlobalAdminTheme(themeName) {
           catatan: JSON.stringify({ theme: themeName, updatedBy: currentUser.username, time: now }),
           items: [],
           photos: [],
-          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'ADMIN',
           created_at: new Date().toISOString()
         };
-        await supabase.from('permintaan_toko').upsert(themeRow, { onConflict: 'no_surat' });
+        await supabase.from('permintaan_toko').upsert(themeRow);
       } catch(e) {
         console.warn('[SUPABASE GLOBAL THEME SAVE ERROR]:', e);
       }
@@ -705,12 +550,10 @@ function getSystemNotifications() {
 }
 
 function getSystemNotifsClearedTimestamp() {
-  let clearedAt = Number(appStorage.getItem('NOTIFS_CLEARED_AT') || (typeof localStorage !== 'undefined' ? localStorage.getItem('NOTIFS_CLEARED_AT') : 0) || 0);
-  if (clearedAt) return clearedAt;
   const raw = appStorage.getItem(NOTIFICATIONS_DB_KEY) || '[]';
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.clearedAt) return Number(parsed.clearedAt) || 0;
+    if (parsed && typeof parsed === 'object' && parsed.clearedAt) return Number(parsed.clearedAt) || 0;
   } catch(e) {}
   return 0;
 }
@@ -798,13 +641,12 @@ function tambahNotifikasiSistem(targetRoles, targetArea, message, noSurat = '') 
         catatan: JSON.stringify(payload),
         items: [],
         photos: [],
-        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: 'SYSTEM',
         created_at: new Date().toISOString()
       };
-      supabase.from('permintaan_toko').upsert(systemNotifRow, { onConflict: 'no_surat' }).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(systemNotifRow).then(({ error }) => {
         if (error) console.warn('[SUPABASE NOTIF SAVE NOTICE]:', error.message);
       });
     } catch(e) {}
@@ -1121,7 +963,7 @@ function loadNotificationList() {
     item.style.cssText = `
       padding: 12px;
       margin-bottom: 8px;
-      border-radius: 5px;
+      border-radius: 8px;
       border: 1px solid var(--border-color);
       background: ${isRead ? 'var(--bg-box)' : 'var(--bg-header)'};
       cursor: pointer;
@@ -1217,13 +1059,12 @@ function markNotifAsRead(notifId, noSurat = '') {
           catatan: JSON.stringify(payload),
           items: [],
           photos: [],
-          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        supabase.from('permintaan_toko').upsert(systemNotifRow, { onConflict: 'no_surat' }).then(({ error }) => {
+        supabase.from('permintaan_toko').upsert(systemNotifRow).then(({ error }) => {
           if (error) console.warn('[SUPABASE NOTIF SAVE NOTICE]:', error.message);
         });
       } catch(e) {}
@@ -1283,13 +1124,12 @@ function markAllNotifAsRead(silent = false) {
         catatan: JSON.stringify(payload),
         items: [],
         photos: [],
-        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: 'SYSTEM',
         created_at: new Date().toISOString()
       };
-      supabase.from('permintaan_toko').upsert(systemNotifRow, { onConflict: 'no_surat' }).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(systemNotifRow).then(({ error }) => {
         if (error) console.warn('[SUPABASE NOTIF SAVE NOTICE]:', error.message);
       });
     } catch(e) {}
@@ -1314,27 +1154,20 @@ function hapusSemuaNotifikasiSystem() {
     return;
   }
 
-  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI DARI SISTEM (DATABASE & SELURUH PERANGKAT)?', async () => {
+  showConfirm('YAKIN INGIN MENGHAPUS SEMUA NOTIFIKASI DARI SISTEM?', async () => {
     showLoading('MENGHAPUS SEMUA NOTIFIKASI...');
     try {
-      const clearedAt = Date.now();
       const emptyNotifsPayload = {
-        clearedAt: clearedAt,
+        clearedAt: Date.now(),
         items: []
       };
 
-      // 1. KOSONGKAN PENYIMPANAN LOKAL METADATA & ITEMS PERANGKAT INI
-      appStorage.setItem('NOTIFS_CLEARED_AT', String(clearedAt));
+      // 1. KOSONGKAN PENYIMPANAN LOKAL METADATA & ITEMS
       appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload));
-      try { localStorage.setItem('NOTIFS_CLEARED_AT', String(clearedAt)); } catch(e) {}
       try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload)); } catch(e) {}
 
-      // 2. SINKRONKAN PERSISTEN LANGSUNG KE SUPABASE CLOUD DATABASE & HAPUS TABEL NOTIFICATIONS
+      // 2. SINKRONKAN PERSISTEN LANGSUNG KE SUPABASE CLOUD DATABASE
       if (typeof supabase !== 'undefined' && supabase) {
-        try {
-          await supabase.from('notifications').delete().neq('id', 'NONE');
-        } catch(e) {}
-
         try {
           const systemNotifRow = {
             id: '__SYSTEM_NOTIFICATIONS__',
@@ -1346,28 +1179,18 @@ function hapusSemuaNotifikasiSystem() {
             catatan: JSON.stringify(emptyNotifsPayload),
             items: [],
             photos: [],
-            artemis_photos: [],
             status: 'DONE',
             service_approve: true,
             created_by: 'SYSTEM',
             created_at: new Date().toISOString()
           };
-          await supabase.from('permintaan_toko').upsert(systemNotifRow, { onConflict: 'no_surat' });
+          await supabase.from('permintaan_toko').upsert(systemNotifRow);
         } catch(sbErr) {
           console.warn('[SUPABASE NOTIF DELETE ERROR]:', sbErr);
         }
       }
 
-      // 3. BROADCAST SIGNAL EVENT KE SELURUH TAB & PERANGKAT LAIN TERHUBUNG
-      try {
-        if (window.BroadcastChannel) {
-          const bc = new BroadcastChannel('permintaan_toko_sync');
-          bc.postMessage({ type: 'CLEAR_ALL_NOTIFS', clearedAt: clearedAt });
-          bc.close();
-        }
-      } catch(e) {}
-
-      // 4. PUSH KE DATABASE UTAMA LAIN
+      // 3. PUSH KE DATABASE UTAMA LAIN
       if (typeof pushCentralCloudDB === 'function') {
         await pushCentralCloudDB();
       }
@@ -1375,7 +1198,7 @@ function hapusSemuaNotifikasiSystem() {
       hideLoading();
       updateNotifBellCounter();
       if (typeof loadNotificationList === 'function') loadNotificationList();
-      showNotif('SELURUH NOTIFIKASI BERHASIL DIHAPUS DARI CLOUD & SELURUH PERANGKAT!', 'success');
+      showNotif('SELURUH NOTIFIKASI BERHASIL DIHAPUS!', 'success');
     } catch (err) {
       hideLoading();
       console.error('[HAPUS NOTIFIKASI ERROR]:', err);
@@ -1530,8 +1353,8 @@ let lastX = 0;
 let lastY = 0;
 let activeScanInput = null;
 let html5QrCodeScanner = null;
-var viewerPhotos = [];
-var viewerCurrentIndex = 0;
+let viewerPhotos = [];
+let viewerCurrentIndex = 0;
 
 function getFormattedDateDDMMYYYY(dObj = new Date()) {
   const d = (dObj instanceof Date && !isNaN(dObj.getTime())) ? dObj : new Date();
@@ -1576,10 +1399,10 @@ function getUsersFromDB() {
   return JSON.parse(appStorage.getItem(USERS_DB_KEY) || '[]');
 }
 
-function saveUsersToDB(users) {
+function saveUsersToDB(users, targetUser = null) {
   appStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
   if (typeof pushCentralCloudDB === 'function') {
-    pushCentralCloudDB();
+    pushCentralCloudDB(targetUser ? (targetUser.type ? targetUser : { type: 'USER', data: targetUser }) : null);
   }
 }
 
@@ -1701,7 +1524,7 @@ async function toggleAdminReminderFeature() {
         key: 'adminReminder',
         value: valStr,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
+      });
 
       const sysRow = {
         id: '__SYSTEM_REMINDER_SETTINGS__',
@@ -1713,13 +1536,12 @@ async function toggleAdminReminderFeature() {
         catatan: JSON.stringify({ adminReminder: valStr, adminReminderTime: timeVal, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
         items: [],
         photos: [],
-        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(sysRow, { onConflict: 'no_surat' });
+      await supabase.from('permintaan_toko').upsert(sysRow);
     } catch(err) {
       console.warn('[SUPABASE REMINDER TOGGLE ERROR]:', err);
     }
@@ -1795,7 +1617,6 @@ async function simpanAdminReminderTime() {
         catatan: JSON.stringify({ adminReminder: isEnabledStr, adminReminderTime: val, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
         items: [],
         photos: [],
-        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser?.fullName || 'ADMIN',
@@ -1803,7 +1624,7 @@ async function simpanAdminReminderTime() {
       };
       await supabase.from('permintaan_toko').upsert(sysRow, { onConflict: 'no_surat' });
     } catch(err) {
-      console.warn('[SUPABASE SIMPAN JADWAL REMINDER ERROR]:', err);
+      console.warn('[SUPABASE REMINDER TIME ERROR]:', err);
     }
   }
 
@@ -2543,25 +2364,6 @@ function simpanFirebaseConfigUser() {
 const SUPABASE_LAST_SYNC_KEY = 'STORE_SUPABASE_LAST_SYNC_V7';
 let supabaseRealtimeChannel = null;
 
-function broadcastSupabaseDataChange(actionType, dataObj) {
-  if (typeof supabaseRealtimeChannel !== 'undefined' && supabaseRealtimeChannel) {
-    try {
-      supabaseRealtimeChannel.send({
-        type: 'broadcast',
-        event: 'request_change',
-        payload: {
-          action: actionType,
-          newRow: dataObj || null,
-          noSurat: dataObj ? (dataObj.no_surat || dataObj.noSurat) : '',
-          senderId: currentUser ? currentUser.id : 'system',
-          time: Date.now()
-        }
-      }).catch(() => {});
-    } catch(e) {}
-  }
-}
-window.broadcastSupabaseDataChange = broadcastSupabaseDataChange;
-
 // ==========================================
 // 1. SUPABASE REALTIME ENGINE (EVENT-DRIVEN)
 // ==========================================
@@ -2591,51 +2393,6 @@ function initSupabaseRealtimeEngine() {
             }
             if (event.payload.theme) {
               if (typeof applyGlobalThemeToApp === 'function') applyGlobalThemeToApp(event.payload.theme);
-            }
-          }
-        }
-      )
-      .on(
-        'broadcast',
-        { event: 'user_change' },
-        (event) => {
-          if (event && event.payload) {
-            handleRealtimeUserChange({ eventType: event.payload.action || 'UPDATE', new: event.payload.newUser || null, old: event.payload.oldUser || null });
-          }
-        }
-      )
-      .on(
-        'broadcast',
-        { event: 'store_change' },
-        (event) => {
-          if (event && event.payload) {
-            handleRealtimeStoreChange({ eventType: event.payload.action || 'UPDATE', new: event.payload.newStore || null, old: event.payload.oldStore || null });
-          }
-        }
-      )
-      .on(
-        'broadcast',
-        { event: 'master_db_reset' },
-        (event) => {
-          if (typeof syncAllDataToCache === 'function') {
-            syncAllDataToCache().then(() => {
-              if (typeof refreshRealtimeUI === 'function') refreshRealtimeUI();
-            });
-          }
-        }
-      )
-      .on(
-        'broadcast',
-        { event: 'request_change' },
-        (event) => {
-          if (event && event.payload) {
-            if (event.payload.action === 'DELETE' && event.payload.noSurat) {
-              handleRealtimePermintaanToko({ eventType: 'DELETE', old: { no_surat: event.payload.noSurat } });
-            } else if (event.payload.newRow) {
-              handleRealtimePermintaanToko({ eventType: event.payload.action || 'UPDATE', new: event.payload.newRow });
-            }
-            if (typeof syncSupabaseIncremental === 'function') {
-              syncSupabaseIncremental().catch(e => console.warn(e));
             }
           }
         }
@@ -2736,15 +2493,9 @@ function initSupabaseRealtimeEngine() {
         if (status === 'SUBSCRIBED') {
           window.isSupabaseOnline = true;
           updateGlobalConnectionDotStatus();
-          if (typeof syncSupabaseIncremental === 'function') {
-            syncSupabaseIncremental().catch(() => {});
-          }
-        } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           window.isSupabaseOnline = false;
           updateGlobalConnectionDotStatus();
-          setTimeout(() => {
-            if (typeof initSupabaseRealtimeEngine === 'function') initSupabaseRealtimeEngine();
-          }, 3000);
         }
       });
   } catch (err) {
@@ -2752,90 +2503,6 @@ function initSupabaseRealtimeEngine() {
   }
 }
 window.initSupabaseRealtimeEngine = initSupabaseRealtimeEngine;
-
-// UNIFIED REALTIME BROADCAST SIGNAL TRANSMITTER FOR ALL DATABASE OPERATIONS
-function notifySupabaseDataChanged(tableOrEvent, dataPayload) {
-  if (typeof supabase === 'undefined' || !supabase) return;
-
-  try {
-    const channel = supabase.channel('public_realtime_sync');
-    const evt = String(tableOrEvent || '').trim().toLowerCase();
-
-    if (evt === 'users' || evt === 'user' || evt === 'user_change') {
-      channel.send({
-        type: 'broadcast',
-        event: 'user_change',
-        payload: {
-          action: 'UPDATE',
-          newUser: dataPayload || null,
-          time: Date.now()
-        }
-      }).catch(e => console.warn(e));
-    } else if (evt === 'toko_list' || evt === 'stores' || evt === 'store_change') {
-      channel.send({
-        type: 'broadcast',
-        event: 'store_change',
-        payload: {
-          action: 'UPDATE',
-          newStore: dataPayload || null,
-          time: Date.now()
-        }
-      }).catch(e => console.warn(e));
-    } else if (evt === 'requests' || evt === 'request' || evt === 'request_change' || evt === 'permintaan_toko') {
-      channel.send({
-        type: 'broadcast',
-        event: 'request_change',
-        payload: {
-          action: 'UPDATE',
-          newRow: dataPayload || null,
-          noSurat: dataPayload ? (dataPayload.no_surat || dataPayload.noSurat) : '',
-          time: Date.now()
-        }
-      }).catch(e => console.warn(e));
-    } else if (evt === 'master_db' || evt === 'master' || evt === 'reset' || evt === 'master_db_reset') {
-      channel.send({
-        type: 'broadcast',
-        event: 'master_db_reset',
-        payload: {
-          time: Date.now()
-        }
-      }).catch(e => console.warn(e));
-    } else if (evt === 'config' || evt === 'config_change' || evt === 'theme') {
-      channel.send({
-        type: 'broadcast',
-        event: 'config_change',
-        payload: dataPayload || { time: Date.now() }
-      }).catch(e => console.warn(e));
-    }
-  } catch(err) {
-    console.warn('[NOTIFY REALTIME BROADCAST NOTICE]:', err);
-  }
-}
-window.notifySupabaseDataChanged = notifySupabaseDataChanged;
-
-// AUTOMATIC WAKE-UP & REALTIME SYNC ON TAB FOCUS / VISIBILITY CHANGE (SCREEN UNLOCK / TAB SWITCH)
-if (typeof document !== 'undefined' && document.addEventListener) {
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      if (typeof initSupabaseRealtimeEngine === 'function') initSupabaseRealtimeEngine();
-      if (typeof syncSupabaseIncremental === 'function') syncSupabaseIncremental().catch(() => {});
-    }
-  });
-  window.addEventListener('focus', () => {
-    if (typeof syncSupabaseIncremental === 'function') syncSupabaseIncremental().catch(() => {});
-  });
-}
-
-// SILENT BACKGROUND SYNC SAFETY NET WHILE TAB IS ACTIVE (EVERY 15 SECONDS)
-if (typeof window !== 'undefined') {
-  setInterval(() => {
-    if (!document.hidden && typeof currentUser !== 'undefined' && currentUser) {
-      if (typeof syncSupabaseIncremental === 'function') {
-        syncSupabaseIncremental().catch(() => {});
-      }
-    }
-  }, 15000);
-}
 
 // Helper: Format raw row from Supabase permintaan_toko
 function formatSupabaseRequestRow(row) {
@@ -2876,22 +2543,23 @@ function formatSupabaseRequestRow(row) {
 // Check if user has permission to see request
 function isRequestVisibleToCurrentUser(r) {
   if (!currentUser || !r) return true;
-  const cat = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
-  const userArea = String(currentUser.area || '').trim().toUpperCase();
+  const cat = String(currentUser.category || '').toUpperCase();
+  const userArea = String(currentUser.area || '').toUpperCase();
 
-  if (cat === 'ADMIN' || cat === 'DM') return true;
-
+  if (cat === 'ADMIN') return true;
   if (cat === 'SERVICE') {
     if (userArea === 'ALL' || userArea === 'TSM') return true;
-    return isAreaMatch(userArea, r.area);
+    return String(r.area || '').toUpperCase() === userArea;
   }
-
-  if (cat === 'TOKO' || cat === 'GBJ') {
+  if (cat === 'DM') {
+    if (userArea === 'ALL') return true;
+    return String(r.area || '').toUpperCase() === userArea;
+  }
+  if (cat === 'TOKO') {
     if (r.userId && currentUser.id && String(r.userId) === String(currentUser.id)) return true;
     if (r.toko && currentUser.fullName && String(r.toko).trim().toUpperCase() === String(currentUser.fullName).trim().toUpperCase()) return true;
-    return isAreaMatch(userArea, r.area);
+    return false;
   }
-
   return true;
 }
 
@@ -3053,25 +2721,37 @@ function handleRealtimePermintaanToko(payload) {
 
     const requests = getRequestsFromDB();
 
-    if (payload && payload.new) {
-      const formatted = formatSupabaseRequestRow(payload.new);
-      if (formatted && !formatted.noSurat.startsWith('__SYSTEM_') && isRequestVisibleToCurrentUser(formatted)) {
-        const existsIdx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(formatted.noSurat).trim().toUpperCase());
+    if (eventType === 'INSERT') {
+      const newRow = formatSupabaseRequestRow(payload.new);
+      if (newRow && !newRow.noSurat.startsWith('__SYSTEM_') && isRequestVisibleToCurrentUser(newRow)) {
+        const existsIdx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(newRow.noSurat).trim().toUpperCase());
         if (existsIdx === -1) {
-          requests.unshift(formatted);
+          requests.unshift(newRow);
         } else {
-          requests[existsIdx] = { ...requests[existsIdx], ...formatted };
+          requests[existsIdx] = { ...requests[existsIdx], ...newRow };
         }
         appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
-        try { localStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests)); } catch(e) {}
         refreshRealtimeUI();
       }
-    } else if (payload && (payload.old || eventType === 'DELETE')) {
+    } else if (eventType === 'UPDATE') {
+      const updatedRow = formatSupabaseRequestRow(payload.new);
+      if (updatedRow && !updatedRow.noSurat.startsWith('__SYSTEM_')) {
+        const idx = requests.findIndex(r => r && String(r.noSurat).trim().toUpperCase() === String(updatedRow.noSurat).trim().toUpperCase());
+        if (idx !== -1) {
+          requests[idx] = { ...requests[idx], ...updatedRow };
+          appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
+          refreshRealtimeUI();
+        } else if (isRequestVisibleToCurrentUser(updatedRow)) {
+          requests.unshift(updatedRow);
+          appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(requests));
+          refreshRealtimeUI();
+        }
+      }
+    } else if (eventType === 'DELETE') {
       const delNoSurat = payload.old ? (payload.old.no_surat || payload.old.noSurat || payload.old.id) : null;
       if (delNoSurat) {
         const filtered = requests.filter(r => r && String(r.noSurat).trim().toUpperCase() !== String(delNoSurat).trim().toUpperCase());
         appStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(filtered));
-        try { localStorage.setItem(REQUESTS_DB_KEY, JSON.stringify(filtered)); } catch(e) {}
         refreshRealtimeUI();
       }
     }
@@ -3291,8 +2971,7 @@ async function syncSupabaseIncremental() {
     const { data: deltaReqs, error } = await supabase
       .from('permintaan_toko')
       .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100);
+      .gt('updated_at', lastSync);
 
     if (!error && Array.isArray(deltaReqs) && deltaReqs.length > 0) {
       const currentReqs = getRequestsFromDB();
@@ -3583,10 +3262,13 @@ async function syncSupabaseLookupToLocalCache() {
           if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
         }
         if (item.key === 'global_theme' || item.code === 'GLOBAL_THEME') {
-          // SIMPAN METADATA CLOUD THEME TANPA MERUBAH TEMA AKTIF PERANGKAT LOKAL USER
-          const cloudTheme = item.value ? (typeof item.value === 'object' ? item.value.theme : String(item.value)) : (item.type || '');
+          const cloudTheme = item.value ? (typeof item.value === 'object' ? item.value.theme : String(item.value)) : (item.type || 'dark-mode');
           if (cloudTheme) {
             appStorage.setItem(GLOBAL_THEME_KEY, cloudTheme);
+            appStorage.setItem(THEME_KEY, cloudTheme);
+            try { localStorage.setItem('APP_SELECTED_THEME', cloudTheme); } catch(e) {}
+            try { localStorage.setItem(THEME_KEY, cloudTheme); } catch(e) {}
+            if (typeof updateBodyClasses === 'function') updateBodyClasses(cloudTheme);
           }
         }
         if (item.key === 'fonteToken' || item.code === 'FONTE_TOKEN' || item.key === 'FONTE_TOKEN') {
@@ -3730,30 +3412,12 @@ async function syncSupabaseThemeToLocalCache() {
 }
 window.syncSupabaseThemeToLocalCache = syncSupabaseThemeToLocalCache;
 
-async function safeSupabaseUpsert(table, payload, conflictCol) {
-  if (typeof supabase === 'undefined' || !supabase) return;
-  try {
-    const opts = conflictCol ? { onConflict: conflictCol } : undefined;
-    await supabase.from(table).upsert(payload, opts);
-  } catch(e) {}
-}
-window.safeSupabaseUpsert = safeSupabaseUpsert;
-
-async function safeSupabaseInsert(table, payload) {
-  if (typeof supabase === 'undefined' || !supabase) return;
-  try {
-    await supabase.from(table).insert(payload);
-  } catch(e) {}
-}
-window.safeSupabaseInsert = safeSupabaseInsert;
-
 async function pushCentralCloudDB() {
   try {
     const requests = getRequestsFromDB();
     if (typeof supabase !== 'undefined' && supabase) {
       try {
         const supaPayloads = requests.map(r => ({
-          id: r.id || ('PRMT_' + String(r.noSurat || Date.now()).replace(/[\/\.]/g, '_')),
           no_surat: r.noSurat,
           tanggal: r.tanggal,
           toko: r.toko,
@@ -3762,20 +3426,24 @@ async function pushCentralCloudDB() {
           catatan: r.catatan || '',
           items: r.items || [],
           photos: r.photos || [],
-          artemis_photos: r.artemisPhotos || [],
           status: r.status,
           service_approve: !!r.serviceApprove,
-          service_user_name: r.serviceUserName || '',
-          service_ttd: r.serviceTTD || '',
-          dm_user_name: r.dmUserName || '',
-          dm_ttd: r.dmTTD || '',
           created_by: r.createdBy || '',
           created_at: r.createdAt || '',
-          user_id: r.userId || '',
-          log: r.log || []
+          user_id: r.userId || ''
         }));
         if (supaPayloads.length > 0) {
-          await safeSupabaseUpsert('permintaan_toko', supaPayloads, 'no_surat');
+          const supaPayloadsWithId = supaPayloads.map(p => ({
+            id: String(p.no_surat || '').replace(/[\/\.]/g, '_'),
+            ...p
+          }));
+          try {
+            const { error } = await supabase.from('permintaan_toko').upsert(supaPayloadsWithId);
+            if (error) console.warn('[SUPABASE PUSH REQUESTS NOTICE]:', error.message);
+            else console.log('⚡ [SUPABASE PUSH SUCCESS]: All requests synced to Supabase!');
+          } catch(sbErr) {
+            console.warn('[SUPABASE PUSH EXCEPTION]:', sbErr);
+          }
         }
 
         // PUSH STORE LIST TO SUPABASE TABLE 'toko_list'
@@ -3786,11 +3454,10 @@ async function pushCentralCloudDB() {
               id: s.id,
               full_name: s.fullName,
               area: s.area,
-              store_code: s.storeCode,
               created_by: s.createdBy || 'ADMIN'
             }));
             try {
-              await supabase.from('toko_list').upsert(supaStores, { onConflict: 'id' });
+              await supabase.from('toko_list').upsert(supaStores);
             } catch(e) {}
           }
         }
@@ -3810,14 +3477,13 @@ async function pushCentralCloudDB() {
               catatan: JSON.stringify(unitMap),
               items: [],
               photos: [],
-              artemis_photos: [],
               status: 'DONE',
               service_approve: true,
               created_by: 'SYSTEM',
               created_at: new Date().toISOString()
             };
             try {
-              await supabase.from('permintaan_toko').upsert(systemUnitRow, { onConflict: 'no_surat' });
+              await supabase.from('permintaan_toko').upsert(systemUnitRow);
             } catch(e) {}
           }
         }
@@ -3833,13 +3499,12 @@ async function pushCentralCloudDB() {
           catatan: JSON.stringify(ttdMap),
           items: [],
           photos: [],
-          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        await supabase.from('permintaan_toko').upsert(systemTtdRow, { onConflict: 'no_surat' });
+        await supabase.from('permintaan_toko').upsert(systemTtdRow);
 
         const isPhotoEnabled = getFeaturePhotosEnabled();
         const photoFeatureVal = isPhotoEnabled ? 'true' : 'false';
@@ -3853,13 +3518,12 @@ async function pushCentralCloudDB() {
           catatan: JSON.stringify({ featurePhotos: photoFeatureVal, enabled: isPhotoEnabled, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
           items: [],
           photos: [],
-          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        await supabase.from('permintaan_toko').upsert(systemPhotoRow, { onConflict: 'no_surat' });
+        await supabase.from('permintaan_toko').upsert(systemPhotoRow);
 
         const currentFonteToken = getFonteToken();
         if (currentFonteToken) {
@@ -3873,20 +3537,19 @@ async function pushCentralCloudDB() {
             catatan: JSON.stringify({ fonteToken: currentFonteToken, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
             items: [],
             photos: [],
-            artemis_photos: [],
             status: 'DONE',
             service_approve: true,
             created_by: 'SYSTEM',
             created_at: new Date().toISOString()
           };
-          await supabase.from('permintaan_toko').upsert(systemFonteRow, { onConflict: 'no_surat' });
+          await supabase.from('permintaan_toko').upsert(systemFonteRow);
 
           try {
             await supabase.from('lookup').upsert({
               key: 'fonteToken',
               value: currentFonteToken,
               updated_at: new Date().toISOString()
-            }, { onConflict: 'key' });
+            });
           } catch(e) {}
         }
 
@@ -3903,25 +3566,24 @@ async function pushCentralCloudDB() {
           catatan: JSON.stringify({ adminReminder: reminderEnabledVal, adminReminderTime: reminderTimeVal, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
           items: [],
           photos: [],
-          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        await supabase.from('permintaan_toko').upsert(systemReminderRow, { onConflict: 'no_surat' });
+        await supabase.from('permintaan_toko').upsert(systemReminderRow);
 
         try {
           await supabase.from('lookup').upsert({
             key: 'adminReminder',
             value: reminderEnabledVal,
             updated_at: new Date().toISOString()
-          }, { onConflict: 'key' });
+          });
           await supabase.from('lookup').upsert({
             key: 'adminReminderTime',
             value: reminderTimeVal,
             updated_at: new Date().toISOString()
-          }, { onConflict: 'key' });
+          });
         } catch(e) {}
 
         // Push Chat Messages to Supabase (Lookup & Permintaan_Toko)
@@ -3932,13 +3594,13 @@ async function pushCentralCloudDB() {
               await supabase.from('lookup').upsert({
                 key: 'chat_messages',
                 value: JSON.stringify(currentChats),
+                type: 'CHAT',
                 updated_at: new Date().toISOString()
               }, { onConflict: 'key' });
             } catch(e) {}
 
             try {
               const systemChatRow = {
-                id: '__SYSTEM_CHAT_MESSAGES__',
                 no_surat: '__SYSTEM_CHAT_MESSAGES__',
                 tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
                 toko: 'SYSTEM',
@@ -3947,7 +3609,6 @@ async function pushCentralCloudDB() {
                 catatan: JSON.stringify(currentChats),
                 items: [],
                 photos: [],
-                artemis_photos: [],
                 status: 'DONE',
                 service_approve: true,
                 created_by: 'SYSTEM',
@@ -4097,7 +3758,6 @@ async function setFeaturePhotosEnabled(enabled) {
         catatan: JSON.stringify({ featurePhotos: valStr, enabled: !!enabled, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
         items: [],
         photos: [],
-        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser?.fullName || 'ADMIN',
@@ -4518,14 +4178,16 @@ function getUsersFromDB() {
   return users;
 }
 
-function saveUsersToDB(users) {
+function saveUsersToDB(users, targetUser = null) {
   const normalizedUsers = normalizeUserList(Array.isArray(users) ? users : []);
   appStorage.setItem(USERS_DB_KEY, JSON.stringify(normalizedUsers));
-  pushCentralCloudDB();
+  if (typeof pushCentralCloudDB === 'function') {
+    pushCentralCloudDB(targetUser ? (targetUser.type ? targetUser : { type: 'USER', data: targetUser }) : null);
+  }
   if (currentUser) {
-    loadDashboard();
-    loadRiwayat();
-    if (document.getElementById('userTableBody')) loadUsersManagement();
+    if (typeof loadDashboard === 'function') loadDashboard();
+    if (typeof loadRiwayat === 'function') loadRiwayat();
+    if (document.getElementById('userTableBody') && typeof loadUsersManagement === 'function') loadUsersManagement();
   }
 }
 
@@ -4567,7 +4229,7 @@ async function simpanFonteToken() {
         key: 'fonteToken',
         value: token,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
+      });
 
       // Broadcast row sistem permintaan_toko ke seluruh perangkat
       const systemFonteRow = {
@@ -4580,13 +4242,12 @@ async function simpanFonteToken() {
         catatan: JSON.stringify({ fonteToken: token, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
         items: [],
         photos: [],
-        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(systemFonteRow, { onConflict: 'no_surat' });
+      await supabase.from('permintaan_toko').upsert(systemFonteRow);
     } catch (err) {
       console.warn('[SUPABASE SIMPAN FONTE TOKEN ERROR]:', err);
     }
@@ -4616,123 +4277,11 @@ async function simpanFonteToken() {
   showNotif(token ? 'TOKEN WA BERHASIL DISIMPAN!' : 'TOKEN WA DIKOSONGKAN!', 'success');
 }
 
-const GOOGLE_SCRIPT_URL_KEY = 'STORE_GOOGLE_SCRIPT_URL_KEY_V1';
-
-function getGoogleScriptUrl() {
-  let url = appStorage.getItem(GOOGLE_SCRIPT_URL_KEY);
-  if (!url) {
-    try { url = localStorage.getItem(GOOGLE_SCRIPT_URL_KEY); } catch(e) {}
-  }
-  return (url || '').trim();
-}
-
-function loadGoogleScriptUrl() {
-  const input = document.getElementById('googleScriptUrlInput');
-  if (input) {
-    input.value = getGoogleScriptUrl();
-  }
-}
-
-async function simpanGoogleScriptUrl() {
-  const input = document.getElementById('googleScriptUrlInput');
-  const url = input ? input.value.trim() : '';
-  appStorage.setItem(GOOGLE_SCRIPT_URL_KEY, url);
-  try { localStorage.setItem(GOOGLE_SCRIPT_URL_KEY, url); } catch(e) {}
-
-  if (typeof supabase !== 'undefined' && supabase) {
-    safeSupabaseUpsert('lookup', { key: 'googleScriptUrl', value: url }, 'key');
-  }
-  showNotif(url ? 'URL GOOGLE SCRIPT SHEET "SETING" BERHASIL DISIMPAN!' : 'URL GOOGLE SCRIPT DIKOSONGKAN!', 'success');
-}
-
-async function syncDataFromGoogleSheetSeting() {
-  const scriptUrl = getGoogleScriptUrl();
-  if (!scriptUrl || !scriptUrl.startsWith('http')) {
-    showNotif('⚠️ SILAKAN ISI URL GOOGLE SCRIPT (WEB APP) TERLEBIH DAHULU!', 'warning');
-    return;
-  }
-
-  showLoading('MENARIK DATA USER & PENGATURAN WA DARI GOOGLE SHEET "seting"...');
-  try {
-    const res = await fetch(`${scriptUrl}?action=get_settings`);
-    const data = await res.json();
-    hideLoading();
-
-    console.log('[GOOGLE SHEET SETING DATA]:', data);
-    if (data && (data.status === 'success' || Array.isArray(data.items) || Array.isArray(data.data))) {
-      const rows = data.items || data.data || [];
-      if (rows.length > 0) {
-        let allUsers = getUsersFromDB();
-        let updatedCount = 0;
-        let foundToken = '';
-
-        rows.forEach(row => {
-          const nama = String(row.Nama || row.nama || row.name || '').trim();
-          const area = String(row.Area || row.area || '').trim().toUpperCase();
-          const kategori = String(row.Kategori || row.kategori || row.category || row.role || '').trim().toUpperCase();
-          const noHp = String(row['No HP'] || row.noHp || row.phone || row.wa || '').trim();
-          const token = String(row['Token Fonte'] || row.tokenFonte || row.token || '').trim();
-
-          if (token && !foundToken) {
-            foundToken = token;
-          }
-
-          if (nama || noHp) {
-            const uIdx = allUsers.findIndex(u => 
-              (u.username && nama && u.username.toUpperCase() === nama.toUpperCase()) ||
-              (u.fullName && nama && u.fullName.toUpperCase() === nama.toUpperCase())
-            );
-            if (uIdx !== -1) {
-              if (noHp) allUsers[uIdx].phone = noHp;
-              if (area) allUsers[uIdx].area = area;
-              if (kategori) allUsers[uIdx].category = kategori;
-              updatedCount++;
-            } else if (nama && noHp) {
-              allUsers.push({
-                id: `USR-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                username: nama.toLowerCase().replace(/\s+/g, '_'),
-                fullName: nama,
-                phone: noHp,
-                category: kategori || 'SERVICE',
-                area: area || 'BDG'
-              });
-              updatedCount++;
-            }
-          }
-        });
-
-        if (foundToken) {
-          appStorage.setItem(FONTE_TOKEN_KEY, foundToken);
-          try { localStorage.setItem(FONTE_TOKEN_KEY, foundToken); } catch(e) {}
-          loadFonteToken();
-        }
-
-        saveUsersToDB(allUsers);
-        showNotif(`✅ BERHASIL SINKRONISASI SHEET "seting"! ${updatedCount} User & Token Fonte Diperbarui.`, 'success');
-      } else {
-        showNotif('⚠️ SHEET "seting" TERBACA TETAPI BELUM ADA BARIS DATA.', 'warning');
-      }
-    } else {
-      showNotif('⚠️ RESPON GOOGLE SCRIPT TIDAK SESUAI FORMAT.', 'warning');
-    }
-  } catch(err) {
-    hideLoading();
-    console.error('[SYNC GOOGLE SHEET SETING ERROR]:', err);
-    showNotif('GAGAL MENARIK DATA DARI GOOGLE SHEET: ' + err.message, 'error');
-  }
-}
-
-window.getGoogleScriptUrl = getGoogleScriptUrl;
-window.loadGoogleScriptUrl = loadGoogleScriptUrl;
-window.simpanGoogleScriptUrl = simpanGoogleScriptUrl;
-window.syncDataFromGoogleSheetSeting = syncDataFromGoogleSheetSeting;
-
 function loadFonteToken() {
   const input = document.getElementById('fonteTokenInput');
   if (input) {
     input.value = getFonteToken();
   }
-  loadGoogleScriptUrl();
 }
 
 async function tesKoneksiFonteToken() {
@@ -4879,11 +4428,9 @@ async function kirimNotifikasiWA(targetPhone, message, forceSend = false) {
   }
 
   const token = getFonteToken();
-  const scriptUrl = getGoogleScriptUrl();
-
-  if (!token && !scriptUrl) {
-    console.warn('[FONTE WA WARNING]: Token Fonnte & URL Google Script belum diset!');
-    return { success: false, error: 'Token Fonnte & URL Google Script belum diset.' };
+  if (!token) {
+    console.warn('[FONTE WA WARNING]: Token Fonnte belum diset!');
+    return { success: false, error: 'Token Fonnte belum diset.' };
   }
 
   const phoneList = formatCleanPhoneList(targetPhone);
@@ -4903,61 +4450,32 @@ async function kirimNotifikasiWA(targetPhone, message, forceSend = false) {
     }
     sentWaCache[msgHash] = now;
 
-    // 1. OPSI UTAMA: KIRIM VIA GOOGLE APPS SCRIPT WEB APP (SHEET "seting")
-    let sentViaScript = false;
-    if (scriptUrl && scriptUrl.startsWith('http')) {
-      try {
-        const scriptRes = await fetch(scriptUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'send_wa',
-            target: cleanPhone,
-            message: message,
-            fonteToken: token
-          })
-        });
-        const scriptData = await scriptRes.json();
-        console.log('[GOOGLE SCRIPT WA RESPONSE]:', cleanPhone, scriptData);
-        if (scriptData && (scriptData.status === 'success' || scriptData.status === true || scriptData.success === true)) {
-          successCount++;
-          sentViaScript = true;
-          continue;
-        }
-      } catch(scriptErr) {
-        console.warn('[GOOGLE SCRIPT WA SEND ERROR, FALLBACK TO DIRECT FONTE]:', cleanPhone, scriptErr);
+    try {
+      const formData = new FormData();
+      formData.append('target', cleanPhone);
+      formData.append('message', message);
+      formData.append('countryCode', '62');
+
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': token.trim()
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      console.log('[FONTE WA API RESPONSE]:', cleanPhone, data);
+      if (data && (data.status === true || data.status === 'true' || data.id)) {
+        successCount++;
+      } else {
+        const reason = data ? (data.reason || data.message || JSON.stringify(data)) : 'Unknown error';
+        lastError = reason;
+        console.warn('[FONTE WA SEND REJECTED]:', cleanPhone, reason);
       }
-    }
-
-    // 2. FALLBACK LANGSUNG VIA FONTE API
-    if (!sentViaScript && token) {
-      try {
-        const formData = new FormData();
-        formData.append('target', cleanPhone);
-        formData.append('message', message);
-        formData.append('countryCode', '62');
-
-        const response = await fetch('https://api.fonnte.com/send', {
-          method: 'POST',
-          headers: {
-            'Authorization': token.trim()
-          },
-          body: formData
-        });
-
-        const data = await response.json();
-        console.log('[FONTE WA API RESPONSE]:', cleanPhone, data);
-        if (data && (data.status === true || data.status === 'true' || data.id)) {
-          successCount++;
-        } else {
-          const reason = data ? (data.reason || data.message || JSON.stringify(data)) : 'Unknown error';
-          lastError = reason;
-          console.warn('[FONTE WA SEND REJECTED]:', cleanPhone, reason);
-        }
-      } catch (err) {
-        console.error('[FONTE WA API NETWORK ERROR]:', cleanPhone, err);
-        lastError = err.message;
-      }
+    } catch (err) {
+      console.error('[FONTE WA API NETWORK ERROR]:', cleanPhone, err);
+      lastError = err.message;
     }
   }
 
@@ -5253,16 +4771,16 @@ function toggleTheme() {
         catatan: JSON.stringify({ theme: t.id, time: now, by: currentUser.username }),
         items: [],
         photos: [],
-        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
 
-      supabase.from('permintaan_toko').upsert(themePayload, { onConflict: 'no_surat' }).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(themePayload).then(({ error }) => {
         if (!error) {
           console.log('⚡ [SUPABASE GLOBAL THEME SYNC SUCCESS]: Tema disebar ke semua perangkat!', t.id);
+          showNotif(`TEMA '${t.name.toUpperCase()}' BERHASIL DITERAPKAN!`, 'info');
         }
       }).catch(e => console.warn('[SUPABASE GLOBAL THEME EXCEPTION]:', e));
     }
@@ -5538,9 +5056,8 @@ async function catatLogLogin(username, nama, area, status) {
     try {
       await supabase.from('lookup').upsert({
         key: `login_log_${Date.now()}`,
-        value: { username, nama, area, status, time: new Date().toISOString() },
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
+        value: { username, nama, area, status, time: new Date().toISOString() }
+      });
     } catch (e) {}
   }
 }
@@ -5639,7 +5156,6 @@ async function bukaMainApp() {
     // Jalankan Realtime Listener & Sinkronisasi Delta (updated_at) di latar belakang
     initSupabaseRealtimeEngine();
     syncSupabaseIncremental().catch(e => console.warn(e));
-    if (typeof startGlobalRealtimeLoop === 'function') startGlobalRealtimeLoop();
   } else {
     // ----------------------------------------------------
     // KONDISI B: DATA LOKAL KOSONG (MISAL PERANGKAT BARU)
@@ -5655,7 +5171,6 @@ async function bukaMainApp() {
     if (typeof loadRiwayat === 'function') loadRiwayat();
 
     initSupabaseRealtimeEngine();
-    if (typeof startGlobalRealtimeLoop === 'function') startGlobalRealtimeLoop();
   }
 
   if (typeof setupBottomMenuAutoHide === 'function') {
@@ -5825,34 +5340,24 @@ function initMobileBackButtonEngine() {
       return;
     }
 
-    const openModalConfigs = [
-      { id: 'popupDetail', closeFn: () => { const m = document.getElementById('popupDetail'); if (m) m.style.display = 'none'; } },
-      { id: 'popupDetailBarangV2', closeFn: typeof tutupDetailBarangV2 === 'function' ? tutupDetailBarangV2 : null },
-      { id: 'popupNotifList', closeFn: typeof tutupNotificationModal === 'function' ? tutupNotificationModal : null },
-      { id: 'popupBantuan', closeFn: typeof tutupBantuan === 'function' ? tutupBantuan : null },
-      { id: 'popupAkun', closeFn: typeof tutupAkun === 'function' ? tutupAkun : null },
-      { id: 'popupUserForm', closeFn: () => { const m = document.getElementById('popupUserForm'); if (m) m.style.display = 'none'; } },
-      { id: 'pdfModal', closeFn: typeof tutupPdfModal === 'function' ? tutupPdfModal : null },
-      { id: 'rejectOverlay', closeFn: typeof tutupReject === 'function' ? tutupReject : null },
-      { id: 'popupTambahToko', closeFn: typeof tutupModalTambahToko === 'function' ? tutupModalTambahToko : null },
-      { id: 'popupPdfModelsModal', closeFn: typeof tutupModalPdfModels === 'function' ? tutupModalPdfModels : null },
-      { id: 'confirmOverlay', closeFn: typeof tutupConfirm === 'function' ? tutupConfirm : null },
-      { id: 'popupNotif', closeFn: typeof tutupNotif === 'function' ? tutupNotif : null },
-      { id: 'popupCloudUsageModal', closeFn: typeof tutupModalCloudUsage === 'function' ? tutupModalCloudUsage : null },
-      { id: 'popupEditStatusPart', closeFn: typeof tutupModalEditStatusPart === 'function' ? tutupModalEditStatusPart : null },
-      { id: 'popupEditKetPartSingle', closeFn: typeof tutupModalEditKetPartSingle === 'function' ? tutupModalEditKetPartSingle : null },
-      { id: 'popupArtemis', closeFn: typeof closeArtemisModal === 'function' ? closeArtemisModal : null },
-      { id: 'imageViewer', closeFn: typeof tutupImageViewer === 'function' ? tutupImageViewer : null },
-      { id: 'scannerModal', closeFn: typeof tutupScanner === 'function' ? tutupScanner : null }
+    const openModals = [
+      document.getElementById('popupDetail'),
+      document.getElementById('popupNotifList'),
+      document.getElementById('popupBantuan'),
+      document.getElementById('popupAkun'),
+      document.getElementById('popupUserForm'),
+      document.getElementById('pdfModal'),
+      document.getElementById('rejectOverlay'),
+      document.getElementById('popupTambahToko'),
+      document.getElementById('popupPdfModelsModal'),
+      document.getElementById('confirmOverlay'),
+      document.getElementById('imageViewer'),
+      document.getElementById('scannerModal')
     ];
 
     let closedAnyModal = false;
-    openModalConfigs.forEach(item => {
-      const m = document.getElementById(item.id);
-      if (m && (m.classList.contains('show') || (m.style.display && m.style.display !== 'none'))) {
-        if (typeof item.closeFn === 'function') {
-          try { item.closeFn(); } catch (err) {}
-        }
+    openModals.forEach(m => {
+      if (m && (m.classList.contains('show') || m.style.display === 'flex' || m.style.display === 'block')) {
         m.classList.remove('show');
         m.style.display = 'none';
         closedAnyModal = true;
@@ -5906,35 +5411,6 @@ function initMobileBackButtonEngine() {
       if (mobileBackspaceCount < 5) {
         try { history.pushState({ page: 'dashboardPage' }, '', location.href); } catch(err) {}
       }
-    }
-  });
-
-  // KLIK DI LUAR AREA POPUP (BACKDROP OVERLAY) = TUTUP POPUP MODAL (PDF & MODAL LAINNYA)
-  window.addEventListener('click', (event) => {
-    const pdfModal = document.getElementById('pdfModal');
-    if (pdfModal && event.target === pdfModal) {
-      if (typeof tutupPdfModal === 'function') tutupPdfModal();
-      pdfModal.style.setProperty('display', 'none', 'important');
-      pdfModal.classList.remove('show');
-    }
-
-    const pdfModelsModal = document.getElementById('popupPdfModelsModal');
-    if (pdfModelsModal && event.target === pdfModelsModal) {
-      if (typeof tutupModalPdfModels === 'function') tutupModalPdfModels();
-      pdfModelsModal.style.setProperty('display', 'none', 'important');
-      pdfModelsModal.classList.remove('show');
-    }
-
-    const detailV2 = document.getElementById('popupDetailBarangV2');
-    if (detailV2 && event.target === detailV2) {
-      if (typeof tutupDetailBarangV2 === 'function') tutupDetailBarangV2();
-      detailV2.style.setProperty('display', 'none', 'important');
-    }
-
-    const cloudUsage = document.getElementById('popupCloudUsageModal');
-    if (cloudUsage && event.target === cloudUsage) {
-      if (typeof tutupModalCloudUsage === 'function') tutupModalCloudUsage();
-      cloudUsage.style.setProperty('display', 'none', 'important');
     }
   });
 }
@@ -6093,7 +5569,7 @@ function getAccessibleRequests() {
   const requests = getRequestsFromDB();
   if (!currentUser) return [];
 
-  const role = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
+  const role = (currentUser.category || '').toUpperCase();
   if (
     role === 'ADMIN' ||
     role === 'DM' ||
@@ -6167,27 +5643,40 @@ function loadDashboard() {
   const filteredData = data.filter(r => r.status === dashboardFilterStatus);
 
   if (filteredData.length === 0) {
-    lastDataContainer.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:32px 16px; color:var(--text-muted); border-bottom-left-radius:13px; border-bottom-right-radius:13px;">TIDAK ADA DATA PERMINTAAN DENGAN STATUS ${dashboardFilterStatus}.</td></tr>`;
+    lastDataContainer.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">TIDAK ADA DATA PERMINTAAN DENGAN STATUS ${dashboardFilterStatus}.</td></tr>`;
     return;
   }
 
   filteredData.forEach(r => {
     const isWaitingDM = (r.status === 'PENDING' && r.serviceApprove);
     const isWaitingService = (r.status === 'PENDING' && !r.serviceApprove);
-    const isPendingStatus = (r.status === 'PENDING' || isWaitingDM || isWaitingService);
+
+    let isOrangeRow = false;
+    let isBoldRow = false;
+    if (currentUser) {
+      const cat = (currentUser.category || '').toUpperCase();
+      const isAdm = cat === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN');
+      if ((cat === 'DM' || isAdm) && isWaitingDM) {
+        isOrangeRow = true;
+        isBoldRow = true;
+      } else if ((cat === 'SERVICE' || isAdm) && isWaitingService) {
+        isOrangeRow = true;
+        isBoldRow = true;
+      }
+    }
 
     const tr = document.createElement('tr');
-    if (isPendingStatus || shouldRowBlinkRed(r)) {
-      tr.className = 'status-blinking-row blink-row-red';
+    if (shouldRowBlinkRed(r)) {
+      tr.className = 'blink-row-red';
     }
     tr.style.cursor = 'pointer';
     tr.title = `KLIK BARIS INI UNTUK MEMBUKA PERMINTAAN #${r.noSurat}`;
     tr.onclick = () => bukaDetailDariDashboard(r.noSurat);
     tr.innerHTML = `
-      <td style="width: 18%; text-align: left; white-space: nowrap; color: var(--text-main);">${formatDateDDMMYYYYString(r.tanggal)}</td>
-      <td style="width: 32%; text-align: left; color: var(--text-main);">${r.noSurat}</td>
-      <td style="width: 30%; text-align: left; color: var(--text-main);">${r.toko} <small style="color: var(--text-muted);">(${r.area})</small></td>
-      <td style="width: 20%; text-align: left !important; color: var(--text-main);">${getBadgeStatusHtml(r)}</td>
+      <td style="width: 18%; text-align: left; white-space: nowrap;">${formatDateDDMMYYYYString(r.tanggal)}</td>
+      <td style="width: 32%; text-align: left;">${r.noSurat}</td>
+      <td style="width: 30%; text-align: left;">${r.toko} <small>(${r.area})</small></td>
+      <td style="width: 20%; text-align: left !important;">${getBadgeStatus(r)}</td>
     `;
     lastDataContainer.appendChild(tr);
   });
@@ -6241,12 +5730,6 @@ function getBadgeStatus(r) {
   return st || '-';
 }
 
-function getBadgeStatusHtml(r) {
-  const label = getBadgeStatus(r);
-  return `<span style="color: var(--text-main) !important; font-weight: 500 !important; font-size: 12px !important; white-space: nowrap !important; background: transparent !important; border: none !important;">${label}</span>`;
-}
-window.getBadgeStatusHtml = getBadgeStatusHtml;
-
 function updateStoreDropdownOptions(selectedStoreName = '', filterKeyword = '') {
   const tokoSelect = document.getElementById('toko');
   const wrapperCariToko = document.getElementById('wrapperCariToko');
@@ -6277,8 +5760,7 @@ function updateStoreDropdownOptions(selectedStoreName = '', filterKeyword = '') 
   }
 
   const allStores = getStoresFromDB();
-  const userRole = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
-  let areaStores = (userRole === 'DM' || currentUser.area === 'ALL') 
+  let areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
     ? allStores 
     : allStores.filter(s => s && isAreaMatch(currentUser.area, s.area));
 
@@ -6385,7 +5867,7 @@ function tambahRow() {
       <input type="text" inputmode="text" class="seriDusBarang" placeholder="NO SERI DUS" autocomplete="off">
       <input type="text" inputmode="text" class="alasan" placeholder="ALASAN" autocomplete="off">
       <input type="number" class="qty" value="1" min="1" style="text-align: left;" autocomplete="off">
-      <button type="button" class="btnHapusRow" onclick="hapusRow(this)" title="Hapus Baris"><span class="material-symbols-rounded">delete</span></button>
+      <button type="button" class="btnHapusRow" onclick="hapusRow(this)"><span class="material-symbols-rounded">remove</span></button>
     `;
   } else {
     div.innerHTML = `
@@ -6397,7 +5879,7 @@ function tambahRow() {
       <input type="text" inputmode="text" class="namaBarang" placeholder="PERMINTAAN" autocomplete="off">
       <input type="text" inputmode="text" class="alasan" placeholder="ALASAN" autocomplete="off">
       <input type="number" class="qty" value="1" min="1" style="text-align: left;" autocomplete="off">
-      <button type="button" class="btnHapusRow" onclick="hapusRow(this)" title="Hapus Baris"><span class="material-symbols-rounded">delete</span></button>
+      <button type="button" class="btnHapusRow" onclick="hapusRow(this)"><span class="material-symbols-rounded">remove</span></button>
     `;
   }
 
@@ -6439,11 +5921,7 @@ function bukaScanner(btn) {
           html5QrCodeScanner = null;
         }
         html5QrCodeScanner = new Html5Qrcode("readerScanner");
-        const config = { 
-          fps: 25, 
-          aspectRatio: 1.33333,
-          showTorchButtonIfSupported: true
-        };
+        const config = { fps: 15, qrbox: { width: 260, height: 160 } };
 
         html5QrCodeScanner.start(
           { facingMode: "environment" },
@@ -6890,9 +6368,8 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       };
 
       if (typeof supabase !== 'undefined' && supabase) {
-        supabase.from('permintaan_toko').upsert(supaEditRow, { onConflict: 'no_surat' }).then(({ error }) => {
+        supabase.from('permintaan_toko').upsert(supaEditRow).then(({ error }) => {
           if (error) console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
-          else if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', supaEditRow);
         }).catch(e => console.warn(e));
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
@@ -6970,15 +6447,12 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     }
 
     let autoServiceTTD = '';
-    let serviceUserNameVal = '';
     if (isDMUser) {
       const users = getUsersFromDB();
       const areaSvcUser = users.find(u => u && u.category === 'SERVICE' && isAreaMatch(u.area, targetArea));
       if (areaSvcUser) {
-        serviceUserNameVal = areaSvcUser.fullName || areaSvcUser.username || `SERVICE ${targetArea}`;
         autoServiceTTD = areaSvcUser.ttd || ttdMap[areaSvcUser.id] || ttdMap[areaSvcUser.username] || ttdMap[areaSvcUser.fullName] || ttdMap['SERVICE_' + targetArea] || '';
       } else {
-        serviceUserNameVal = `SERVICE ${targetArea}`;
         autoServiceTTD = ttdMap['SERVICE_' + targetArea] || '';
       }
     }
@@ -7047,6 +6521,8 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       service_ttd: newRecord.serviceTTD || '',
       dm_user_name: '',
       dm_ttd: '',
+      toko_ttd: newRecord.tokoTTD || '',
+      pemohon_ttd: newRecord.pemohonTTD || '',
       created_by: newRecord.createdBy || '',
       created_at: newRecord.createdAt || '',
       user_id: newRecord.userId || '',
@@ -7055,9 +6531,8 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     };
 
     if (typeof supabase !== 'undefined' && supabase) {
-      supabase.from('permintaan_toko').upsert(supaNewRow, { onConflict: 'no_surat' }).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(supaNewRow).then(({ error }) => {
         if (error) console.warn('[SUPABASE SAVE NOTICE]:', error.message);
-        else if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('INSERT', supaNewRow);
       }).catch(e => console.warn(e));
     }
     if (typeof dbFirestore !== 'undefined' && dbFirestore) {
@@ -7109,7 +6584,7 @@ function bukaRiwayat(status) {
 
 function isPdfButtonAllowed(req) {
   if (!req || !currentUser) return false;
-  const role = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
+  const role = String(currentUser.category || '').toUpperCase();
   const isAdmin = typeof checkIsAdminUser === 'function' ? checkIsAdminUser() : (role === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
   
   // TOMBOL PDF TIDAK DIBERIKAN UNTUK ROLE TOKO DAN SALES
@@ -7166,24 +6641,24 @@ function filterRiwayat() {
   const tbody = document.getElementById('riwayatData');
   if (!thead || !tbody) return;
 
-  const role = currentUser ? String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase() : '';
+  const role = currentUser ? currentUser.category : '';
 
   thead.innerHTML = `
     <tr>
-      <th style="text-align:center;">AKSI</th>
-      <th style="text-align:center;">TGL</th>
-      <th style="text-align:center;">NO SURAT</th>
-      <th style="text-align:center;">TOKO</th>
-      <th style="text-align:center;">JENIS</th>
-      <th style="text-align:center;">STATUS</th>
-      <th style="text-align:center;">CATATAN</th>
+      <th>AKSI</th>
+      <th>TGL</th>
+      <th>NO SURAT</th>
+      <th>TOKO</th>
+      <th>JENIS</th>
+      <th>STATUS</th>
+      <th>CATATAN</th>
     </tr>
   `;
 
   tbody.innerHTML = '';
 
   if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted); border:none !important;">BELUM ADA DATA PERMINTAAN.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">BELUM ADA DATA PERMINTAAN.</td></tr>`;
     return;
   }
 
@@ -7324,26 +6799,6 @@ function filterRiwayat() {
     `;
     tbody.appendChild(tr);
   });
-
-  // BUAT PATEN 10 BARIS KOSONG PELENGKAP (JIKA DATA BERTAMBAH AKAN OTOMATIS BERTAMBAH)
-  const targetMinRowsRiwayat = 10;
-  if (data.length < targetMinRowsRiwayat) {
-    for (let i = data.length; i < targetMinRowsRiwayat; i++) {
-      const emptyTr = document.createElement('tr');
-      emptyTr.className = 'empty-grid-row';
-      emptyTr.style.height = '42px';
-      emptyTr.innerHTML = `
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-      `;
-      tbody.appendChild(emptyTr);
-    }
-  }
 }
 
 function lihatFotoByNoSurat(noSurat) {
@@ -7352,14 +6807,15 @@ function lihatFotoByNoSurat(noSurat) {
   
   let photos = [];
   if (req) {
-    const regP = parsePhotosArray(req.photos || req.foto || req.photo);
-    const artP = parsePhotosArray(req.artemisPhotos || req.artemis_photos);
+    const regP = parsePhotosArray(req.photos);
+    const artP = parsePhotosArray(req.artemisPhotos);
     photos = [...regP, ...artP];
     photos = Array.from(new Set(photos.filter(Boolean)));
   }
 
-  const isDoneOrHasArtemis = req && (req.status === 'DONE' || (req.artemisPhotos && req.artemisPhotos.length > 0) || (req.artemis_photos && req.artemis_photos.length > 0));
-  if (!isDoneOrHasArtemis && typeof getFeaturePhotosEnabled === 'function' && !getFeaturePhotosEnabled()) {
+  // FOTO BUKTI PROSES ARTEMIS (STATUS DONE) SELALU DIIZINKAN DILIHAT DI SEMUA PERANGKAT!
+  const isDoneOrHasArtemis = req && (req.status === 'DONE' || (req.artemisPhotos && req.artemisPhotos.length > 0));
+  if (!isDoneOrHasArtemis && !getFeaturePhotosEnabled()) {
     showNotif('FITUR UPLOAD FOTO FORM PERMINTAAN SEDANG DINONAKTIFKAN OLEH ADMIN!', 'warning');
     return;
   }
@@ -7372,229 +6828,158 @@ function lihatFotoByNoSurat(noSurat) {
 }
 window.lihatFotoByNoSurat = lihatFotoByNoSurat;
 
-var viewerCurrentZoom = 1;
-var viewerPanX = 0;
-var viewerPanY = 0;
+let viewerCurrentZoom = 1;
+let viewerPanX = 0;
+let viewerPanY = 0;
 let isDraggingViewerImage = false;
 let startDragX = 0;
 let startDragY = 0;
 let initialPinchDistance = 0;
 let initialPinchZoom = 1;
 
-
-// ==========================================================================
-
-// ==========================================================================
-// BULLETPROOF REAL-TIME PHOTO PAN & ZOOM ENGINE (PC MOUSE & HP TOUCH)
-// ==========================================================================
-let isPanningViewerActive = false;
-let startPanX = 0;
-let startPanY = 0;
-let basePanX = 0;
-let basePanY = 0;
-
-function updateImageTransform(isSmooth = false) {
+function applyViewerTransform() {
   const img = document.getElementById('viewerImage');
   if (!img) return;
-  if (!viewerCurrentZoom || isNaN(viewerCurrentZoom) || viewerCurrentZoom <= 1) {
+  if (viewerCurrentZoom <= 1) {
     viewerCurrentZoom = 1;
     viewerPanX = 0;
     viewerPanY = 0;
   }
-  if (isNaN(viewerPanX)) viewerPanX = 0;
-  if (isNaN(viewerPanY)) viewerPanY = 0;
-
-  img.style.transition = isSmooth ? 'transform 0.2s cubic-bezier(0.1, 0.9, 0.2, 1)' : 'none';
   img.style.transform = `translate(${viewerPanX}px, ${viewerPanY}px) scale(${viewerCurrentZoom})`;
-  img.style.cursor = viewerCurrentZoom > 1 ? (isPanningViewerActive ? 'grabbing' : 'grab') : 'pointer';
+  img.style.cursor = viewerCurrentZoom > 1 ? (isDraggingViewerImage ? 'grabbing' : 'grab') : 'pointer';
 }
-window.updateImageTransform = updateImageTransform;
-window.applyViewerTransform = updateImageTransform;
 
-function attachPhotoPanListeners() {
-  const img = document.getElementById('viewerImage');
-  const canvas = document.getElementById('imageViewerCanvas');
+function zoomImage(delta) {
+  viewerCurrentZoom += delta;
+  if (viewerCurrentZoom < 1) viewerCurrentZoom = 1;
+  if (viewerCurrentZoom > 5) viewerCurrentZoom = 5;
+  applyViewerTransform();
+}
+
+function resetZoom() {
+  viewerCurrentZoom = 1;
+  viewerPanX = 0;
+  viewerPanY = 0;
+  applyViewerTransform();
+}
+
+function initPhotoViewerGestureListeners() {
   const modal = document.getElementById('imageViewer');
-  if (!img) return;
+  const img = document.getElementById('viewerImage');
+  if (!modal || !img || modal.dataset.gesturesInited) return;
+  modal.dataset.gesturesInited = 'true';
 
-  img.ondragstart = () => false;
-  if (canvas) canvas.ondragstart = () => false;
-
-  const handleStart = (clientX, clientY, isInteractiveTarget) => {
-    if (isInteractiveTarget) return;
-    if (viewerCurrentZoom > 1.01 || currentZoom > 1.01) {
-      isPanningViewerActive = true;
-      startPanX = clientX;
-      startPanY = clientY;
-      basePanX = viewerPanX;
-      basePanY = viewerPanY;
-      if (img) img.style.cursor = 'grabbing';
-    } else {
-      isPanningViewerActive = false;
-      viewerPanX = 0;
-      viewerPanY = 0;
-      panX = 0;
-      panY = 0;
+  // Touch Start (Pinch or Pan)
+  modal.addEventListener('touchstart', (e) => {
+    if (e.target.closest('#navViewerLeft') || e.target.closest('#navViewerRight') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar')) {
+      return;
     }
-  };
 
-  const handleMove = (clientX, clientY, e) => {
-    if (isPanningViewerActive && (viewerCurrentZoom > 1.01 || currentZoom > 1.01)) {
-      const dx = clientX - startPanX;
-      const dy = clientY - startPanY;
-      viewerPanX = basePanX + dx;
-      viewerPanY = basePanY + dy;
-      panX = viewerPanX;
-      panY = viewerPanY;
-      updateImageTransform(false);
-      if (e && e.cancelable) e.preventDefault();
-    }
-  };
-
-  const handleEnd = () => {
-    if (isPanningViewerActive) {
-      isPanningViewerActive = false;
-      updateImageTransform(false);
-    }
-  };
-
-  // Mouse pan
-  const onMouseDown = (e) => {
-    const isInteractive = !!e.target.closest('#navViewerLeft, #navViewerRight, .closeViewer, .viewerBottomBar');
-    handleStart(e.clientX, e.clientY, isInteractive);
-  };
-
-  const onMouseMove = (e) => {
-    handleMove(e.clientX, e.clientY, e);
-  };
-
-  const onMouseUp = () => handleEnd();
-
-  img.onmousedown = onMouseDown;
-  if (canvas) canvas.onmousedown = onMouseDown;
-  window.onmousemove = onMouseMove;
-  window.onmouseup = onMouseUp;
-
-  // Touch pan (mobile HP)
-  const onTouchStart = (e) => {
-    if (e.touches.length === 1) {
-      const isInteractive = !!e.target.closest('#navViewerLeft, #navViewerRight, .closeViewer, .viewerBottomBar');
-      handleStart(e.touches[0].clientX, e.touches[0].clientY, isInteractive);
-    } else if (e.touches.length === 2) {
-      isPanningViewerActive = false;
+    if (e.touches.length === 2) {
+      isDraggingViewerImage = false;
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
-      window.initialPinchDist = Math.hypot(dx, dy);
-      window.initialPinchZoomVal = viewerCurrentZoom;
+      initialPinchDistance = Math.hypot(dx, dy);
+      initialPinchZoom = viewerCurrentZoom;
+    } else if (e.touches.length === 1 && viewerCurrentZoom > 1) {
+      isDraggingViewerImage = true;
+      startDragX = e.touches[0].clientX - viewerPanX;
+      startDragY = e.touches[0].clientY - viewerPanY;
     }
-  };
+  }, { passive: false });
 
-  const onTouchMove = (e) => {
-    if (e.touches.length === 1) {
-      handleMove(e.touches[0].clientX, e.touches[0].clientY, e);
-    } else if (e.touches.length === 2 && window.initialPinchDist > 0) {
+  // Touch Move
+  modal.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && initialPinchDistance > 0) {
+      if (e.cancelable) e.preventDefault();
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.hypot(dx, dy);
       if (dist > 0) {
-        viewerCurrentZoom = window.initialPinchZoomVal * (dist / window.initialPinchDist);
+        viewerCurrentZoom = initialPinchZoom * (dist / initialPinchDistance);
         if (viewerCurrentZoom < 1) viewerCurrentZoom = 1;
         if (viewerCurrentZoom > 5) viewerCurrentZoom = 5;
-        updateImageTransform(false);
-        if (e.cancelable) e.preventDefault();
+        applyViewerTransform();
       }
+    } else if (e.touches.length === 1 && isDraggingViewerImage && viewerCurrentZoom > 1) {
+      if (e.cancelable) e.preventDefault();
+      viewerPanX = e.touches[0].clientX - startDragX;
+      viewerPanY = e.touches[0].clientY - startDragY;
+      applyViewerTransform();
     }
-  };
+  }, { passive: false });
 
-  const onTouchEnd = (e) => {
-    if (e.touches.length === 0) handleEnd();
-  };
+  // Touch End
+  modal.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+      initialPinchDistance = 0;
+    }
+    if (e.touches.length === 0) {
+      isDraggingViewerImage = false;
+    }
+  });
 
-  img.ontouchstart = onTouchStart;
-  img.ontouchmove = onTouchMove;
-  img.ontouchend = onTouchEnd;
+  // Mouse Drag (PC/Laptop)
+  img.addEventListener('mousedown', (e) => {
+    if (viewerCurrentZoom > 1) {
+      isDraggingViewerImage = true;
+      startDragX = e.clientX - viewerPanX;
+      startDragY = e.clientY - viewerPanY;
+      applyViewerTransform();
+      e.preventDefault();
+    }
+  });
 
-  if (canvas) {
-    canvas.ontouchstart = onTouchStart;
-    canvas.ontouchmove = onTouchMove;
-    canvas.ontouchend = onTouchEnd;
-  }
+  window.addEventListener('mousemove', (e) => {
+    if (isDraggingViewerImage && viewerCurrentZoom > 1) {
+      viewerPanX = e.clientX - startDragX;
+      viewerPanY = e.clientY - startDragY;
+      applyViewerTransform();
+    }
+  });
 
-  // Mouse wheel zoom
-  const onWheel = (e) => {
+  window.addEventListener('mouseup', () => {
+    if (isDraggingViewerImage) {
+      isDraggingViewerImage = false;
+      applyViewerTransform();
+    }
+  });
+
+  // Mouse Wheel Zoom
+  modal.addEventListener('wheel', (e) => {
     if (e.target.closest('.viewerBottomBar')) return;
     if (e.cancelable) e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.3 : -0.3;
-    zoomImage(delta);
-  };
-  if (modal) modal.onwheel = onWheel;
-
-  // Double click / double tap
-  const onDblClick = (e) => {
-    if (e.target.closest('#navViewerLeft, #navViewerRight, .closeViewer, .viewerBottomBar')) return;
-    if (viewerCurrentZoom > 1.2) {
-      resetZoom();
+    if (e.deltaY < 0) {
+      zoomImage(0.25);
     } else {
-      viewerCurrentZoom = 2.5;
-      updateImageTransform(true);
+      zoomImage(-0.25);
     }
-  };
-  img.ondblclick = onDblClick;
-  if (canvas) canvas.ondblclick = onDblClick;
+  }, { passive: false });
 }
-window.attachPhotoPanListeners = attachPhotoPanListeners;
-window.initPhotoViewerGestureListeners = attachPhotoPanListeners;
-
 
 function tampilkanFotoViewerAktif() {
   viewerCurrentZoom = 1;
   viewerPanX = 0;
   viewerPanY = 0;
-  if (typeof updateImageTransform === 'function') updateImageTransform(false);
-
-  const photos = parsePhotosArray(currentViewerPhotos && currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
-  if (photos && photos.length > 0) {
-    viewerPhotos = photos;
-    currentViewerPhotos = photos;
-  }
-
-  if (viewerCurrentIndex < 0) viewerCurrentIndex = 0;
-  if (viewerCurrentIndex >= viewerPhotos.length) viewerCurrentIndex = Math.max(0, viewerPhotos.length - 1);
-  currentViewerIndex = viewerCurrentIndex;
+  applyViewerTransform();
 
   const img = document.getElementById('viewerImage');
   if (img && viewerPhotos.length > 0) {
     img.src = viewerPhotos[viewerCurrentIndex];
-    img.style.display = 'block';
-    img.style.visibility = 'visible';
-    img.style.opacity = '1';
   }
-
   const modal = document.getElementById('imageViewer');
   if (modal) {
-    modal.classList.add('show');
-    modal.style.setProperty('display', 'flex', 'important');
-    modal.style.setProperty('z-index', '999999999', 'important');
-    if (typeof attachPhotoPanListeners === 'function') attachPhotoPanListeners();
+    modal.style.display = 'flex';
+    initPhotoViewerGestureListeners();
   }
-
+  
   const btnLeft = document.getElementById('navViewerLeft');
   const btnRight = document.getElementById('navViewerRight');
   const textCounter = document.getElementById('viewerCounter');
-
-  if (btnLeft) {
-    btnLeft.style.setProperty('display', viewerPhotos.length > 1 ? 'flex' : 'none', 'important');
-    btnLeft.style.setProperty('top', '50%', 'important');
-    btnLeft.style.setProperty('transform', 'translateY(-50%)', 'important');
-  }
-  if (btnRight) {
-    btnRight.style.setProperty('display', viewerPhotos.length > 1 ? 'flex' : 'none', 'important');
-    btnRight.style.setProperty('top', '50%', 'important');
-    btnRight.style.setProperty('transform', 'translateY(-50%)', 'important');
-  }
-  if (textCounter) {
-    textCounter.textContent = (viewerCurrentIndex + 1) + ' / ' + viewerPhotos.length;
-  }
+  
+  if (btnLeft) btnLeft.style.display = viewerPhotos.length > 1 ? 'flex' : 'none';
+  if (btnRight) btnRight.style.display = viewerPhotos.length > 1 ? 'flex' : 'none';
+  if (textCounter) textCounter.textContent = `${viewerCurrentIndex + 1} / ${viewerPhotos.length}`;
 }
 
 function gantiFotoViewer(arah) {
@@ -7644,9 +7029,7 @@ function approveService(noSurat) {
           status: requests[idx].status || 'PENDING',
           log: requests[idx].log,
           updated_at: new Date().toISOString()
-        }).eq('no_surat', noSurat).then(() => {
-          if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', { noSurat });
-        }, (e) => console.warn(e));
+        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
         dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -7726,9 +7109,7 @@ function approveDM(noSurat) {
           dm_ttd: requests[idx].dmTTD || '',
           log: requests[idx].log,
           updated_at: new Date().toISOString()
-        }).eq('no_surat', noSurat).then(() => {
-          if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', { noSurat });
-        }, (e) => console.warn(e));
+        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
         dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -7898,7 +7279,7 @@ function renderArtemisPhotoPreviews() {
   }
 
   grid.innerHTML = tempArtemisPhotos.map((imgSrc, idx) => `
-    <div style="position: relative; width: 65px; height: 65px; border-radius: 5px; overflow: hidden; border: 1px solid var(--border-color);">
+    <div style="position: relative; width: 65px; height: 65px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">
       <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: cover;">
       <button type="button" onclick="hapusPhotoArtemisTemp(${idx})" style="position: absolute; top: 2px; right: 2px; background: rgba(239,68,68,0.9); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
     </div>
@@ -7987,9 +7368,7 @@ function prosesSimpanDoneDenganBuktiArtemis() {
               artemis_photos: requests[idx].artemisPhotos,
               log: requests[idx].log,
               updated_at: new Date().toISOString()
-            }).eq('no_surat', noSurat).then(() => {
-              if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', requests[idx]);
-            }, (e) => console.warn('[SUPABASE DONE UPDATE NOTICE]:', e));
+            }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn('[SUPABASE DONE UPDATE NOTICE]:', e));
           }
           if (typeof dbFirestore !== 'undefined' && dbFirestore) {
             dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -8051,9 +7430,7 @@ function batalApproveService(noSurat) {
           status: 'PENDING',
           log: requests[idx].log,
           updated_at: new Date().toISOString()
-        }).eq('no_surat', noSurat).then(() => {
-          if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', requests[idx]);
-        }, (e) => console.warn(e));
+        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
         dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -8101,14 +7478,11 @@ function batalApproveDM(noSurat) {
       if (typeof supabase !== 'undefined' && supabase) {
         supabase.from('permintaan_toko').update({
           status: 'PENDING',
-          service_approve: false,
-          service_user_name: '',
-          service_ttd: '',
+          dm_user_name: '',
+          dm_ttd: '',
           log: requests[idx].log,
           updated_at: new Date().toISOString()
-        }).eq('no_surat', noSurat).then(() => {
-          if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', requests[idx]);
-        }, (e) => console.warn(e));
+        }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
         dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -8126,13 +7500,11 @@ function tolakServiceModal(noSurat, roleType) {
   const elRole = document.getElementById('rejectRoleType');
   const elReason = document.getElementById('rejectReason');
   const elTitle = document.getElementById('rejectTitle');
-  const elSub = document.getElementById('rejectSubTitle');
 
   if (elNo) elNo.value = noSurat;
   if (elRole) elRole.value = roleType;
   if (elReason) elReason.value = '';
   if (elTitle) elTitle.textContent = `TOLAK PERMINTAAN`;
-  if (elSub) elSub.textContent = `MASUKKAN ALASAN PENOLAKAN:`;
   
   const modal = document.getElementById('rejectOverlay');
   if (modal) modal.style.display = 'flex';
@@ -8183,9 +7555,7 @@ function kirimReject() {
         catatan: requests[idx].catatan,
         log: requests[idx].log,
         updated_at: new Date().toISOString()
-      }).eq('no_surat', noSurat).then(() => {
-        if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', requests[idx]);
-      }, (e) => console.warn(e));
+      }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
     }
     if (typeof dbFirestore !== 'undefined' && dbFirestore) {
       dbFirestore.collection('requests').doc(docId).set(requests[idx], { merge: true }).catch(e => console.warn(e));
@@ -8361,9 +7731,7 @@ function hapusData(noSurat) {
             items: currentReqs[idx].items,
             log: currentReqs[idx].log,
             updated_at: new Date().toISOString()
-          }).eq('no_surat', noSurat).then(() => {
-            if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('UPDATE', currentReqs[idx]);
-          }, (e) => console.warn(e));
+          }).eq('no_surat', noSurat).then(() => {}, (e) => console.warn(e));
         }
         if (typeof dbFirestore !== 'undefined' && dbFirestore) {
           dbFirestore.collection('requests').doc(docId).set(currentReqs[idx], { merge: true }).catch(e => console.warn(e));
@@ -8589,8 +7957,8 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   if (!bodyBox) return;
 
   let headerInfoHtml = `
-    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-start !important; align-items: center !important; gap: 12px !important; width: 100% !important; padding: 8px 14px !important; text-align: left !important; box-sizing: border-box !important; background: transparent !important;">
-      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; justify-content: flex-start !important; text-align: left !important; white-space: nowrap !important; background: transparent !important;">
+    <div class="detailHeaderInfoV2" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; align-items: center !important; width: 100% !important; padding: 6px 12px !important; box-sizing: border-box !important; background: transparent !important;">
+      <div class="noSuratWrapV2" style="display: inline-flex !important; align-items: center !important; text-align: left !important; white-space: nowrap !important; flex: 0 0 auto !important; background: transparent !important;">
         <span style="opacity: 0.85; font-weight: 500; color: var(--text-main);">NO SURAT : </span>
         <span class="noSuratValV2" style="color: var(--primary) !important; font-weight: 700 !important; margin-left: 4px; background: transparent !important;">${req.noSurat || '-'}</span>
       </div>
@@ -8607,7 +7975,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
   const thBase = "background: var(--primary) !important; color: #ffffff !important; padding: 8px 12px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.3px !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important; box-shadow: none !important; text-shadow: none !important;";
   const thStyleAutofit = `${thBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
-  const thStyleLeft = `${thBase} text-align: center !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
+  const thStyleLeft = `${thBase} text-align: left !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
 
   const tdBase = "padding: 8px 12px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;";
   const tdStyleAutofit = `${tdBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
@@ -8642,7 +8010,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
     let statusPartBadgeHtml = '<span style="color: var(--text-muted); font-size: 11px;">-</span>';
     if (isUnfulfilled) {
-      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 5px; font-weight: 700; font-size: 11px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444;">TIDAK DIPENUHI</span>`;
+      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 700; font-size: 11px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444;">TIDAK DIPENUHI</span>`;
     } else if (statusPartVal) {
       const up = statusPartVal.toUpperCase();
       let badgeBg = 'rgba(2, 132, 199, 0.12)';
@@ -8661,7 +8029,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         badgeColor = '#ef4444';
         badgeBorder = '#ef4444';
       }
-      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 5px; font-weight: 700; font-size: 11px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">${statusPartVal}</span>`;
+      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 700; font-size: 11px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">${statusPartVal}</span>`;
     }
 
     let ketPartTdHtml = showKetPartCol ? `<td style="${tdStyleLeft} ${strikeStyle}">${statusPartBadgeHtml}</td>` : '';
@@ -8671,13 +8039,13 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
       let unfulfilledBtn = '';
       if (isUnfulfilled) {
         unfulfilledBtn = `
-          <button type="button" class="btnIcon btnUndo" onclick="undoBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="BATALKAN (UNDO)" style="padding: 3px 6px !important; border-radius: 5px !important; line-height: 1 !important; height: auto !important; background: #f59e0b !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
+          <button type="button" class="btnIcon btnUndo" onclick="undoBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="BATALKAN (UNDO)" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #f59e0b !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
             <span class="material-symbols-rounded" style="font-size: 15px !important;">undo</span>
           </button>
         `;
       } else {
         unfulfilledBtn = `
-          <button type="button" class="btnIcon btnDelete" onclick="hapusBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="TANDAI TIDAK DIPENUHI" style="padding: 3px 6px !important; border-radius: 5px !important; line-height: 1 !important; height: auto !important; background: #ef4444 !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
+          <button type="button" class="btnIcon btnDelete" onclick="hapusBarisItemDetailAdmin('${req.noSurat}', ${idx})" title="TANDAI TIDAK DIPENUHI" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #ef4444 !important; color: #ffffff !important; border: none !important; cursor: pointer !important;">
             <span class="material-symbols-rounded" style="font-size: 15px !important;">cancel</span>
           </button>
         `;
@@ -8685,7 +8053,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
       // TOMBOL EDIT KETERANGAN PART (MANUAL FREE TEXT) PERSIS DI SEBELAH TOMBOL TIDAK DIPENUHI
       const editPartBtn = `
-        <button type="button" class="btnIcon btnEditPartRow" onclick="bukaModalEditKetPartSingle('${req.noSurat}', ${idx})" title="EDIT KETERANGAN / NO PART (FREE TEXT)" style="padding: 3px 6px !important; border-radius: 5px !important; line-height: 1 !important; height: auto !important; background: #0284c7 !important; color: #ffffff !important; border: none !important; cursor: pointer !important; margin-left: 4px !important;">
+        <button type="button" class="btnIcon btnEditPartRow" onclick="bukaModalEditKetPartSingle('${req.noSurat}', ${idx})" title="EDIT KETERANGAN / NO PART (FREE TEXT)" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #0284c7 !important; color: #ffffff !important; border: none !important; cursor: pointer !important; margin-left: 4px !important;">
           <span class="material-symbols-rounded" style="font-size: 15px !important;">edit_note</span>
         </button>
       `;
@@ -8763,7 +8131,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         }
       }
       
-      if (role === 'DM' && req.status === 'PENDING' && req.serviceApprove) {
+      if (role === 'DM' && req.serviceApprove) {
         actionButtons.push(`
           <button type="button" class="btnIcon btnApprove btnIconOnly" title="APPROVE" onclick="tutupDetailBarangV2(); approveDM('${req.noSurat}');">
             <span class="material-symbols-rounded">check_circle</span>
@@ -8847,7 +8215,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   if (allReqPhotos.length > 0) {
     const isDoneState = req.status === 'DONE';
     actionButtons.push(`
-      <button type="button" class="btnIcon btnPhotoView btnIconOnly" title="${isDoneState ? 'LIHAT BUKTI PROSES ARTEMIS / DONE' : 'LIHAT FOTO BUKTI BARANG'} (${allReqPhotos.length})" onclick="tutupDetailBarangV2(); lihatFotoByNoSurat('${req.noSurat || req.id}');" style="background: ${isDoneState ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #0284c7, #0369a1)'} !important; color: #ffffff !important; border-radius: 5px !important; border: none !important;">
+      <button type="button" class="btnIcon btnPhotoView btnIconOnly" title="${isDoneState ? 'LIHAT BUKTI PROSES ARTEMIS / DONE' : 'LIHAT FOTO BUKTI BARANG'} (${allReqPhotos.length})" onclick="tutupDetailBarangV2(); lihatFotoByNoSurat('${req.noSurat || req.id}');" style="${isDoneState ? 'background: linear-gradient(135deg, #059669, #10b981) !important; color: #ffffff !important;' : ''}">
         <span class="material-symbols-rounded">image</span>
       </button>
     `);
@@ -8894,11 +8262,11 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   `;
 
   bodyBox.innerHTML = `
-    <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 6px 0 12px 0 !important; display: flex !important; flex-direction: column !important; gap: 6px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 5px 5px !important; overflow: hidden !important;">
+    <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 8px 0px 12px 0px !important; display: flex !important; flex-direction: column !important; gap: 6px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 18px 18px !important; overflow: hidden !important;">
       ${headerInfoHtml}
       
-      <div class="tableCardV2 tableWrap" style="display: block !important; border: 0 !important; border-radius: 5px !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important; overscroll-behavior: contain !important; max-height: 55vh !important; min-height: 140px !important; background: var(--bg-box) !important; width: 100% !important; min-width: 100% !important; max-width: 100% !important; margin: 2px 0 6px 0 !important; padding: 0 !important; position: relative !important;">
-        <table class="detailTableV2" style="width: 100% !important; min-width: 100% !important; border-radius: 5px !important; border: 0 !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
+      <div class="tableCardV2 tableWrap" style="display: block !important; border-top: 1px solid var(--border-color) !important; border-bottom: 1px solid var(--border-color) !important; border-left: none !important; border-right: none !important; border-radius: 0 !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: auto !important; overscroll-behavior: contain !important; max-height: 55vh !important; background: var(--bg-box) !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 0 !important; position: relative !important;">
+        <table class="detailTableV2" style="width: 100% !important; min-width: 100% !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
           ${tableHeaderHtml}
           <tbody>
             ${itemsHtml}
@@ -8969,7 +8337,7 @@ function bukaModalEditStatusPart(noSurat) {
       const currentStatusPart = i.statusPart || '';
 
       return `
-        <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 5px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">
             <strong style="font-size: 13px; color: var(--primary);">${idx + 1}. ${typeVal} (SN: ${seriVal})</strong>
             <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);">${barangVal} (Qty: ${i.qty || 1})</span>
@@ -8977,11 +8345,11 @@ function bukaModalEditStatusPart(noSurat) {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
               <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">NO PART / KODE PART</label>
-              <input type="text" id="input_nopart_${idx}" value="${currentNoPart}" placeholder="Contoh: PRT-99210 / BAUT..." style="width: 100%; padding: 8px 10px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
+              <input type="text" id="input_nopart_${idx}" value="${currentNoPart}" placeholder="Contoh: PRT-99210 / BAUT..." style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
             </div>
             <div>
               <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">STATUS PART</label>
-              <input type="text" id="input_statuspart_${idx}" list="list_statuspart_presets" value="${currentStatusPart}" placeholder="Pilih / Ketik Status..." style="width: 100%; padding: 8px 10px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
+              <input type="text" id="input_statuspart_${idx}" list="list_statuspart_presets" value="${currentStatusPart}" placeholder="Pilih / Ketik Status..." style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-box); color: var(--text-main); font-size: 12px; font-weight: 600; box-sizing: border-box;">
               <datalist id="list_statuspart_presets">
                 <option value="READY / TERSEDIA">
                 <option value="PROSES">
@@ -9124,7 +8492,7 @@ function bukaModalEditKetPartSingle(noSurat, itemIndex) {
   const currentKet = item.statusPart || item.keteranganPart || item.noPart || '';
 
   const titleEl = document.getElementById('editKetPartSingleTitle');
-  if (titleEl) titleEl.textContent = `UPDATE PART (BARIS ${itemIndex + 1})`;
+  if (titleEl) titleEl.textContent = `EDIT KETERANGAN PART (BARIS ${itemIndex + 1})`;
 
   const noSuratHidden = document.getElementById('editKetPartSingleNoSurat');
   if (noSuratHidden) noSuratHidden.value = req.noSurat;
@@ -9443,23 +8811,10 @@ function updatePdfModelSelectorButtons() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `btnPdfNumSimple ${isActive ? 'active' : ''}`;
-    btn.style.cssText = `
-      width: 72px !important;
-      min-width: 72px !important;
-      height: 38px !important;
-      font-size: 16px !important;
-      font-weight: 900 !important;
-      border-radius: 8px !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      cursor: pointer !important;
-      margin: 0 !important;
-      border: ${isActive ? '2px solid #ffffff' : '1.5px solid var(--border-color)'} !important;
-      background: ${btnBg} !important;
-      color: ${isActive ? '#ffffff' : 'var(--text-main)'} !important;
-      box-shadow: ${isActive ? '0 6px 18px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.1)'} !important;
-    `;
+    btn.style.background = btnBg;
+    if (isActive) {
+      btn.style.color = '#ffffff';
+    }
 
     btn.onclick = () => switchPdfPreviewModel(m.id);
     btn.innerHTML = `${num}`;
@@ -9484,35 +8839,35 @@ function renderFullPdfPreviewDocument(modelId) {
   if (modelId === 'MODEL_2') {
     tableHeaderBg = '#334155';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 5px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
+      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 10px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (modelId === 'MODEL_3') {
     tableHeaderBg = '#0f172a';
     headerTitleHtml = `
-      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 5px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
+      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 8px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (modelId === 'MODEL_4') {
     tableHeaderBg = '#059669';
     headerTitleHtml = `
-      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 5px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
+      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 6px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (modelId === 'MODEL_5') {
     tableHeaderBg = '#7c3aed';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 5px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
+      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 12px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
         PERMINTAAN TOKO
       </div>
     `;
   }
 
   container.innerHTML = `
-    <div style="background: #ffffff; color: #0f172a; width: 100%; max-width: 720px; margin: 0 auto; padding: 20px 24px; border-radius: 5px; box-shadow: 0 10px 30px rgba(0,0,0,0.18); font-family: Arial, sans-serif; box-sizing: border-box; border: 1px solid #cbd5e1;">
+    <div style="background: #ffffff; color: #0f172a; width: 100%; max-width: 720px; margin: 0 auto; padding: 20px 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.18); font-family: Arial, sans-serif; box-sizing: border-box; border: 1px solid #cbd5e1;">
       ${headerTitleHtml}
 
       <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 10px; padding: 2px 0; flex-wrap: wrap; gap: 6px; background: transparent; border: none;">
@@ -9553,7 +8908,7 @@ function renderFullPdfPreviewDocument(modelId) {
         </tbody>
       </table>
 
-      <div style="margin-top: 8px; margin-bottom: 12px; font-size: 11px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 5px solid ${tableHeaderBg}; padding: 8px 12px; border-radius: 5px; color: #0f172a;">
+      <div style="margin-top: 8px; margin-bottom: 12px; font-size: 11px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 5px solid ${tableHeaderBg}; padding: 8px 12px; border-radius: 6px; color: #0f172a;">
         <div style="font-weight: 800; font-size: 11px; color: ${tableHeaderBg === '#0f172a' ? '#0369a1' : tableHeaderBg}; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
           <span>📌</span> CATATAN / KETERANGAN PERMINTAAN:
         </div>
@@ -9722,7 +9077,7 @@ function bukaPdfModal(noSurat) {
   if (req.photos && req.photos.length > 0) {
     const isAdminUser = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
     const deleteBtnHtml = isAdminUser ? `
-      <button type="button" onclick="hapusFotoDokumenBiasa('${req.noSurat}')" style="background:#dc2626; color:#ffffff; border:none; border-radius: 5px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+      <button type="button" onclick="hapusFotoDokumenBiasa('${req.noSurat}')" style="background:#dc2626; color:#ffffff; border:none; border-radius:4px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
         <span class="material-symbols-rounded" style="font-size:13px;">delete</span> HAPUS FOTO DOKUMEN INI
       </button>
     ` : '';
@@ -9735,7 +9090,7 @@ function bukaPdfModal(noSurat) {
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           ${req.photos.map(p => `
-            <div style="width: 95px; height: 95px; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: #000;">
+            <div style="width: 95px; height: 95px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #000;">
               <img src="${p}" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
           `).join('')}
@@ -9764,35 +9119,35 @@ function bukaPdfModal(noSurat) {
   if (activeModel === 'MODEL_2') {
     tableHeaderBg = '#334155';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 5px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
+      <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 10px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (activeModel === 'MODEL_3') {
     tableHeaderBg = '#0f172a';
     headerTitleHtml = `
-      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 5px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
+      <div style="background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 8px; border-bottom: 4px solid #fbbf24; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (activeModel === 'MODEL_4') {
     tableHeaderBg = '#059669';
     headerTitleHtml = `
-      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 5px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
+      <div style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 6px; text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1px; border-left: 6px solid #047857;">
         PERMINTAAN TOKO
       </div>
     `;
   } else if (activeModel === 'MODEL_5') {
     tableHeaderBg = '#7c3aed';
     headerTitleHtml = `
-      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 5px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
+      <div style="background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #ffffff; padding: 14px 18px; border-radius: 12px; text-align: center; font-size: 21px; font-weight: 900; margin-bottom: 20px; letter-spacing: 1.5px; box-shadow: 0 6px 18px rgba(124,58,237,0.3);">
         PERMINTAAN TOKO
       </div>
     `;
   }
 
   pdfContainer.innerHTML = `
-    <div class="pdf-paper" style="min-height: 680px; height: auto !important; display: flex; flex-direction: column; justify-content: space-between; padding: 22px 22px 36px 22px; color: #0f172a; background: #ffffff; font-family: 'Poppins', sans-serif; box-sizing: border-box;">
+    <div class="pdf-paper" style="min-height: 680px; display: flex; flex-direction: column; justify-content: space-between; padding: 22px; color: #0f172a; background: #ffffff; font-family: 'Poppins', sans-serif; box-sizing: border-box;">
       <div>
         ${headerTitleHtml}
 
@@ -9816,7 +9171,7 @@ function bukaPdfModal(noSurat) {
         </table>
 
         <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; color: #0f172a;">DETAIL PERMINTAAN:</div>
-        <div class="pdf-table-responsive" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; border-radius: 5px;">
+        <div class="pdf-table-responsive" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; border-radius: 6px;">
           <table style="width: 100%; border-collapse: collapse; font-size: 11px; border: 1px solid #cbd5e1; min-width: 100%;">
             <thead>
               <tr style="background: ${tableHeaderBg}; color: #ffffff;">
@@ -9839,7 +9194,7 @@ function bukaPdfModal(noSurat) {
           const cTxt = (req.catatan || '').trim();
           if (cTxt && cTxt !== '-') {
             return `
-              <div style="margin-top: 12px; margin-bottom: 16px; font-size: 11.5px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 6px solid ${tableHeaderBg}; padding: 12px 16px; border-radius: 5px; box-shadow: 0 3px 10px rgba(2,132,199,0.12); color: #0f172a; opacity: 1 !important;">
+              <div style="margin-top: 12px; margin-bottom: 16px; font-size: 11.5px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-left: 6px solid ${tableHeaderBg}; padding: 12px 16px; border-radius: 8px; box-shadow: 0 3px 10px rgba(2,132,199,0.12); color: #0f172a; opacity: 1 !important;">
                 <div style="font-weight: 800; font-size: 11.5px; color: ${tableHeaderBg === '#0f172a' ? '#0369a1' : tableHeaderBg}; margin-bottom: 4px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
                   <span style="font-size: 14px;">📌</span> CATATAN / KETERANGAN PERMINTAAN:
                 </div>
@@ -9887,13 +9242,13 @@ function bukaPdfModal(noSurat) {
           </div>
         </div>
 
-        <div style="margin-top: 36px; padding-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #475569; letter-spacing: 0.2px;">
+        <div style="margin-top: 36px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #475569; letter-spacing: 0.2px;">
           ${hasUnfulfilledItem ? `
             <div style="font-weight: 800; color: #b91c1c; font-style: normal; display: flex; align-items: center; gap: 4px;">
               <span style="text-decoration: line-through; text-decoration-thickness: 3px; font-weight: 900; color: #b91c1c; font-size: 11px;">---</span> = Tidak dipenuhi
             </div>
           ` : '<div></div>'}
-          <div style="font-style: italic; opacity: 0.85; font-weight: 600;">
+          <div style="font-style: italic; opacity: 0.85;">
             ${timestampStr}
           </div>
         </div>
@@ -10359,6 +9714,9 @@ function simpanTTD() {
         } else if (currentUser.category === 'GBJ' && (r.createdBy === currentUser.username || r.createdBy === currentUser.fullName || r.isGBJ)) {
           r.pemohonTTD = png;
           reqsChanged = true;
+          if (typeof supabase !== 'undefined' && supabase) {
+            supabase.from('permintaan_toko').update({ pemohon_ttd: png }).eq('no_surat', r.noSurat).then(() => {}, () => {});
+          }
         }
       });
       if (reqsChanged) saveRequestsToDB(allReqs);
@@ -10377,13 +9735,12 @@ function simpanTTD() {
           catatan: JSON.stringify(ttdMap),
           items: [],
           photos: [],
-          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        supabase.from('permintaan_toko').upsert(systemTtdRow, { onConflict: 'no_surat' }).then(({ error }) => {
+        supabase.from('permintaan_toko').upsert(systemTtdRow).then(({ error }) => {
           if (error) console.warn('[SUPABASE TTD SAVE NOTICE]:', error.message);
           else console.log('⚡ [SUPABASE TTD SUCCESS]: TTD berhasil di-upload ke Supabase!');
         });
@@ -10392,8 +9749,9 @@ function simpanTTD() {
         supabase.from('lookup').upsert({
           key: 'SYSTEM_TTD_MAP',
           value: JSON.stringify(ttdMap),
+          type: 'TTD',
           updated_at: new Date().toISOString()
-        }, { onConflict: 'key' }).then(() => {}, () => {});
+        }).then(() => {}, () => {});
 
         if (currentUser && currentUser.id) {
           supabase.from('users').update({ ttd: png }).eq('id', currentUser.id).then(() => {}, () => {});
@@ -10404,7 +9762,7 @@ function simpanTTD() {
     }
     
     pushCentralCloudDB();
-    showNotif('Tanda Tangan berhasil di simpan', 'success');
+    showNotif('TANDA TANGAN DIGITAL BERHASIL DISIMPAN & DI-UPLOAD KE SUPABASE!', 'success');
     tutupTTD();
   });
 }
@@ -10464,176 +9822,141 @@ function refreshActiveChatUI() {
 async function pushChatToSupabase(allChats, newChatObj) {
   if (typeof supabase === 'undefined' || !supabase) return;
 
-  if (newChatObj) {
-    const chatRow = {
-      id: newChatObj.id || `CHAT-${Date.now()}`,
-      room: newChatObj.room || '',
-      user: newChatObj.user || '',
-      pengirim: newChatObj.pengirim || 'USER',
-      pesan: newChatObj.pesan || '',
-      tanggal: newChatObj.tanggal || ''
-    };
+  const chatRow = {
+    id: newChatObj?.id || `CHAT-${Date.now()}`,
+    room: newChatObj?.room || '',
+    user: newChatObj?.user || '',
+    user_area: newChatObj?.userArea || currentUser?.area || 'BDG',
+    pengirim: newChatObj?.pengirim || 'USER',
+    sender_id: newChatObj?.senderId || '',
+    sender_username: newChatObj?.senderUsername || '',
+    sender_name: newChatObj?.senderName || '',
+    pesan: newChatObj?.pesan || '',
+    tanggal: newChatObj?.tanggal || '',
+    created_at: new Date().toISOString()
+  };
 
-    safeSupabaseInsert('chat_messages', [chatRow]);
-  }
+  // 1. Insert individual message to chat_messages table
+  try {
+    supabase.from('chat_messages').insert([chatRow]).then(({ error }) => {
+      if (error) console.warn('[SUPABASE chat_messages INSERT NOTICE]:', error.message);
+      else console.log('⚡ [SUPABASE chat_messages SUCCESS]: Pesan chat berhasil masuk tabel chat_messages!');
+    }).catch(e => console.warn(e));
+  } catch(e1) {}
+
+  // 2. Insert individual message to chat table
+  try {
+    supabase.from('chat').insert([chatRow]).then(({ error }) => {
+      if (error) console.warn('[SUPABASE chat INSERT NOTICE]:', error.message);
+      else console.log('⚡ [SUPABASE chat SUCCESS]: Pesan chat berhasil masuk tabel chat!');
+    }).catch(e => console.warn(e));
+  } catch(e2) {}
+
+  // 3. Upsert full chat list to lookup table (key: chat_messages)
+  try {
+    supabase.from('lookup').upsert({
+      key: 'chat_messages',
+      value: JSON.stringify(allChats),
+      type: 'CHAT',
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'key' }).then(({ error }) => {
+      if (error) console.warn('[SUPABASE lookup chat UPSERT NOTICE]:', error.message);
+      else console.log('⚡ [SUPABASE lookup CHAT SUCCESS]: Pesan chat berhasil disimpan ke tabel lookup!');
+    }).catch(e => console.warn(e));
+  } catch(e3) {}
+
+  // 4. Upsert full chat list to permintaan_toko table (__SYSTEM_CHAT_MESSAGES__)
+  try {
+    const systemChatRow = {
+      no_surat: '__SYSTEM_CHAT_MESSAGES__',
+      tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+      toko: 'SYSTEM',
+      area: 'ALL',
+      jenis: 'SYSTEM',
+      catatan: JSON.stringify(allChats),
+      items: [],
+      photos: [],
+      status: 'DONE',
+      service_approve: true,
+      created_by: 'SYSTEM',
+      created_at: new Date().toISOString()
+    };
+    supabase.from('permintaan_toko').upsert(systemChatRow, { onConflict: 'no_surat' }).then(({ error }) => {
+      if (error) console.warn('[SUPABASE permintaan_toko CHAT UPSERT NOTICE]:', error.message);
+      else console.log('⚡ [SUPABASE permintaan_toko CHAT SUCCESS]: Chat berhasil disiarkan via permintaan_toko!');
+    }).catch(e => console.warn(e));
+  } catch(e4) {}
 }
 window.pushChatToSupabase = pushChatToSupabase;
-
-function parseTimestampFromMessage(c) {
-  if (!c) return 0;
-  
-  if (typeof c.created_at === 'number') return c.created_at;
-  if (typeof c.createdAt === 'number') return c.createdAt;
-
-  if (c.created_at && typeof c.created_at === 'string') {
-    const t = new Date(c.created_at).getTime();
-    if (!isNaN(t) && t > 0) return t;
-  }
-  if (c.createdAt && typeof c.createdAt === 'string') {
-    const t = new Date(c.createdAt).getTime();
-    if (!isNaN(t) && t > 0) return t;
-  }
-
-  // Extract timestamp directly from message ID e.g. CHAT-1786523868541-164
-  if (c.id && typeof c.id === 'string' && c.id.includes('CHAT-')) {
-    const match = c.id.match(/CHAT-(\d{10,})/);
-    if (match && match[1]) {
-      const ts = parseInt(match[1], 10);
-      if (!isNaN(ts) && ts > 1000000000000) return ts;
-    }
-  }
-
-  // Parse DD/MM/YYYY HH:mm format
-  if (c.tanggal && typeof c.tanggal === 'string') {
-    const parts = c.tanggal.trim().split(/[\sT]+/);
-    if (parts.length >= 1) {
-      const dateParts = parts[0].split(/[\/\.\-]/);
-      let day = 1, month = 1, year = 2026;
-      if (dateParts.length >= 3) {
-        day = parseInt(dateParts[0], 10) || 1;
-        month = (parseInt(dateParts[1], 10) || 1) - 1;
-        year = parseInt(dateParts[2], 10) || 2026;
-      }
-      let hours = 0, minutes = 0, seconds = 0;
-      if (parts.length >= 2) {
-        const timeParts = parts[1].split(':');
-        if (timeParts.length >= 1) hours = parseInt(timeParts[0], 10) || 0;
-        if (timeParts.length >= 2) minutes = parseInt(timeParts[1], 10) || 0;
-        if (timeParts.length >= 3) seconds = parseInt(timeParts[2], 10) || 0;
-      }
-      const parsedDate = new Date(year, month, day, hours, minutes, seconds);
-      const t = parsedDate.getTime();
-      if (!isNaN(t) && t > 0) return t;
-    }
-  }
-
-  return 0;
-}
-window.parseTimestampFromMessage = parseTimestampFromMessage;
-
-let chatRealtimeChannel = null;
-
-function initChatRealtimeSubscription() {
-  if (typeof supabase === 'undefined' || !supabase || chatRealtimeChannel) return;
-  try {
-    chatRealtimeChannel = supabase
-      .channel('public:chat_messages')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, payload => {
-        if (payload) {
-          if (payload.eventType === 'DELETE') {
-            if (typeof fetchChatFromSupabase === 'function') {
-              fetchChatFromSupabase().catch(() => {});
-            }
-          } else if (payload.new) {
-            const newMsg = {
-              id: payload.new.id || `CHAT-${Date.now()}`,
-              room: payload.new.room || '',
-              user: payload.new.user || '',
-              userArea: payload.new.user_area || payload.new.userArea || 'BDG',
-              pengirim: payload.new.pengirim || 'USER',
-              senderId: payload.new.sender_id || payload.new.senderId || '',
-              senderUsername: payload.new.sender_username || payload.new.senderUsername || '',
-              senderName: payload.new.sender_name || payload.new.senderName || '',
-              pesan: payload.new.pesan || '',
-              tanggal: payload.new.tanggal || ''
-            };
-            const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-            const exists = allChats.some(c => c && (c.id === newMsg.id || (c.room === newMsg.room && c.pesan === newMsg.pesan && c.tanggal === newMsg.tanggal)));
-            if (!exists) {
-              allChats.push(newMsg);
-              const dynamicRooms = rebuildRoomsFromChats(allChats);
-              clearAllLocalChatStorage(allChats, dynamicRooms);
-
-              refreshActiveChatUI();
-              if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-              if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
-            }
-          }
-        }
-      })
-      .subscribe();
-  } catch(e) {
-    console.warn('[CHAT REALTIME SUBSCRIPTION ERROR]:', e);
-  }
-}
-window.initChatRealtimeSubscription = initChatRealtimeSubscription;
 
 async function fetchChatFromSupabase() {
   if (typeof supabase === 'undefined' || !supabase) return [];
 
-  initChatRealtimeSubscription();
+  let retrievedChats = null;
 
-  let serverChats = null;
-
-  // 1. QUERY UTAMA: Ambil langsung dari tabel chat_messages di Supabase (Authority Server)
+  // 1. Prioritas Utama: Lookup table (1 query ringkas)
   try {
-    const { data: rows, error } = await supabase.from('chat_messages').select('*');
-    if (!error && Array.isArray(rows)) {
-      serverChats = rows.map(c => ({
-        id: c.id || `CHAT-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-        room: c.room || '',
-        user: c.user || '',
-        userArea: c.user_area || c.userArea || 'BDG',
-        pengirim: c.pengirim || 'USER',
-        senderId: c.sender_id || c.senderId || '',
-        senderUsername: c.sender_username || c.senderUsername || '',
-        senderName: c.sender_name || c.senderName || '',
-        pesan: c.pesan || '',
-        tanggal: c.tanggal || '',
-        created_at: c.created_at || c.createdAt || new Date().toISOString()
-      }));
+    const { data: lookupRow } = await supabase.from('lookup').select('value').eq('key', 'chat_messages').maybeSingle();
+    if (lookupRow && lookupRow.value) {
+      const parsed = typeof lookupRow.value === 'string' ? JSON.parse(lookupRow.value) : lookupRow.value;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        retrievedChats = parsed;
+      }
     }
-  } catch(e) {
-    console.warn('[SUPABASE chat_messages fetch notice]:', e);
+  } catch(e) {}
+
+  // 2. Fallback: Permintaan_toko broadcast row
+  if (!retrievedChats || retrievedChats.length === 0) {
+    try {
+      const { data: sysRow } = await supabase.from('permintaan_toko').select('catatan').eq('no_surat', '__SYSTEM_CHAT_MESSAGES__').maybeSingle();
+      if (sysRow && sysRow.catatan) {
+        const parsed = JSON.parse(sysRow.catatan);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          retrievedChats = parsed;
+        }
+      }
+    } catch(e) {}
   }
 
-  // PADUKAN DENGAN AMAN LOKAL DAN SERVER TANPA MENGHAPUS CHAT PERANGKAT
-  const localChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-  const chatMap = new Map();
-
-  if (Array.isArray(localChats)) {
-    localChats.forEach(lc => {
-      if (lc && lc.id) chatMap.set(String(lc.id), lc);
-    });
+  // 3. Fallback: Chat_messages table
+  if (!retrievedChats || retrievedChats.length === 0) {
+    try {
+      const { data: rows } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+      if (Array.isArray(rows) && rows.length > 0) {
+        retrievedChats = rows.map(c => ({
+          id: c.id,
+          room: c.room,
+          user: c.user,
+          userArea: c.user_area || c.userArea || 'BDG',
+          pengirim: c.pengirim,
+          senderId: c.sender_id || c.senderId || '',
+          senderUsername: c.sender_username || c.senderUsername || '',
+          senderName: c.sender_name || c.senderName || '',
+          pesan: c.pesan,
+          tanggal: c.tanggal
+        }));
+      }
+    } catch(e) {}
   }
 
-  if (Array.isArray(serverChats)) {
-    serverChats.forEach(sc => {
-      if (sc && sc.id) chatMap.set(String(sc.id), sc);
-    });
+  if (Array.isArray(retrievedChats)) {
+    const localChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+    // Merge without duplicates based on id
+    const chatMap = new Map();
+    localChats.forEach(c => { if (c && c.id) chatMap.set(c.id, c); });
+    retrievedChats.forEach(c => { if (c && c.id) chatMap.set(c.id, c); });
+    const mergedChats = Array.from(chatMap.values());
+
+    if (JSON.stringify(mergedChats) !== JSON.stringify(localChats)) {
+      appStorage.setItem(CHAT_DB_KEY, JSON.stringify(mergedChats));
+      try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(mergedChats)); } catch(e) {}
+      refreshActiveChatUI();
+      if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+      if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
+    }
+    return mergedChats;
   }
-
-  let finalChats = Array.from(chatMap.values());
-  finalChats.sort((a, b) => parseTimestampFromMessage(a) - parseTimestampFromMessage(b));
-
-  // Update data penyimpanan lokal dengan data valid dari server
-  clearAllLocalChatStorage(finalChats, rebuildRoomsFromChats(finalChats));
-
-  refreshActiveChatUI();
-  if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-  if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
-
-  return finalChats;
+  return [];
 }
 window.fetchChatFromSupabase = fetchChatFromSupabase;
 
@@ -10672,73 +9995,7 @@ window.addEventListener('storage', (e) => {
   if (e.key === CHAT_DB_KEY || e.key === CHAT_ROOM_DB_KEY) {
     refreshActiveChatUI();
   }
-  if (e.key === NOTIFICATIONS_DB_KEY) {
-    if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-    if (typeof loadNotificationList === 'function') loadNotificationList();
-  }
 });
-
-try {
-  if (window.BroadcastChannel) {
-    const syncChannel = new BroadcastChannel('permintaan_toko_sync');
-    syncChannel.onmessage = (event) => {
-      if (event && event.data) {
-        if (event.data.type === 'NEW_CHAT_MESSAGE') {
-          const newMsg = event.data.chat;
-          if (newMsg && newMsg.id) {
-            let allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-            if (!allChats.some(c => c && c.id === newMsg.id)) {
-              allChats.push(newMsg);
-              const dynamicRooms = rebuildRoomsFromChats(allChats);
-              clearAllLocalChatStorage(allChats, dynamicRooms);
-              refreshActiveChatUI();
-            }
-          }
-        } else if (event.data.type === 'CLEAR_ALL_CHATS') {
-          const clearedAt = event.data.clearedAt || Date.now();
-          appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
-          appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
-          appStorage.setItem('CHAT_CLEARED_AT', String(clearedAt));
-          try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify([])); } catch(e) {}
-          try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([])); } catch(e) {}
-          try { localStorage.setItem('CHAT_CLEARED_AT', String(clearedAt)); } catch(e) {}
-          if (typeof refreshActiveChatUI === 'function') refreshActiveChatUI();
-        } else if (event.data.type === 'DELETE_ROOM') {
-          const roomUpper = String(event.data.roomTarget || '').toUpperCase();
-          const userUpper = String(event.data.userTarget || '').toUpperCase();
-          let allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-          let rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
-
-          allChats = allChats.filter(c => 
-            String(c.room || '').toUpperCase() !== roomUpper && 
-            String(c.user || '').toUpperCase() !== userUpper &&
-            String(c.senderUsername || '').toUpperCase() !== userUpper
-          );
-          rooms = rooms.filter(r => 
-            String(r.room || '').toUpperCase() !== roomUpper && 
-            String(r.user || '').toUpperCase() !== userUpper
-          );
-
-          if (typeof clearAllLocalChatStorage === 'function') {
-            clearAllLocalChatStorage(allChats, rooms);
-          }
-          if (typeof refreshActiveChatUI === 'function') {
-            refreshActiveChatUI();
-          }
-        } else if (event.data.type === 'CLEAR_ALL_NOTIFS') {
-          const clearedAt = event.data.clearedAt || Date.now();
-          const emptyNotifsPayload = { clearedAt: clearedAt, items: [] };
-          appStorage.setItem('NOTIFS_CLEARED_AT', String(clearedAt));
-          appStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload));
-          try { localStorage.setItem('NOTIFS_CLEARED_AT', String(clearedAt)); } catch(e) {}
-          try { localStorage.setItem(NOTIFICATIONS_DB_KEY, JSON.stringify(emptyNotifsPayload)); } catch(e) {}
-          if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-          if (typeof loadNotificationList === 'function') loadNotificationList();
-        }
-      }
-    };
-  }
-} catch(e) {}
 
 function isServiceTSMUser() {
   if (!currentUser) return false;
@@ -10763,26 +10020,18 @@ function rebuildRoomsFromChats(allChats) {
   if (!Array.isArray(allChats) || allChats.length === 0) return [];
 
   const roomMap = new Map();
-  const allUsers = typeof getUsersFromDB === 'function' ? getUsersFromDB() : [];
 
   allChats.forEach(c => {
     if (!c) return;
     const userTarget = String(c.user || c.senderUsername || 'USER').trim().toUpperCase();
     const roomKey = String(c.room || ('ROOM_' + userTarget)).trim().toUpperCase();
-    
-    // Cari data user toko dari database lokal agar nama room selalu nama Toko / User
-    const userObj = allUsers.find(u => u && u.username && String(u.username).toUpperCase() === userTarget);
-    const tokoFullName = userObj ? (userObj.fullName || userObj.username) : null;
-    const userArea = (userObj ? userObj.area : null) || c.userArea || 'TSM';
-    
-    // Nama room adalah Nama Toko/User (bukan nama Service TSM)
-    const senderDisplay = (c.pengirim === 'USER' && c.senderName) ? c.senderName : (tokoFullName || userTarget);
+    const senderDisplay = c.senderName || c.senderUsername || userTarget;
 
     if (!roomMap.has(roomKey)) {
       roomMap.set(roomKey, {
         room: roomKey,
         user: userTarget,
-        userArea: userArea,
+        userArea: c.userArea || 'TSM',
         userName: senderDisplay,
         last: (c.pengirim === 'SERVICE' ? `SERVICE TSM: ${c.pesan}` : c.pesan),
         lastTime: c.tanggal || '',
@@ -10793,13 +10042,8 @@ function rebuildRoomsFromChats(allChats) {
       const existing = roomMap.get(roomKey);
       existing.last = (c.pengirim === 'SERVICE' ? `SERVICE TSM: ${c.pesan}` : c.pesan);
       if (c.tanggal) existing.lastTime = c.tanggal;
-      if (userArea) existing.userArea = userArea;
-      
-      if (c.pengirim === 'USER' && c.senderName) {
-        existing.userName = c.senderName;
-      } else if (tokoFullName && (!existing.userName || String(existing.userName).toUpperCase().includes('SERVICE'))) {
-        existing.userName = tokoFullName;
-      }
+      if (c.userArea) existing.userArea = c.userArea;
+      if (c.senderName) existing.userName = c.senderName;
     }
   });
 
@@ -10912,10 +10156,10 @@ function loadDaftarChatAdmin() {
   const actionToolbar = document.createElement('div');
   actionToolbar.style.cssText = 'display:flex; flex-direction:column; gap:6px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border-color);';
   actionToolbar.innerHTML = `
-    <button type="button" onclick="bukaModalPilihUserChat()" style="width:100%; padding:9px 12px; background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; border:none; border-radius: 5px; font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 5px rgba(2,132,199,0.25);">
+    <button type="button" onclick="bukaModalPilihUserChat()" style="width:100%; padding:9px 12px; background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; border:none; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 5px rgba(2,132,199,0.25);">
       <span class="material-symbols-rounded" style="font-size:17px;">add_comment</span> + MULAI CHAT KE TOKO / USER
     </button>
-    <button type="button" onclick="bukaModalBroadcastChat()" style="width:100%; padding:7px 12px; background:rgba(245,158,11,0.12); color:#d97706; border:1px dashed #d97706; border-radius: 5px; font-weight:700; font-size:11.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+    <button type="button" onclick="bukaModalBroadcastChat()" style="width:100%; padding:7px 12px; background:rgba(245,158,11,0.12); color:#d97706; border:1px dashed #d97706; border-radius:8px; font-weight:700; font-size:11.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
       <span class="material-symbols-rounded" style="font-size:17px;">campaign</span> SIARKAN KE SEMUA TOKO
     </button>
   `;
@@ -10942,22 +10186,29 @@ function loadDaftarChatAdmin() {
 
   rooms.forEach(r => {
     const item = document.createElement('div');
-    item.style.cssText = 'padding:10px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.2s; display:flex; justify-content:space-between; align-items:center; border-radius: 5px; margin-bottom:4px;';
+    item.style.cssText = 'padding:10px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.2s; display:flex; justify-content:space-between; align-items:center; border-radius:6px; margin-bottom:4px;';
     item.onmouseover = () => item.style.background = 'rgba(59,130,246,0.06)';
     item.onmouseout = () => item.style.background = 'transparent';
 
-    const unreadBadgeHtml = r.unreadAdmin > 0 ? `<span style="background:#ef4444; color:#fff; border-radius: 5px; padding:2px 8px; font-size:10px; font-weight:bold;">${r.unreadAdmin} UNREAD</span>` : '';
+    const unreadBadgeHtml = r.unreadAdmin > 0 ? `<span style="background:#ef4444; color:#fff; border-radius:10px; padding:2px 8px; font-size:10px; font-weight:bold;">${r.unreadAdmin} UNREAD</span>` : '';
+    
+    const deleteRoomBtnHtml = isSysAdmin ? `
+      <button type="button" class="btnIcon btnDelete" onclick="event.stopPropagation(); hapusChatRoom('${r.room}', '${r.user}')" title="HAPUS CHAT USER INI" style="padding:5px; background:rgba(239,68,68,0.1); color:#ef4444; border-radius:6px; border:none; cursor:pointer; display:flex; align-items:center;">
+        <span class="material-symbols-rounded" style="font-size:17px;">delete</span>
+      </button>
+    ` : '';
 
     item.innerHTML = `
-      <div style="flex:1; min-width:0; margin-right:0px;" onclick="bukaRoomAdmin('${r.room}', '${r.user}', '${r.userName || r.user}', '${r.userArea || 'TSM'}')">
+      <div style="flex:1; min-width:0; margin-right:8px;" onclick="bukaRoomAdmin('${r.room}', '${r.user}', '${r.userName || r.user}', '${r.userArea || 'TSM'}')">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
           <div style="font-size:12.5px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            ${r.userName || r.user} <span style="font-size:10.5px; font-weight:bold; color:var(--primary); background:rgba(59,130,246,0.15); padding:1px 5px; border-radius: 5px;">(${r.userArea || 'TSM'})</span>
+            ${r.userName || r.user} <span style="font-size:10.5px; font-weight:bold; color:var(--primary); background:rgba(59,130,246,0.15); padding:1px 5px; border-radius:4px;">(${r.userArea || 'TSM'})</span>
           </div>
           ${unreadBadgeHtml}
         </div>
         <div style="color:var(--text-muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${r.last || '-'}</div>
       </div>
+      ${deleteRoomBtnHtml}
     `;
     roomsContainer.appendChild(item);
   });
@@ -11025,7 +10276,7 @@ function filterListUserChat(query) {
 
   filtered.forEach(u => {
     const card = document.createElement('div');
-    card.style.cssText = 'padding:9px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-radius: 5px; margin-bottom:4px; transition:background 0.2s;';
+    card.style.cssText = 'padding:9px 12px; border-bottom:1px solid var(--border-color); cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-radius:6px; margin-bottom:4px; transition:background 0.2s;';
     card.onmouseover = () => card.style.background = 'rgba(59,130,246,0.08)';
     card.onmouseout = () => card.style.background = 'transparent';
     card.onclick = () => {
@@ -11049,7 +10300,7 @@ function filterListUserChat(query) {
         </div>
       </div>
       <div style="text-align:right; flex-shrink:0;">
-        <span style="font-size:10px; font-weight:700; color:var(--primary); background:rgba(59,130,246,0.15); padding:2px 6px; border-radius: 5px; display:inline-block; margin-bottom:2px;">
+        <span style="font-size:10px; font-weight:700; color:var(--primary); background:rgba(59,130,246,0.15); padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:2px;">
           ${u.area || 'TSM'}
         </span>
         <div style="font-size:9.5px; color:var(--text-muted); font-weight:600;">
@@ -11177,35 +10428,6 @@ async function kirimBroadcastChatKeSemuaUser() {
 }
 window.kirimBroadcastChatKeSemuaUser = kirimBroadcastChatKeSemuaUser;
 
-function clearAllLocalChatStorage(newChats = [], newRooms = []) {
-  const jsonChats = JSON.stringify(newChats);
-  const jsonRooms = JSON.stringify(newRooms);
-
-  appStorage.setItem(CHAT_DB_KEY, jsonChats);
-  appStorage.setItem(CHAT_ROOM_DB_KEY, jsonRooms);
-  if (typeof CHAT_MESSAGES_KEY !== 'undefined') appStorage.setItem(CHAT_MESSAGES_KEY, jsonChats);
-
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(CHAT_DB_KEY, jsonChats);
-      localStorage.setItem(CHAT_ROOM_DB_KEY, jsonRooms);
-      localStorage.setItem('CHAT_MESSAGES', jsonChats);
-      localStorage.setItem('CHAT_ROOMS', jsonRooms);
-      localStorage.setItem('STORE_CHAT_DB_V7_CLEAN', jsonChats);
-      localStorage.setItem('STORE_CHAT_MESSAGES_V7_CLEAN', jsonChats);
-      localStorage.setItem('STORE_CHAT_ROOM_DB_V7_CLEAN', jsonRooms);
-      if (!newChats || newChats.length === 0) {
-        localStorage.removeItem('CHAT_MESSAGES');
-        localStorage.removeItem('CHAT_ROOMS');
-        localStorage.removeItem('STORE_CHAT_DB_V7_CLEAN');
-        localStorage.removeItem('STORE_CHAT_MESSAGES_V7_CLEAN');
-        localStorage.removeItem('STORE_CHAT_ROOM_DB_V7_CLEAN');
-      }
-    }
-  } catch(e) {}
-}
-window.clearAllLocalChatStorage = clearAllLocalChatStorage;
-
 function hapusChatRoom(roomTarget, userTarget) {
   const isSysAdmin = currentUser && (
     String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
@@ -11235,32 +10457,20 @@ function hapusChatRoom(roomTarget, userTarget) {
           String(r.user || '').toUpperCase() !== userUpper
         );
 
-        // 1. BERSIHKAN LENGKAP PENYIMPANAN LOKAL PERANGKAT
-        clearAllLocalChatStorage(allChats, rooms);
+        appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
+        appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
 
         // 2. SYNC UPDATED CHATS TO SUPABASE VIA ALL CHAT TARGETS
         if (typeof pushChatToSupabase === 'function') {
           pushChatToSupabase(allChats, null);
         }
         if (typeof supabase !== 'undefined' && supabase) {
-          try { if (roomTarget) await supabase.from('chat_messages').delete().eq('room', roomTarget); } catch(e) {}
-          try { if (userTarget) await supabase.from('chat_messages').delete().eq('user', userTarget); } catch(e) {}
-          try { if (userTarget) await supabase.from('chat_messages').delete().eq('sender_username', userTarget); } catch(e) {}
-          try { if (roomTarget) await supabase.from('chat').delete().eq('room', roomTarget); } catch(e) {}
-          try { if (userTarget) await supabase.from('chat').delete().eq('user', userTarget); } catch(e) {}
+          try { await supabase.from('chat_messages').delete().eq('room', roomTarget); } catch(e) {}
+          try { await supabase.from('chat').delete().eq('room', roomTarget); } catch(e) {}
         }
 
-        // 3. BROADCAST SIGNAL EVENT KE TAB TERHUBUNG
-        try {
-          if (window.BroadcastChannel) {
-            const bc = new BroadcastChannel('permintaan_toko_sync');
-            bc.postMessage({ type: 'DELETE_ROOM', roomTarget: roomTarget, userTarget: userTarget });
-            bc.close();
-          }
-        } catch(e) {}
-
         hideLoading();
-        showNotif(`CHAT ROOM DENGAN '${userTarget || roomTarget}' BERHASIL DIHAPUS DARI PENYIMPANAN LOKAL & DATABASE!`, 'success');
+        showNotif(`CHAT ROOM DENGAN '${userTarget || roomTarget}' BERHASIL DIHAPUS!`, 'success');
 
         if (isAdminChat) {
           kembaliKeDaftarAdmin();
@@ -11289,6 +10499,7 @@ function bukaRoomAdmin(room, user, fullName, area) {
   if (rIdx !== -1) {
     rooms[rIdx].unreadAdmin = 0;
     appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
+    if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
   }
 
   const chatList = document.getElementById('chatList');
@@ -11341,12 +10552,9 @@ function loadChatAdmin(room) {
   } else {
     roomChats.forEach(c => {
       const isSelf = (c.pengirim === 'SERVICE' || c.pengirim === 'ADMIN' || (currentUser && String(c.senderUsername).toUpperCase() === String(currentUser.username).toUpperCase()));
-      const senderTitle = isSelf ? `SERVICE TSM (${currentUser?.fullName || currentUser?.username || 'SUPPORT'})` : (c.senderName || c.senderUsername || currentChatUser || 'TOKO/USER');
-
       const div = document.createElement('div');
       div.className = isSelf ? 'chatUser' : 'chatAdmin';
       div.innerHTML = `
-        <div style="font-size:10.5px; font-weight:700; color:${isSelf ? 'var(--primary)' : '#0284c7'}; margin-bottom:3px; letter-spacing:0.3px;">${senderTitle}</div>
         <div class="chatText">${c.pesan}</div>
         <div class="chatTime">${c.tanggal}</div>
       `;
@@ -11362,23 +10570,13 @@ function loadChatAdmin(room) {
 function loadChatUser() {
   const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
   const myUsernameUpper = String(currentUser ? currentUser.username : '').toUpperCase();
-  const myAreaUpper = String(currentUser ? currentUser.area : '').toUpperCase();
   const roomName = 'ROOM_' + myUsernameUpper;
 
-  const userChats = allChats.filter(c => {
-    if (!c) return false;
-    const cRoom = String(c.room || '').toUpperCase();
-    const cUser = String(c.user || '').toUpperCase();
-    const cSender = String(c.senderUsername || '').toUpperCase();
-    const cArea = String(c.userArea || c.user_area || '').toUpperCase();
-
-    return (
-      cRoom === roomName || 
-      cUser === myUsernameUpper ||
-      cSender === myUsernameUpper ||
-      (myAreaUpper && (cArea === myAreaUpper || cRoom === ('ROOM_' + myAreaUpper) || cUser === myAreaUpper))
-    );
-  });
+  const userChats = allChats.filter(c => 
+    String(c.room || '').toUpperCase() === roomName || 
+    String(c.user || '').toUpperCase() === myUsernameUpper ||
+    String(c.senderUsername || '').toUpperCase() === myUsernameUpper
+  );
 
   const body = document.getElementById('chatBody');
   if (!body) return;
@@ -11398,19 +10596,15 @@ function loadChatUser() {
   if (userChats.length === 0) {
     body.innerHTML = `
       <div class="chatAdmin">
-        <div style="font-size:10.5px; font-weight:700; color:#0284c7; margin-bottom:3px; letter-spacing:0.3px;">SERVICE TSM SUPPORT</div>
         <div class="chatText">HALO 👋<br>ADA YANG BISA KAMI BANTU UNTUK PERMINTAAN TOKO ANDA? SILAKAN KIRIM PESAN DI SINI.</div>
       </div>
     `;
   } else {
     userChats.forEach(c => {
       const isSelf = (c.pengirim === 'USER' || (currentUser && String(c.senderUsername).toUpperCase() === myUsernameUpper));
-      const senderTitle = isSelf ? (currentUser.fullName || currentUser.username) : (c.senderName || 'SERVICE TSM SUPPORT');
-
       const div = document.createElement('div');
       div.className = isSelf ? 'chatUser' : 'chatAdmin';
       div.innerHTML = `
-        <div style="font-size:10.5px; font-weight:700; color:${isSelf ? 'var(--primary)' : '#0284c7'}; margin-bottom:3px; letter-spacing:0.3px;">${senderTitle}</div>
         <div class="chatText">${c.pesan}</div>
         <div class="chatTime">${c.tanggal}</div>
       `;
@@ -11429,8 +10623,8 @@ function kirimPesanChat() {
   const pesan = txt.value.trim().toUpperCase();
   if (!pesan) return;
 
-  const senderId = currentUser.id || 'USER';
-  const senderUsername = currentUser.username || 'USER';
+  const senderId = currentUser.id;
+  const senderUsername = currentUser.username;
   const now = new Date();
   const timeStr = getFormattedDateDDMMYYYY(now) + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
 
@@ -11448,7 +10642,7 @@ function kirimPesanChat() {
     pengirimType = 'USER';
   }
 
-  const newChatId = `CHAT-${Date.now()}-${Math.floor(Math.random()*10000)}`;
+  const newChatId = `CHAT-${Date.now()}-${Math.floor(Math.random()*1000)}`;
   const newChatRow = {
     id: newChatId,
     room: roomTarget,
@@ -11457,11 +10651,15 @@ function kirimPesanChat() {
     pengirim: pengirimType,
     sender_id: senderId,
     sender_username: senderUsername,
-    sender_name: `${currentUser.fullName || currentUser.username} (${currentUser.toko || currentUser.area || 'BDG'})`,
+    sender_name: `${currentUser.fullName || currentUser.username} (${currentUser.toko || currentUser.area})`,
     pesan: pesan,
     tanggal: timeStr,
     created_at: new Date().toISOString()
   };
+
+  // 1. LOCAL STORAGE UPDATE & REFRESH UI
+  const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
+  const rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
 
   const newChatEntry = {
     id: newChatId,
@@ -11471,19 +10669,31 @@ function kirimPesanChat() {
     pengirim: pengirimType,
     senderId,
     senderUsername,
-    senderName: `${currentUser.fullName || currentUser.username} (${currentUser.toko || currentUser.area || 'BDG'})`,
+    senderName: `${currentUser.fullName || currentUser.username} (${currentUser.toko || currentUser.area})`,
     pesan,
-    tanggal: timeStr,
-    created_at: new Date().toISOString()
+    tanggal: timeStr
   };
-
-  txt.value = '';
-
-  // 1. LOCAL STORAGE UPDATE
-  const allChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
-  const rooms = JSON.parse(appStorage.getItem(CHAT_ROOM_DB_KEY) || '[]');
-
   allChats.push(newChatEntry);
+
+  appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
+  try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats)); } catch(e) {}
+
+  // 2. SUPABASE DIRECT PUSH VIA MULTI-TARGET CHAT SYSTEM (chat_messages, chat, lookup, permintaan_toko)
+  if (typeof pushChatToSupabase === 'function') {
+    pushChatToSupabase(allChats, newChatEntry);
+  }
+
+  // 3. FIRESTORE & REALTIME DB SYNC (IF CONFIGURED)
+  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+    try {
+      dbFirestore.collection('chat_messages').doc(newChatId).set(newChatRow).catch(e => console.warn(e));
+    } catch(e) {}
+  }
+  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+    try {
+      dbRealtime.ref(`chat_messages/${newChatId}`).set(newChatRow).catch(e => console.warn(e));
+    } catch(e) {}
+  }
 
   const roomUpper = String(roomTarget).toUpperCase();
   const rIdx = rooms.findIndex(x => String(x.room).toUpperCase() === roomUpper || String(x.user).toUpperCase() === String(targetUser).toUpperCase());
@@ -11496,7 +10706,6 @@ function kirimPesanChat() {
     rooms.push({
       room: roomTarget,
       user: targetUser,
-      userName: targetUser,
       userArea: currentUser.area || 'BDG',
       last: (pengirimType === 'SERVICE' ? `SERVICE TSM: ${pesan}` : pesan),
       unreadAdmin: pengirimType === 'USER' ? 1 : 0,
@@ -11505,39 +10714,15 @@ function kirimPesanChat() {
     });
   }
 
-  clearAllLocalChatStorage(allChats, rooms);
+  appStorage.setItem(CHAT_DB_KEY, JSON.stringify(allChats));
+  appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify(rooms));
 
-  // 2. BROADCAST INSTAN
-  try {
-    if (window.BroadcastChannel) {
-      const syncChannel = new BroadcastChannel('permintaan_toko_sync');
-      syncChannel.postMessage({ type: 'NEW_CHAT_MESSAGE', chat: newChatEntry });
-      syncChannel.close();
-    }
-  } catch(e) {}
+  txt.value = '';
 
-  // 3. DISPLAY INSTAN PADA LAYAR
   if (isAdminChat) {
     loadChatAdmin(roomTarget);
   } else {
     loadChatUser();
-  }
-
-  // 4. SUPABASE DIRECT PUSH VIA MULTI-TARGET CHAT SYSTEM
-  if (typeof pushChatToSupabase === 'function') {
-    pushChatToSupabase(allChats, newChatEntry);
-  }
-
-  // 5. FIRESTORE & REALTIME DB SYNC (IF CONFIGURED)
-  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-    try {
-      dbFirestore.collection('chat_messages').doc(newChatId).set(newChatRow).catch(e => console.warn(e));
-    } catch(e) {}
-  }
-  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-    try {
-      dbRealtime.ref(`chat_messages/${newChatId}`).set(newChatRow).catch(e => console.warn(e));
-    } catch(e) {}
   }
 
   if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
@@ -11600,19 +10785,17 @@ function hapusSemuaChatAdmin() {
     return;
   }
 
-  showConfirm('YAKIN INGIN MENGHAPUS SELURUH RIWAYAT CHAT & ROOM DARI SISTEM (DATABASE & SELURUH PERANGKAT)?', () => {
+  showConfirm('YAKIN INGIN MENGHAPUS SELURUH RIWAYAT CHAT & ROOM DARI SISTEM?', () => {
     showLoading('MENGHAPUS SEMUA CHAT...');
     setTimeout(async () => {
       try {
-        const clearedAt = Date.now();
-        const clearPayload = { clearedAt: clearedAt, items: [] };
+        // 1. KOSONGKAN PENYIMPANAN LOKAL
+        appStorage.setItem(CHAT_DB_KEY, JSON.stringify([]));
+        appStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([]));
+        try { localStorage.setItem(CHAT_DB_KEY, JSON.stringify([])); } catch(e) {}
+        try { localStorage.setItem(CHAT_ROOM_DB_KEY, JSON.stringify([])); } catch(e) {}
 
-        // 1. KOSONGKAN HAPUS SELURUH PENYIMPANAN LOKAL PERANGKAT INI
-        clearAllLocalChatStorage([], []);
-        appStorage.setItem('CHAT_CLEARED_AT', String(clearedAt));
-        try { localStorage.setItem('CHAT_CLEARED_AT', String(clearedAt)); } catch(e) {}
-
-        // 2. KOSONGKAN & HAPUS DATABASE SUPABASE CLOUD (chat_messages, chat, lookup, permintaan_toko)
+        // 2. KOSONGKAN DI SUPABASE CLOUD (chat_messages, chat, lookup, permintaan_toko)
         if (typeof pushChatToSupabase === 'function') {
           pushChatToSupabase([], null);
         }
@@ -11622,22 +10805,21 @@ function hapusSemuaChatAdmin() {
           try {
             await supabase.from('lookup').upsert({
               key: 'chat_messages',
-              value: JSON.stringify(clearPayload),
+              value: JSON.stringify([]),
+              type: 'CHAT',
               updated_at: new Date().toISOString()
             }, { onConflict: 'key' });
           } catch(e) {}
           try {
             const systemChatRow = {
-              id: '__SYSTEM_CHAT_MESSAGES__',
               no_surat: '__SYSTEM_CHAT_MESSAGES__',
               tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
               toko: 'SYSTEM',
               area: 'ALL',
               jenis: 'SYSTEM',
-              catatan: JSON.stringify(clearPayload),
+              catatan: JSON.stringify([]),
               items: [],
               photos: [],
-              artemis_photos: [],
               status: 'DONE',
               service_approve: true,
               created_by: 'SYSTEM',
@@ -11649,13 +10831,12 @@ function hapusSemuaChatAdmin() {
           }
         }
 
-        // 3. KOSONGKAN DI FIRESTORE & REALTIME DB JIKA TERSEDIA
+        // 3. KOSONGKAN DI FIRESTORE & REALTIME DB
         if (typeof dbFirestore !== 'undefined' && dbFirestore) {
           try {
             await dbFirestore.collection('app_settings').doc('config').set({
               chatMessages: [],
-              chatRooms: [],
-              chatClearedAt: clearedAt
+              chatRooms: []
             }, { merge: true });
           } catch(e) {}
         }
@@ -11663,26 +10844,16 @@ function hapusSemuaChatAdmin() {
           try {
             await dbRealtime.ref('chat_messages').remove();
             await dbRealtime.ref('chat_rooms').remove();
-            await dbRealtime.ref('chat_cleared_at').set(clearedAt);
           } catch(e) {}
         }
 
-        // 4. BROADCAST SIGNAL EVENT KE SELURUH TAB & PERANGKAT LAIN TERHUBUNG
-        try {
-          if (window.BroadcastChannel) {
-            const bc = new BroadcastChannel('permintaan_toko_sync');
-            bc.postMessage({ type: 'CLEAR_ALL_CHATS', clearedAt: clearedAt });
-            bc.close();
-          }
-        } catch(e) {}
-
-        // 5. SYNC CENTRAL CLOUD
+        // 4. SYNC CENTRAL CLOUD
         if (typeof pushCentralCloudDB === 'function') {
           await pushCentralCloudDB();
         }
 
         hideLoading();
-        showNotif('SELURUH PESAN CHAT & ROOM BERHASIL DIHAPUS DARI CLOUD & SELURUH PERANGKAT!', 'success');
+        showNotif('SELURUH PESAN CHAT & ROOM BERHASIL DIHAPUS!', 'success');
 
         if (typeof refreshActiveChatUI === 'function') {
           refreshActiveChatUI();
@@ -11767,12 +10938,11 @@ window.addEventListener('click', function (e) {
     tutupImageViewer();
   }
 
-  // 10. Chat Bantuan Popup (#popupBantuan) - Click outside chatBox to close
+  // 10. Chat Bantuan Popup (#popupBantuan) - Click outside to close
   const popupBantuan = document.getElementById('popupBantuan');
-  const chatBox = popupBantuan?.querySelector('.chatBox');
   const helpBtn = document.getElementById('helpButton');
-  if (popupBantuan && (popupBantuan.classList.contains('show') || popupBantuan.style.display === 'flex' || popupBantuan.style.display === 'block')) {
-    if (e.target === popupBantuan || (chatBox && !chatBox.contains(e.target) && (!helpBtn || !helpBtn.contains(e.target)))) {
+  if (popupBantuan && (popupBantuan.classList.contains('show') || popupBantuan.style.display === 'block')) {
+    if (!popupBantuan.contains(e.target) && (!helpBtn || !helpBtn.contains(e.target))) {
       if (typeof tutupBantuan === 'function') {
         tutupBantuan();
       }
@@ -12087,7 +11257,6 @@ async function simpanUserData() {
           username: users[idx].username,
           password: users[idx].password,
           full_name: users[idx].fullName,
-          store_code: users[idx].storeCode,
           phone: users[idx].phone,
           category: users[idx].category,
           area: users[idx].area,
@@ -12122,10 +11291,8 @@ async function simpanUserData() {
               id: users[idx].id,
               full_name: fullName,
               area: area,
-              store_code: storeCode || generateStoreCode(fullName),
               created_by: currentUser ? currentUser.fullName : 'ADMIN'
             }).catch(e => console.warn(e));
-            if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('toko_list', { id: users[idx].id, fullName, area, storeCode });
           }
           if (typeof syncSupabaseStoresToLocalCache === 'function') {
             await syncSupabaseStoresToLocalCache().catch(() => {});
@@ -12181,102 +11348,84 @@ async function simpanUserData() {
   });
   appStorage.setItem(DELETED_USERS_KEY, JSON.stringify(cleanDelUsers));
 
-  showMiniLoading('MENYIMPAN USER / TOKO BARU...');
-  setTimeout(async () => {
-    try {
-      const startTime = Date.now();
-      const newUser = {
-        id: `USR-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-        username,
-        password,
-        fullName,
-        storeCode: storeCode || generateStoreCode(fullName),
-        phone,
-        category,
-        area,
-        createdAt: getFormattedDateDDMMYYYY()
-      };
+  const newUser = {
+    id: `USR-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+    username,
+    password,
+    fullName,
+    storeCode: storeCode || generateStoreCode(fullName),
+    phone,
+    category,
+    area,
+    createdAt: getFormattedDateDDMMYYYY()
+  };
 
-      users.push(newUser);
-      saveUsersToDB(users);
+  users.push(newUser);
+  saveUsersToDB(users);
 
-      const docId = String(username).toUpperCase();
-      if (typeof supabase !== 'undefined' && supabase) {
-        await supabase.from('users').upsert({
+  const docId = String(username).toUpperCase();
+  if (typeof supabase !== 'undefined' && supabase) {
+    await supabase.from('users').upsert({
+      id: newUser.id,
+      username: newUser.username,
+      password: newUser.password,
+      full_name: newUser.fullName,
+      phone: newUser.phone,
+      category: newUser.category,
+      area: newUser.area,
+      created_at: newUser.createdAt
+    });
+
+    if (category === 'TOKO') {
+      try {
+        await supabase.from('toko_list').upsert({
           id: newUser.id,
-          username: newUser.username,
-          password: newUser.password,
           full_name: newUser.fullName,
-          store_code: newUser.storeCode,
-          phone: newUser.phone,
-          category: newUser.category,
           area: newUser.area,
-          created_at: newUser.createdAt
+          created_by: currentUser ? currentUser.fullName : 'ADMIN'
         });
-
-        if (category === 'TOKO') {
-          try {
-            await supabase.from('toko_list').upsert({
-              id: newUser.id,
-              full_name: newUser.fullName,
-              area: newUser.area,
-              store_code: newUser.storeCode,
-              created_by: currentUser ? currentUser.fullName : 'ADMIN'
-            });
-          } catch (e) {}
-        }
-      }
-
-      if (category === 'TOKO') {
-        try {
-          const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
-          if (!localStores.some(s => s.id === newUser.id || (s.fullName && s.fullName.toUpperCase() === fullName.toUpperCase()))) {
-            localStores.push({
-              id: newUser.id,
-              fullName: newUser.fullName,
-              area: newUser.area,
-              storeCode: newUser.storeCode,
-              createdBy: currentUser ? currentUser.fullName : 'ADMIN'
-            });
-            appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
-          }
-        } catch (e) {}
-      }
-
-      if (typeof syncSupabaseUsersToLocalCache === 'function') {
-        await syncSupabaseUsersToLocalCache();
-      }
-      if (typeof syncSupabaseStoresToLocalCache === 'function') {
-        await syncSupabaseStoresToLocalCache();
-      }
-      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-        dbFirestore.collection('users').doc(docId).set(newUser).catch(e => console.warn(e));
-      }
-      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-        dbRealtime.ref(`users/${docId}`).set(newUser).catch(e => console.warn(e));
-      }
-      if (typeof pushCentralCloudDB === 'function') {
-        pushCentralCloudDB();
-      }
-
-      const elapsed = Date.now() - startTime;
-      if (elapsed < 650) {
-        await new Promise(r => setTimeout(r, 650 - elapsed));
-      }
-
-      hideMiniLoading();
-      showNotif(`USER ${fullName} (${username}) BERHASIL DISIMPAN!`, 'success');
-
-      tutupUserModal();
-      loadUsersManagement();
-      if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
-      if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
-    } catch(err) {
-      hideMiniLoading();
-      console.error('[SIMPAN USER ERROR]:', err);
-      showNotif('GAGAL MENYIMPAN USER: ' + (err.message || err), 'error');
+      } catch (e) {}
     }
-  }, 50);
+  }
+
+  if (category === 'TOKO') {
+    try {
+      const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
+      if (!localStores.some(s => s.id === newUser.id || (s.fullName && s.fullName.toUpperCase() === fullName.toUpperCase()))) {
+        localStores.push({
+          id: newUser.id,
+          fullName: newUser.fullName,
+          area: newUser.area,
+          storeCode: newUser.storeCode,
+          createdBy: currentUser ? currentUser.fullName : 'ADMIN'
+        });
+        appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
+      }
+    } catch (e) {}
+  }
+
+  if (typeof syncSupabaseUsersToLocalCache === 'function') {
+    await syncSupabaseUsersToLocalCache();
+  }
+  if (typeof syncSupabaseStoresToLocalCache === 'function') {
+    await syncSupabaseStoresToLocalCache();
+  }
+  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+    dbFirestore.collection('users').doc(docId).set(newUser).catch(e => console.warn(e));
+  }
+  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+    dbRealtime.ref(`users/${docId}`).set(newUser).catch(e => console.warn(e));
+  }
+  if (typeof pushCentralCloudDB === 'function') {
+    pushCentralCloudDB();
+  }
+
+  showNotif(`USER ${fullName} (${username}) BERHASIL DISIMPAN!`, 'success');
+
+  tutupUserModal();
+  loadUsersManagement();
+  if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
+  if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
 }
 
 function hapusUser(userId) {
@@ -12299,10 +11448,9 @@ function hapusUser(userId) {
   }
 
   showConfirm(`HAPUS USER '${u.fullName || u.username}' (${u.username})?`, () => {
-    showMiniLoading(`MENGHAPUS USER '${u.fullName || u.username}'...`);
+    showLoading('MENGHAPUS USER...');
     setTimeout(async () => {
       try {
-        const startTime = Date.now();
         // 1. UPDATE DELETED KEYS & LOKAL STORAGE FOR USERS & STORES
         try {
           const delUsers = JSON.parse(appStorage.getItem(DELETED_USERS_KEY) || '[]');
@@ -12339,10 +11487,6 @@ function hapusUser(userId) {
             if (u.fullName) {
               await supabase.from('toko_list').delete().eq('full_name', u.fullName);
             }
-            if (typeof notifySupabaseDataChanged === 'function') {
-              notifySupabaseDataChanged('users', { id: u.id, username: u.username });
-              notifySupabaseDataChanged('toko_list', { id: u.id, fullName: u.fullName });
-            }
           } catch (sbErr) {
             console.warn('[SUPABASE DELETE USER NOTICE]:', sbErr);
           }
@@ -12368,23 +11512,21 @@ function hapusUser(userId) {
         if (typeof pushCentralCloudDB === 'function') {
           try { await pushCentralCloudDB(); } catch(e) {}
         }
-
-        const elapsed = Date.now() - startTime;
-        if (elapsed < 650) {
-          await new Promise(r => setTimeout(r, 650 - elapsed));
+        if (typeof pullCentralCloudDB === 'function') {
+          try { await pullCentralCloudDB(); } catch(e) {}
         }
 
-        hideMiniLoading();
+        hideLoading();
         showNotif(`USER ${u.username} BERHASIL DIHAPUS!`, 'info');
         if (typeof loadUsersManagement === 'function') loadUsersManagement();
         if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
         if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
       } catch (err) {
-        hideMiniLoading();
+        hideLoading();
         console.error('[HAPUS USER ERROR]:', err);
         showNotif('TERJADI KESALAHAN SAAT MENGHAPUS USER: ' + (err.message || err), 'error');
       }
-    }, 50);
+    }, 300);
   });
 }
 window.hapusUser = hapusUser;
@@ -12415,7 +11557,7 @@ function loadMasterDbTable() {
   tbody.innerHTML = '';
 
   if (requests.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted); border:none !important;">BELUM ADA DATA PERMINTAAN TERDAFTAR.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);">BELUM ADA DATA PERMINTAAN TERDAFTAR.</td></tr>`;
     updateMultiMasterDbBtnState();
     return;
   }
@@ -12451,29 +11593,6 @@ function loadMasterDbTable() {
     `;
     tbody.appendChild(tr);
   });
-
-  // BUAT PATEN 10 BARIS KOSONG PELENGKAP (JIKA DATA BERTAMBAH AKAN OTOMATIS BERTAMBAH)
-  const targetMinRowsMaster = 10;
-  if (requests.length < targetMinRowsMaster) {
-    for (let i = requests.length; i < targetMinRowsMaster; i++) {
-      const emptyTr = document.createElement('tr');
-      emptyTr.className = 'empty-grid-row';
-      emptyTr.style.height = '42px';
-      emptyTr.innerHTML = `
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-      `;
-      tbody.appendChild(emptyTr);
-    }
-  }
   updateMultiMasterDbBtnState();
 }
 
@@ -12541,7 +11660,6 @@ function hapusMultiMasterDb() {
         if (typeof supabase !== 'undefined' && supabase) {
           try {
             await supabase.from('permintaan_toko').delete().in('no_surat', noSuratList);
-            if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('master_db_reset');
           } catch(sbErr1) {}
         }
 
@@ -12598,10 +11716,7 @@ function hapusDataMaster(noSurat) {
       if (typeof supabase !== 'undefined' && supabase) {
         supabase.from('permintaan_toko').delete().eq('no_surat', noSurat).then(({ error }) => {
           if (error) console.warn('[SUPABASE DELETE NOTICE]:', error.message);
-          else {
-            console.log('⚡ [SUPABASE DELETE SUCCESS]:', noSurat);
-            if (typeof broadcastSupabaseDataChange === 'function') broadcastSupabaseDataChange('DELETE', { noSurat });
-          }
+          else console.log('⚡ [SUPABASE DELETE SUCCESS]:', noSurat);
         });
       }
       if (typeof dbFirestore !== 'undefined' && dbFirestore) {
@@ -12871,7 +11986,6 @@ function simpanAkun() {
                 username: currentUser.username,
                 password: currentUser.password,
                 full_name: currentUser.fullName,
-                store_code: currentUser.storeCode || generateStoreCode(currentUser.fullName),
                 phone: currentUser.phone || '-',
                 category: currentUser.category,
                 area: currentUser.area,
@@ -13041,8 +12155,7 @@ function loadDaftarTokoModal(filterKeyword = '') {
   tbody.innerHTML = '';
 
   const allStores = getStoresFromDB();
-  const userRole = String(currentUser.category || currentUser.kategori || currentUser.role || '').trim().toUpperCase();
-  let areaStores = (userRole === 'DM' || currentUser.area === 'ALL') 
+  let areaStores = (currentUser.category === 'DM' || currentUser.area === 'ALL') 
     ? allStores 
     : allStores.filter(s => isAreaMatch(currentUser.area, s.area));
 
@@ -13073,12 +12186,12 @@ function loadDaftarTokoModal(filterKeyword = '') {
     const code = s.storeCode || generateStoreCode(s.fullName);
     const areaBadge = s.area || 'BDG';
     tr.innerHTML = `
-      <td style="padding: 8px 12px; font-weight: 600; white-space: nowrap !important;">${s.fullName}</td>
-      <td style="padding: 8px 8px; text-align: center; font-weight: 700; color: #0284c7; white-space: nowrap !important;">${areaBadge}</td>
-      <td style="padding: 8px 8px; text-align: center; color: var(--primary); font-weight: 700; white-space: nowrap !important;">${code}</td>
-      <td style="padding: 8px 8px; text-align: center; white-space: nowrap !important;">
+      <td style="padding: 8px; font-weight: 600;">${s.fullName}</td>
+      <td style="padding: 8px; text-align: center; font-weight: 700; color: #0284c7;">${areaBadge}</td>
+      <td style="padding: 8px; text-align: center; color: var(--primary); font-weight: 700;">${code}</td>
+      <td style="padding: 8px; text-align: center; white-space: nowrap;">
         <button type="button" class="btnIcon btnEdit" onclick="editTokoCustom('${s.id}')" title="EDIT TOKO" style="margin-right: 4px;"><span class="material-symbols-rounded">edit</span></button>
-        <button type="button" class="btnIcon btnDelete" id="btnHapusToko_${s.id}" onclick="hapusTokoCustom('${s.id}', this)" title="HAPUS TOKO"><span class="material-symbols-rounded">delete</span></button>
+        <button type="button" class="btnIcon btnDelete" onclick="hapusTokoCustom('${s.id}')" title="HAPUS TOKO"><span class="material-symbols-rounded">delete</span></button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -13117,19 +12230,11 @@ function simpanTokoBaru() {
     return;
   }
 
-  // TAMPILKAN ANIMASI LOADING BERPUTAR PADA TOMBOL
-  if (btnSimpan) {
-    btnSimpan.disabled = true;
-    btnSimpan.style.opacity = '0.9';
-    btnSimpan.innerHTML = `<span class="btn-spinner-ring"></span> <span style="vertical-align: middle; font-weight: 700;">${editStoreId ? 'MEMPERBARUI...' : 'MENYIMPAN...'}</span>`;
-  }
-
   if (editStoreId) {
     // MODES EDIT TOKO
-    showMiniLoading('MEMPERBARUI DATA TOKO...');
+    showLoading('MEMPERBARUI DATA TOKO...');
     setTimeout(async () => {
       try {
-        const startTime = Date.now();
         const targetStore = existingStores.find(s => s.id === editStoreId);
         const oldName = targetStore ? targetStore.fullName : '';
         const newCode = generateStoreCode(namaToko);
@@ -13171,7 +12276,6 @@ function simpanTokoBaru() {
                 username: userObj.username,
                 password: userObj.password,
                 full_name: userObj.fullName,
-                store_code: userObj.storeCode,
                 phone: userObj.phone || '-',
                 category: userObj.category || 'TOKO',
                 area: targetArea,
@@ -13188,10 +12292,8 @@ function simpanTokoBaru() {
               id: editStoreId,
               full_name: namaToko,
               area: targetArea,
-              store_code: newCode,
               created_by: currentUser.fullName
             });
-            if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('toko_list', { id: editStoreId, fullName: namaToko, area: targetArea });
           } catch (e) {
             console.warn('[SUPABASE TOKO_LIST UPDATE WARNING]:', e);
           }
@@ -13206,44 +12308,30 @@ function simpanTokoBaru() {
           try { await pushCentralCloudDB(); } catch (e) {}
         }
 
-        const elapsed = Date.now() - startTime;
-        if (elapsed < 650) {
-          await new Promise(r => setTimeout(r, 650 - elapsed));
-        }
-
-        hideMiniLoading();
+        hideLoading();
         showNotif(`TOKO BERHASIL DIPERBARUHI MENJADI '${namaToko}' (AREA ${targetArea})!`, 'success');
 
         editStoreId = null;
         if (inputEl) inputEl.value = '';
         if (btnSimpan) {
-          btnSimpan.disabled = false;
-          btnSimpan.style.opacity = '1';
-          btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span> SIMPAN`;
-          btnSimpan.style.background = 'var(--primary)';
+          btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle;">save</span> SIMPAN`;
+          btnSimpan.style.background = '#16a34a';
         }
         if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
         if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions(namaToko);
         if (typeof loadUsersManagement === 'function') loadUsersManagement();
       } catch (err) {
-        hideMiniLoading();
-        if (btnSimpan) {
-          btnSimpan.disabled = false;
-          btnSimpan.style.opacity = '1';
-          btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span> SIMPAN EDIT`;
-        }
+        hideLoading();
         console.error('[EDIT TOKO ERROR]:', err);
         showNotif('GAGAL MEMPERBARUI TOKO: ' + (err.message || err), 'error');
       }
-    }, 50);
+    }, 300);
     return;
   }
 
-  // MODES TAMBAH TOKO BARU
-  showMiniLoading('MENYIMPAN TOKO BARU...');
+  showLoading('MENYIMPAN TOKO BARU...');
   setTimeout(async () => {
     try {
-      const startTime = Date.now();
       const storeKey = `${namaToko}_${targetArea}`;
       let deletedStoreKeys = JSON.parse(appStorage.getItem(DELETED_STORES_KEY) || '[]');
       if (deletedStoreKeys.includes(storeKey)) {
@@ -13291,7 +12379,6 @@ function simpanTokoBaru() {
             id: newId,
             full_name: newStore.fullName,
             area: newStore.area,
-            store_code: newStore.storeCode,
             created_by: newStore.createdBy
           });
           if (newUserAcc) {
@@ -13300,15 +12387,12 @@ function simpanTokoBaru() {
               username: newUserAcc.username,
               password: newUserAcc.password,
               full_name: newUserAcc.fullName,
-              store_code: newUserAcc.storeCode,
               phone: newUserAcc.phone,
               category: newUserAcc.category,
               area: newUserAcc.area,
               created_at: newUserAcc.createdAt
             });
-            if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('users', newUserAcc);
           }
-          if (typeof notifySupabaseDataChanged === 'function') notifySupabaseDataChanged('toko_list', newStore);
           console.log('⚡ [SUPABASE STORE SUCCESS]: Data toko berhasil disimpan ke Supabase!');
         } catch (sbErr) {
           console.warn('[SUPABASE STORE SAVE WARNING]:', sbErr);
@@ -13331,57 +12415,36 @@ function simpanTokoBaru() {
         await pushCentralCloudDB();
       }
 
-      const elapsed = Date.now() - startTime;
-      if (elapsed < 650) {
-        await new Promise(r => setTimeout(r, 650 - elapsed));
+      // AMBIL DATA TERBARU DARI CLOUD SEHINGGA DATA LANGSUNG MASUK KE DATABASE & MENU USER ADMIN
+      if (typeof syncAllDataToCache === 'function') {
+        await syncAllDataToCache().catch(() => {});
       }
 
-      hideMiniLoading();
+      hideLoading();
       showNotif(`TOKO '${namaToko}' BERHASIL DITAMBAHKAN!`, 'success');
       if (inputEl) inputEl.value = '';
-      if (btnSimpan) {
-        btnSimpan.disabled = false;
-        btnSimpan.style.opacity = '1';
-        btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span> SIMPAN`;
-        btnSimpan.style.background = 'var(--primary)';
-      }
       if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
       if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions(namaToko);
       if (typeof loadUsersManagement === 'function') loadUsersManagement();
     } catch (err) {
-      hideMiniLoading();
-      if (btnSimpan) {
-        btnSimpan.disabled = false;
-        btnSimpan.style.opacity = '1';
-        btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span> SIMPAN`;
-      }
+      hideLoading();
       console.error('[SIMPAN TOKO ERROR]:', err);
       showNotif('GAGAL MENYIMPAN TOKO!', 'error');
     }
-  }, 50);
+  }, 300);
 }
 window.simpanTokoBaru = simpanTokoBaru;
 
-function hapusTokoCustom(id, btnElement) {
+function hapusTokoCustom(id) {
   const allStores = getStoresFromDB();
   const store = allStores.find(s => s.id === id);
   const name = store ? store.fullName : 'TOKO';
   const storeArea = store ? store.area : (currentUser ? currentUser.area : '');
 
-  const btnDel = btnElement || document.getElementById(`btnHapusToko_${id}`);
-
   showConfirm(`HAPUS TOKO '${name}' DARI DAFTAR?`, () => {
-    if (btnDel) {
-      btnDel.disabled = true;
-      btnDel.innerHTML = `<span class="btn-spinner-ring danger"></span>`;
-      const tr = btnDel.closest ? btnDel.closest('tr') : null;
-      if (tr) tr.style.opacity = '0.5';
-    }
-
-    showMiniLoading(`MENGHAPUS TOKO '${name}'...`);
+    showLoading('MENGHAPUS TOKO...');
     setTimeout(async () => {
       try {
-        const startTime = Date.now();
         // 1. UPDATE CACHE LOKAL & DELETED KEYS
         try {
           const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
@@ -13409,10 +12472,6 @@ function hapusTokoCustom(id, btnElement) {
             await supabase.from('toko_list').delete().eq('full_name', name);
             await supabase.from('users').delete().eq('id', id);
             await supabase.from('users').delete().eq('full_name', name);
-            if (typeof notifySupabaseDataChanged === 'function') {
-              notifySupabaseDataChanged('toko_list', { id, fullName: name });
-              notifySupabaseDataChanged('users', { id, fullName: name });
-            }
           } catch (sbErr) {
             console.warn('[SUPABASE DELETE STORE NOTICE]:', sbErr);
           }
@@ -13433,29 +12492,29 @@ function hapusTokoCustom(id, btnElement) {
           await pushCentralCloudDB();
         }
 
-        const elapsed = Date.now() - startTime;
-        if (elapsed < 650) {
-          await new Promise(r => setTimeout(r, 650 - elapsed));
+        if (typeof syncAllDataToCache === 'function') {
+          await syncAllDataToCache().catch(() => {});
         }
 
-        hideMiniLoading();
+        hideLoading();
         showNotif(`TOKO '${name}' BERHASIL DIHAPUS!`, 'info');
+
+        // Buka kembali modal tambah toko jika tertutup oleh konfirmasi
+        const popupToko = document.getElementById('popupTambahToko');
+        if (popupToko) {
+          popupToko.style.display = 'flex';
+          popupToko.classList.add('show');
+        }
 
         if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
         if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
         if (typeof loadUsersManagement === 'function') loadUsersManagement();
       } catch (err) {
-        hideMiniLoading();
-        if (btnDel) {
-          btnDel.disabled = false;
-          btnDel.innerHTML = `<span class="material-symbols-rounded">delete</span>`;
-          const tr = btnDel.closest ? btnDel.closest('tr') : null;
-          if (tr) tr.style.opacity = '1';
-        }
+        hideLoading();
         console.error('[HAPUS TOKO ERROR]:', err);
         showNotif('GAGAL MENGHAPUS TOKO!', 'error');
       }
-    }, 50);
+    }, 300);
   });
 }
 window.hapusTokoCustom = hapusTokoCustom;
@@ -13605,7 +12664,6 @@ async function prosesUploadExcelToko(event) {
             id: s.id,
             full_name: s.fullName,
             area: s.area,
-            store_code: s.storeCode,
             created_by: s.createdBy
           }));
           await supabase.from('toko_list').upsert(supaStoresPayload);
@@ -13616,7 +12674,6 @@ async function prosesUploadExcelToko(event) {
               username: u.username,
               password: u.password,
               full_name: u.fullName,
-              store_code: u.storeCode,
               phone: u.phone,
               category: u.category,
               area: u.area,
@@ -13756,6 +12813,7 @@ function confirmYes() {
   const cb = confirmCallback;
   confirmCallback = null;
   closeConfirm();
+  closeAllPopups();
   if (typeof cb === 'function') {
     cb();
   }
@@ -13839,89 +12897,268 @@ function closePopup() {
   }
 }
 
-function showLoading(msg) {
+function showLoading(msg = '', allowCancel = false, onCancelCallback = null) {
   const modal = document.getElementById('loadingOverlay');
-  if (modal) {
-    modal.classList.add('show');
-    modal.style.display = 'flex';
-    const textEl = document.getElementById('loadingText');
-    if (textEl) {
-      if (msg && typeof msg === 'string' && msg.trim() !== '') {
-        textEl.textContent = msg;
-        textEl.style.display = 'block';
-      } else {
-        textEl.style.display = 'none';
-      }
+  if (modal) modal.style.display = 'flex';
+
+  const textEl = document.getElementById('loadingText');
+  if (textEl) {
+    if (msg) {
+      textEl.innerText = msg;
+      textEl.style.display = 'block';
+    } else {
+      textEl.innerText = 'MEMPROSES...';
+      textEl.style.display = 'block';
+    }
+  }
+
+  const cancelBtn = document.getElementById('btnBatalLoading');
+  if (cancelBtn) {
+    if (allowCancel) {
+      cancelBtn.style.display = 'inline-block';
+      window._onCancelLoadingCallback = onCancelCallback;
+    } else {
+      cancelBtn.style.display = 'none';
+      window._onCancelLoadingCallback = null;
     }
   }
 }
 
 function hideLoading() {
   const modal = document.getElementById('loadingOverlay');
+  if (modal) modal.style.display = 'none';
+  
+  const cancelBtn = document.getElementById('btnBatalLoading');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
+function batalProsesLoading() {
+  hideLoading();
+  if (typeof window._cancelGeminiProcess === 'function') {
+    try { window._cancelGeminiProcess(); } catch(e) {}
+    window._cancelGeminiProcess = null;
+  }
+  if (typeof window._onCancelLoadingCallback === 'function') {
+    try { window._onCancelLoadingCallback(); } catch(e) {}
+    window._onCancelLoadingCallback = null;
+  }
+  if (typeof showNotif === 'function') {
+    showNotif('PROSES DIBATALKAN OLEH PENGGUNA.', 'info');
+  }
+}
+window.batalProsesLoading = batalProsesLoading;
+
+let currentZoom = 1;
+let panX = 0;
+let panY = 0;
+let isPanningImage = false;
+let startPointerX = 0;
+let startPointerY = 0;
+let initialPanX = 0;
+let initialPanY = 0;
+
+let currentRotation = 0;
+
+function applyImageTransform(isSmooth = false) {
+  const img = document.getElementById('viewerImage');
+  if (!img) return;
+
+  if (currentZoom <= 1) {
+    panX = 0;
+    panY = 0;
+  }
+
+  img.style.transition = isSmooth ? 'transform 0.22s cubic-bezier(0.1, 0.9, 0.2, 1)' : 'none';
+  img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom}) rotate(${currentRotation}deg)`;
+  img.style.cursor = isPanningImage ? 'grabbing' : (currentZoom > 1 ? 'grab' : 'pointer');
+}
+
+function toggleRotation() {
+  currentRotation = (currentRotation + 90) % 360;
+  applyImageTransform(true);
+}
+window.toggleRotation = toggleRotation;
+window.rotateImage = toggleRotation;
+
+function initImagePanListeners() {
+  const canvas = document.getElementById('imageViewerCanvas');
+  const img = document.getElementById('viewerImage');
+  if (!canvas || !img || canvas.dataset.panInitialized) return;
+  canvas.dataset.panInitialized = 'true';
+
+  img.addEventListener('dragstart', (e) => e.preventDefault());
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar')) return;
+
+    isPanningImage = true;
+    startPointerX = e.clientX;
+    startPointerY = e.clientY;
+    initialPanX = panX;
+    initialPanY = panY;
+
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch(err) {}
+
+    applyImageTransform(false);
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!isPanningImage) return;
+    e.preventDefault();
+
+    const dx = e.clientX - startPointerX;
+    const dy = e.clientY - startPointerY;
+
+    panX = initialPanX + dx;
+    panY = initialPanY + dy;
+
+    applyImageTransform(false);
+  });
+
+  const stopPan = (e) => {
+    if (isPanningImage) {
+      isPanningImage = false;
+      try {
+        if (e && e.pointerId && canvas.hasPointerCapture(e.pointerId)) {
+          canvas.releasePointerCapture(e.pointerId);
+        }
+      } catch(err) {}
+      applyImageTransform(false);
+    }
+  };
+
+  canvas.addEventListener('pointerup', stopPan);
+  canvas.addEventListener('pointercancel', stopPan);
+
+  canvas.addEventListener('dblclick', (e) => {
+    if (e.target.closest('button') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar')) return;
+    if (currentZoom > 1.2) {
+      resetZoom();
+    } else {
+      currentZoom = 2.5;
+      applyImageTransform(true);
+    }
+  });
+}
+
+let currentViewerPhotos = [];
+let currentViewerIndex = 0;
+
+function updateViewerCounter() {
+  const counter = document.getElementById('viewerCounter');
+  const navLeft = document.getElementById('navViewerLeft');
+  const navRight = document.getElementById('navViewerRight');
+
+  const photos = parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
+  const total = photos.length || 1;
+  const current = (currentViewerIndex || 0) + 1;
+
+  if (counter) counter.textContent = `${current} / ${total}`;
+
+  if (navLeft) navLeft.style.display = total > 1 ? 'flex' : 'none';
+  if (navRight) navRight.style.display = total > 1 ? 'flex' : 'none';
+}
+
+function gantiFotoViewer(direction) {
+  const photos = parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
+  if (!photos || photos.length <= 1) return;
+  
+  currentViewerIndex = (currentViewerIndex + direction + photos.length) % photos.length;
+  viewerCurrentIndex = currentViewerIndex;
+  currentViewerPhotos = photos;
+  viewerPhotos = photos;
+  
+  resetZoom();
+  
+  const img = document.getElementById('viewerImage');
+  if (img) {
+    img.src = photos[currentViewerIndex];
+    applyImageTransform(false);
+  }
+  updateViewerCounter();
+}
+
+function bukaViewGambar(src, startIdx = 0) {
+  const photoList = parsePhotosArray(src);
+  if (!photoList || photoList.length === 0) {
+    showNotif('TIDAK ADA FOTO BUKTI PENDUKUNG!', 'warning');
+    return;
+  }
+
+  currentViewerPhotos = photoList;
+  viewerPhotos = photoList;
+  currentViewerIndex = Math.max(0, Math.min(startIdx, photoList.length - 1));
+  viewerCurrentIndex = currentViewerIndex;
+
+  currentZoom = 1;
+  panX = 0;
+  panY = 0;
+  isPanningImage = false;
+
+  const modal = document.getElementById('imageViewer');
+  const img = document.getElementById('viewerImage');
+
+  if (img) {
+    img.src = photoList[currentViewerIndex];
+  }
+
   if (modal) {
-    modal.classList.remove('show');
-    modal.style.display = 'none';
-    const textEl = document.getElementById('loadingText');
-    if (textEl) textEl.style.display = 'none';
+    modal.style.display = 'flex';
+  }
+
+  applyImageTransform(false);
+  updateViewerCounter();
+  initImagePanListeners();
+
+  setTimeout(() => {
+    applyImageTransform(false);
+  }, 50);
+
+  if (typeof pushPopupHistoryState === 'function') {
+    pushPopupHistoryState();
   }
 }
+window.bukaViewGambar = bukaViewGambar;
+window.zoomFoto = bukaViewGambar;
 
-function showMiniLoading(msg = 'MEMPROSES...') {
-  if (!document.getElementById('miniLoadingGlobalStyle')) {
-    const st = document.createElement('style');
-    st.id = 'miniLoadingGlobalStyle';
-    st.textContent = `
-      @keyframes spinSmoothMini {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      @keyframes spinReverseMini {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(-360deg); }
-      }
-      @keyframes spinnerPopMini {
-        0% { transform: scale(0.85); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
-      }
-    `;
-    document.head.appendChild(st);
-  }
-
-  let el = document.getElementById('miniCenterLoading');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'miniCenterLoading';
-    document.body.appendChild(el);
-  }
-  
-  el.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; height: 100dvh !important; background: rgba(10, 15, 30, 0.65) !important; backdrop-filter: blur(6px) !important; -webkit-backdrop-filter: blur(6px) !important; display: flex !important; align-items: center !important; justify-content: center !important; z-index: 2147483647 !important; pointer-events: auto !important; visibility: visible !important; opacity: 1 !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box !important;';
-  
-  el.innerHTML = `
-    <div style="display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 14px !important; padding: 22px 28px !important; min-width: 180px !important; border-radius: 16px !important; background: #0f172a !important; border: 1.5px solid #38bdf8 !important; box-shadow: 0 25px 60px rgba(0,0,0,0.85), 0 0 35px rgba(56,189,248,0.5) !important; animation: spinnerPopMini 0.25s ease-out !important; box-sizing: border-box !important; text-align: center !important;">
-      <div style="width: 44px !important; height: 44px !important; position: relative !important; border-radius: 50% !important; border: 4px solid rgba(255,255,255,0.15) !important; border-top: 4px solid #38bdf8 !important; border-right: 4px solid #818cf8 !important; animation: spinSmoothMini 0.75s linear infinite !important; filter: drop-shadow(0 0 16px rgba(56,189,248,0.95)) !important; box-sizing: border-box !important; margin: 0 auto !important;">
-        <div style="position: absolute !important; inset: 5px !important; border-radius: 50% !important; border: 3px solid transparent !important; border-top: 3px solid #34d399 !important; border-left: 3px solid #38bdf8 !important; animation: spinReverseMini 0.95s linear infinite !important; box-sizing: border-box !important;"></div>
-      </div>
-      <div id="miniCenterLoadingText" style="color: #ffffff !important; font-size: 12.5px !important; font-weight: 800 !important; letter-spacing: 0.7px !important; text-transform: uppercase !important; text-align: center !important; text-shadow: 0 2px 8px rgba(0,0,0,0.8) !important; max-width: 240px !important; line-height: 1.35 !important; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;">${msg || 'MEMPROSES...'}</div>
-    </div>
-  `;
-
-  if (document.body && el.parentNode !== document.body) {
-    document.body.appendChild(el);
-  }
+function tutupImageViewer() {
+  const modal = document.getElementById('imageViewer');
+  if (modal) modal.style.display = 'none';
+  resetZoom();
 }
 
-function hideMiniLoading() {
-  const el = document.getElementById('miniCenterLoading');
-  if (el) {
-    el.style.cssText = 'display: none !important; visibility: hidden !important;';
-    el.classList.remove('show');
+function zoomImage(step) {
+  currentZoom += step;
+  if (currentZoom < 0.2) currentZoom = 0.2;
+  if (currentZoom > 8) currentZoom = 8;
+  if (currentZoom <= 1.05 && step < 0) {
+    currentZoom = 1;
+    panX = 0;
+    panY = 0;
   }
+  applyImageTransform(true);
 }
 
-window.showLoading = showLoading;
-window.hideLoading = hideLoading;
-window.showMiniLoading = showMiniLoading;
-window.hideMiniLoading = hideMiniLoading;
+function resetZoom() {
+  currentZoom = 1;
+  currentRotation = 0;
+  panX = 0;
+  panY = 0;
+  isPanningImage = false;
+  applyImageTransform(true);
+}
+
+// MOUSE WHEEL SCROLL ZOOM IN / ZOOM OUT FOR IMAGE VIEWER
+document.addEventListener('wheel', function(e) {
+  const imageViewer = document.getElementById('imageViewer');
+  if (imageViewer && (imageViewer.style.display === 'flex' || imageViewer.style.display === 'block')) {
+    e.preventDefault();
+    const step = e.deltaY < 0 ? 0.25 : -0.25;
+    zoomImage(step);
+  }
+}, { passive: false });
 
 function initDraggableElement(element, storageKey) {
   const el = typeof element === 'string' ? document.getElementById(element) : element;
@@ -14267,9 +13504,6 @@ function initAppStartup() {
   } else if (typeof loadRememberedCredentials === 'function') {
     loadRememberedCredentials();
   }
-  if (typeof fetchChatFromSupabase === 'function') {
-    fetchChatFromSupabase().catch(() => {});
-  }
 }
 
 if (document.readyState === 'loading') {
@@ -14312,514 +13546,169 @@ document.addEventListener('touchmove', function (e) {
   }
 }, { passive: false });
 
-
-// ==========================================================================
-
-/* ==========================================================================
-   PERFECT ROCK-SOLID PHOTO VIEWER PAN & ZOOM ENGINE (TOUCH & MOUSE)
-   ========================================================================== */
-var currentZoom = 1;
-var panX = 0;
-var panY = 0;
-var currentRotation = 0;
-var isPanningImage = false;
-var startPointerX = 0;
-var startPointerY = 0;
-var initialPanX = 0;
-var initialPanY = 0;
-
-var currentViewerPhotos = [];
-var currentViewerIndex = 0;
-var viewerPhotos = [];
-var viewerCurrentIndex = 0;
-var viewerCurrentZoom = 1;
-var viewerPanX = 0;
-var viewerPanY = 0;
-
-function applyImageTransform(animate = false) {
-  const img = document.getElementById('viewerImage');
-  if (!img) return;
-  if (!currentZoom || isNaN(currentZoom) || currentZoom <= 1.01) {
-    currentZoom = 1;
-    panX = 0;
-    panY = 0;
-    viewerPanX = 0;
-    viewerPanY = 0;
-  }
-  img.style.transition = animate ? 'transform 0.18s cubic-bezier(0.25, 1, 0.5, 1)' : 'none';
-  img.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${currentZoom}) rotate(${currentRotation}deg)`;
-  img.style.cursor = currentZoom > 1.01 ? (isPanningImage ? 'grabbing' : 'grab') : 'default';
-  viewerCurrentZoom = currentZoom;
-  viewerPanX = panX;
-  viewerPanY = panY;
-}
-window.applyImageTransform = applyImageTransform;
-window.updateImageTransform = applyImageTransform;
-
-function zoomImage(step) {
-  currentZoom = Math.max(0.3, Math.min(10, currentZoom + step));
-  if (currentZoom <= 1.05 && step < 0) {
-    currentZoom = 1;
-    panX = 0;
-    panY = 0;
-    viewerPanX = 0;
-    viewerPanY = 0;
-  }
-  applyImageTransform(true);
-}
-window.zoomImage = zoomImage;
-
-function resetZoom() {
-  currentZoom = 1;
-  panX = 0;
-  panY = 0;
-  viewerPanX = 0;
-  viewerPanY = 0;
-  currentRotation = 0;
-  isPanningImage = false;
-  applyImageTransform(true);
-}
-window.resetZoom = resetZoom;
-
-function rotateImage(deg = 90) {
-  currentRotation = (currentRotation + deg) % 360;
-  applyImageTransform(true);
-}
-window.rotateImage = rotateImage;
-
-function updateViewerCounter() {
-  const counter = document.getElementById('viewerCounter');
-  const navLeft = document.getElementById('navViewerLeft');
-  const navRight = document.getElementById('navViewerRight');
-
-  const photos = typeof parsePhotosArray === 'function' 
-    ? parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos)
-    : (currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
-    
-  const total = (photos && photos.length) || 1;
-  const current = (currentViewerIndex || 0) + 1;
-
-  if (counter) counter.textContent = `${current} / ${total}`;
-  if (navLeft) navLeft.style.setProperty('display', total > 1 ? 'flex' : 'none', 'important');
-  if (navRight) navRight.style.setProperty('display', total > 1 ? 'flex' : 'none', 'important');
-}
-
-function gantiFotoViewer(direction) {
-  const photos = typeof parsePhotosArray === 'function' 
-    ? parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos)
-    : (currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
-
-  if (!photos || photos.length <= 1) return;
-  
-  currentViewerIndex = (currentViewerIndex + direction + photos.length) % photos.length;
-  viewerCurrentIndex = currentViewerIndex;
-  currentViewerPhotos = photos;
-  viewerPhotos = photos;
-  
-  resetZoom();
-  
-  const img = document.getElementById('viewerImage');
-  if (img) {
-    img.src = photos[currentViewerIndex];
-    applyImageTransform(false);
-  }
-  updateViewerCounter();
-}
-window.gantiFotoViewer = gantiFotoViewer;
-
-function bukaViewGambar(src, startIdx = 0) {
-  const photoList = typeof parsePhotosArray === 'function' ? parsePhotosArray(src) : (Array.isArray(src) ? src : [src]);
-  if (!photoList || photoList.length === 0) {
-    if (typeof showNotif === 'function') showNotif('TIDAK ADA FOTO BUKTI PENDUKUNG!', 'warning');
-    return;
-  }
-
-  currentViewerPhotos = photoList;
-  viewerPhotos = photoList;
-  currentViewerIndex = Math.max(0, Math.min(startIdx, photoList.length - 1));
-  viewerCurrentIndex = currentViewerIndex;
-
-  tampilkanFotoViewerAktif();
-}
-window.bukaViewGambar = bukaViewGambar;
-window.zoomFoto = bukaViewGambar;
-
-function tampilkanFotoViewerAktif() {
-  resetZoom();
-
-  const photos = typeof parsePhotosArray === 'function' 
-    ? parsePhotosArray(currentViewerPhotos && currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos)
-    : (currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
-
-  if (photos && photos.length > 0) {
-    viewerPhotos = photos;
-    currentViewerPhotos = photos;
-  }
-
-  if (currentViewerIndex < 0) currentViewerIndex = 0;
-  if (currentViewerIndex >= viewerPhotos.length) currentViewerIndex = Math.max(0, viewerPhotos.length - 1);
-  viewerCurrentIndex = currentViewerIndex;
-
-  const img = document.getElementById('viewerImage');
-  if (img && viewerPhotos.length > 0) {
-    img.src = viewerPhotos[currentViewerIndex];
-    img.style.display = 'block';
-    img.style.visibility = 'visible';
-    img.style.opacity = '1';
-  }
-
-  const modal = document.getElementById('imageViewer');
-  if (modal) {
-    modal.classList.add('show');
-    modal.style.setProperty('display', 'flex', 'important');
-    modal.style.setProperty('z-index', '999999999', 'important');
-  }
-
-  initImagePanListeners();
-  updateViewerCounter();
-  applyImageTransform(false);
-}
-window.tampilkanFotoViewerAktif = tampilkanFotoViewerAktif;
-
-function tutupImageViewer() {
-  const modal = document.getElementById('imageViewer');
-  if (modal) {
-    modal.classList.remove('show');
-    modal.style.display = 'none';
-  }
-  resetZoom();
-}
-window.tutupImageViewer = tutupImageViewer;
-
-function initImagePanListeners() {
-  const canvas = document.getElementById('imageViewerCanvas');
-  const img = document.getElementById('viewerImage');
-  if (!canvas || !img || canvas.dataset.panInitialized === 'true') return;
-  canvas.dataset.panInitialized = 'true';
-
-  img.addEventListener('dragstart', (e) => e.preventDefault());
-
-  const onPointerDown = (e) => {
-    if (e.target.closest('button') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar') || e.target.closest('#navViewerLeft') || e.target.closest('#navViewerRight')) {
-      return;
-    }
-    if (currentZoom <= 1.01 || viewerCurrentZoom <= 1.01) {
-      isPanningImage = false;
-      return;
-    }
-
-    isPanningImage = true;
-    startPointerX = e.clientX;
-    startPointerY = e.clientY;
-    initialPanX = panX;
-    initialPanY = panY;
-
-    try {
-      canvas.setPointerCapture(e.pointerId);
-    } catch(err) {}
-
-    applyImageTransform(false);
-  };
-
-  const onPointerMove = (e) => {
-    if (!isPanningImage || currentZoom <= 1.01 || viewerCurrentZoom <= 1.01) return;
-    e.preventDefault();
-
-    const dx = e.clientX - startPointerX;
-    const dy = e.clientY - startPointerY;
-
-    panX = initialPanX + dx;
-    panY = initialPanY + dy;
-
-    applyImageTransform(false);
-  };
-
-  const onPointerUp = (e) => {
-    if (isPanningImage) {
-      isPanningImage = false;
-      try {
-        if (e && e.pointerId && canvas.hasPointerCapture(e.pointerId)) {
-          canvas.releasePointerCapture(e.pointerId);
-        }
-      } catch(err) {}
-      applyImageTransform(false);
-    }
-  };
-
-  canvas.addEventListener('pointerdown', onPointerDown);
-  canvas.addEventListener('pointermove', onPointerMove);
-  canvas.addEventListener('pointerup', onPointerUp);
-  canvas.addEventListener('pointercancel', onPointerUp);
-
-  // Double click or tap to toggle zoom
-  canvas.addEventListener('dblclick', (e) => {
-    if (e.target.closest('button') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar')) return;
-    if (currentZoom > 1.2) {
-      resetZoom();
-    } else {
-      currentZoom = 2.5;
-      applyImageTransform(true);
-    }
-  });
-}
-window.initImagePanListeners = initImagePanListeners;
-window.attachPhotoPanListeners = initImagePanListeners;
-
-// Mouse wheel zoom
-document.addEventListener('wheel', function(e) {
-  const imageViewer = document.getElementById('imageViewer');
-  if (imageViewer && (imageViewer.style.display === 'flex' || imageViewer.style.display === 'block')) {
-    e.preventDefault();
-    const step = e.deltaY < 0 ? 0.25 : -0.25;
-    zoomImage(step);
-  }
-}, { passive: false });
-
-// ==========================================================================
-// GEMINI AI DOKUMEN PDF AUTO-FILL ENGINE
-// ==========================================================================
-const DEFAULT_GEMINI_API_KEY = "AQ.Ab8RN6L4ea9jImnOkdhtaZhPWn3b-HbLpKV5R9TXtfxZvy_lOQ";
-
-function getGeminiApiKey() {
-  const stored = appStorage.getItem('GEMINI_API_KEY');
-  if (!stored || stored.includes('JU_mOm7_T88bTlgWtMVxMXTP3AOn5wcPtc78RABOVzgw')) {
-    appStorage.setItem('GEMINI_API_KEY', DEFAULT_GEMINI_API_KEY);
-    return DEFAULT_GEMINI_API_KEY;
-  }
-  return stored;
-}
-
 function triggerUploadPdfAutoFill() {
-  const inputEl = document.getElementById('inputPdfAutoFill');
-  if (inputEl) {
-    inputEl.click();
-  }
+  const el = document.getElementById('inputPdfAutoFill');
+  if (el) el.click();
 }
 window.triggerUploadPdfAutoFill = triggerUploadPdfAutoFill;
 
-async function prosesPdfAutoFillGemini(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
+function triggerUploadGambarAutoFill() {
+  const el = document.getElementById('inputGambarAutoFill');
+  if (el) el.click();
+}
+window.triggerUploadGambarAutoFill = triggerUploadGambarAutoFill;
 
-  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-    showNotif('BERKAS HARUS BERFORMAT PDF (.pdf)!', 'warning');
-    event.target.value = '';
+function triggerUploadExcelAutoFill() {
+  const el = document.getElementById('inputExcelAutoFill');
+  if (el) el.click();
+}
+window.triggerUploadExcelAutoFill = triggerUploadExcelAutoFill;
+
+function downloadTemplateExcelPermintaan() {
+  if (typeof XLSX === 'undefined') {
+    if (typeof showNotif === 'function') showNotif('Library XLSX belum dimuat.', 'warning');
     return;
   }
-
-  let apiKey = String(getGeminiApiKey() || '').trim().replace(/["']/g, '');
-
-  if (!apiKey) {
-    showNotif('GEMINI API KEY BELUM DIATUR! KLIK IKON 🔑 UNTUK MENGATUR.', 'warning');
-    event.target.value = '';
-    return;
-  }
-
-  showLoading('✨ GEMINI AI SEDANG MEMBACA DOKUMEN PDF...');
-
-  try {
-    // 1. Convert PDF to base64
-    const base64Data = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const res = reader.result;
-        const b64 = res.split(',')[1];
-        resolve(b64);
-      };
-      reader.onerror = error => reject(error);
-      reader.readAsDataURL(file);
-    });
-
-    // 2. Discover available model names dynamically
-    let availableModelNames = [];
-    try {
-      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        if (listData && Array.isArray(listData.models)) {
-          availableModelNames = listData.models.map(m => m.name.replace(/^models\//, ''));
-          console.log('[GEMINI DYNAMIC MODELS DISCOVERED]:', availableModelNames);
-        }
-      }
-    } catch (eList) {
-      console.warn('[GEMINI LIST MODELS FAIL]:', eList);
-    }
-
-    const promptText = `
-Anda adalah sistem pengurai data dokumen permintaan toko / barang yang sangat teliti.
-Tolong baca seluruh isi dokumen PDF ini dan uraikan datanya secara akurat.
-Kembalikan hasilnya HANYA dalam format JSON murni TANPA pembungkus markdown (tanpa \`\`\`json atau \`\`\`).
-
-Format JSON wajib persis seperti berikut:
-{
-  "toko": "NAMA TOKO",
-  "jenis": "DEFAULT atau DUS",
-  "catatan": "Catatan atau keterangan jika ada",
-  "items": [
+  const templateData = [
     {
-      "typeBarang": "Nama / Tipe Barang",
-      "noSeri": "Nomor Seri Barang",
-      "noSeriDus": "Nomor Seri Dus jika ada",
-      "permintaanBarang": "Deskripsi atau Nama Barang Permintaan",
-      "alasan": "Alasan Permintaan",
-      "qty": 1
+      'Toko': 'TOKO CONTOH',
+      'Jenis': 'DEFAULT',
+      'Type Barang': 'AC 1PK',
+      'No Seri': 'SN12345678',
+      'No Seri Dus': '',
+      'Permintaan Barang': 'MODUL INDOOR',
+      'Alasan': 'RUSAK / MATI TOTAL',
+      'QTY': 1,
+      'Catatan': 'Tolong diproses segera'
     }
-  ]
+  ];
+  const worksheet = XLSX.utils.json_to_sheet(templateData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Permintaan');
+  XLSX.writeFile(workbook, 'Template_Permintaan_Toko.xlsx');
+  if (typeof showNotif === 'function') showNotif('TEMPLATE EXCEL BERHASIL DI-DOWNLOAD!', 'success');
 }
-`;
+window.downloadTemplateExcelPermintaan = downloadTemplateExcelPermintaan;
 
-    // Payload for generateContent API
-    const generatePayload = {
-      contents: [
-        {
-          parts: [
-            { text: promptText },
-            {
-              inlineData: {
-                mimeType: "application/pdf",
-                data: base64Data
-              }
-            }
-          ]
-        }
-      ]
-    };
 
-    // Payload for Interactions API
-    const interactionPayload = {
-      model: "gemini-3.7-flash",
-      input: [
-        { text: promptText },
-        {
-          inline_data: {
-            mime_type: "application/pdf",
-            data: base64Data
-          }
-        }
-      ]
-    };
+// ==========================================================================
 
-    // Exclude special-purpose non-text models (audio, tts, image, video, embedding)
-    const textPdfSupported = availableModelNames.filter(m => {
-      const lower = String(m || '').toLowerCase();
-      return !lower.includes('tts') && 
-             !lower.includes('audio') && 
-             !lower.includes('image') && 
-             !lower.includes('embedding') && 
-             !lower.includes('veo') && 
-             !lower.includes('imagen') &&
-             !lower.includes('aqa') &&
-             !lower.includes('lyria');
-    });
+// ==========================================================================
+// GEMINI API KEY & DOCUMENT AUTO-FILL ENGINE (PDF, GAMBAR, EXCEL)
+// ==========================================================================
 
-    const modelCandidates = [
-      'gemini-3.7-flash',
-      'gemini-3.6-flash',
-      'gemini-3.5-flash',
-      'gemini-3.1-flash-lite',
-      'gemini-flash-latest',
-      'gemini-flash-lite-latest',
-      'gemini-pro-latest',
-      'gemini-3-flash-preview',
-      ...textPdfSupported,
-      'gemini-flash',
-      'gemini-pro'
-    ];
-    const uniqueModelNames = [...new Set(modelCandidates)];
+const GEMINI_API_KEY_STORAGE_KEY = 'gemini_api_key';
+const DEFAULT_GEMINI_API_KEY = 'AQ.Ab8RN6IISGsBiwanoScrwxY4h4xR9qDPa55ZfBx8Vceqp2Z5eg';
 
-    const requestsToTry = [];
+function getGeminiApiKey() {
+  const stored = localStorage.getItem(GEMINI_API_KEY_STORAGE_KEY) || localStorage.getItem('GEMINI_API_KEY');
+  if (stored && stored.trim()) return stored.trim();
+  return DEFAULT_GEMINI_API_KEY;
+}
+window.getGeminiApiKey = getGeminiApiKey;
 
-    // 1. Add generateContent endpoints for active 3.x models first (highest reliability)
-    uniqueModelNames.forEach(mod => {
-      requestsToTry.push({
-        url: `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${apiKey}`,
-        options: {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(generatePayload)
-        },
-        type: 'generateContent'
-      });
-      requestsToTry.push({
-        url: `https://generativelanguage.googleapis.com/v1/models/${mod}:generateContent?key=${apiKey}`,
-        options: {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(generatePayload)
-        },
-        type: 'generateContent'
-      });
-    });
-
-    // 2. Add Interactions API endpoints
-    ['gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-flash-latest'].forEach(mod => {
-      requestsToTry.push({
-        url: `https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`,
-        options: {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...interactionPayload, model: mod })
-        },
-        type: 'interaction'
-      });
-    });
-
-    let response = null;
-    let rawText = '';
-    let lastErrorMsg = '';
-
-    for (const reqObj of requestsToTry) {
-      try {
-        const res = await fetch(reqObj.url, reqObj.options);
-        if (res.ok) {
-          const resJson = await res.json();
-          if (reqObj.type === 'interaction') {
-            rawText = (resJson.output && resJson.output[0] && resJson.output[0].text) ||
-                      (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content && resJson.candidates[0].content.parts && resJson.candidates[0].content.parts[0] && resJson.candidates[0].content.parts[0].text);
-          } else {
-            rawText = resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content && resJson.candidates[0].content.parts && resJson.candidates[0].content.parts[0] && resJson.candidates[0].content.parts[0].text;
-          }
-
-          if (rawText) {
-            response = res;
-            console.log(`[GEMINI AI SUCCESS]: Connected via ${reqObj.url.split('?')[0]}`);
-            break;
-          }
-        } else {
-          const errRes = await res.json().catch(() => ({}));
-          lastErrorMsg = (errRes.error && errRes.error.message) || `HTTP ${res.status}`;
-          console.warn(`[GEMINI TRY NOTICE] ${reqObj.url.split('?')[0]} failed:`, lastErrorMsg);
-        }
-      } catch (e) {
-        lastErrorMsg = e.message || String(e);
-      }
+function aturGeminiApiKey() {
+  const currentKey = getGeminiApiKey();
+  const inputKey = prompt('MASUKKAN GEMINI API KEY:', currentKey || '');
+  if (inputKey !== null) {
+    if (inputKey.trim()) {
+      localStorage.setItem(GEMINI_API_KEY_STORAGE_KEY, inputKey.trim());
+      if (typeof showNotif === 'function') showNotif('GEMINI API KEY BERHASIL DISIMPAN!', 'success');
+    } else {
+      localStorage.removeItem(GEMINI_API_KEY_STORAGE_KEY);
+      if (typeof showNotif === 'function') showNotif('GEMINI API KEY DI-RESET KE DEFAULT.', 'info');
     }
-
-    if (!response || !rawText) {
-      throw new Error(lastErrorMsg || 'Gagal terhubung ke Gemini AI.');
-    }
-
-    const cleanJsonStr = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const parsedData = JSON.parse(cleanJsonStr);
-
-    applyParsedDataToForm(parsedData);
-
-    hideLoading();
-    showNotif('✨ AI BERHASIL MEMBACA PDF! FORM PERMINTAAN TERISI OTOMATIS.', 'info');
-  } catch (err) {
-    hideLoading();
-    console.error('[GEMINI AUTO-FILL ERROR]:', err);
-    showNotif('GAGAL MEMBACA PDF (AI): ' + (err.message || err), 'warning');
-  } finally {
-    event.target.value = '';
   }
 }
+window.aturGeminiApiKey = aturGeminiApiKey;
 
-// Shared helper to fill Form Permintaan Toko from parsed object
+function triggerUploadPdfAutoFill() {
+  const el = document.getElementById('inputPdfAutoFill');
+  if (el) el.click();
+}
+window.triggerUploadPdfAutoFill = triggerUploadPdfAutoFill;
+
+function triggerUploadGambarAutoFill() {
+  const el = document.getElementById('inputGambarAutoFill');
+  if (el) el.click();
+}
+window.triggerUploadGambarAutoFill = triggerUploadGambarAutoFill;
+
+function triggerUploadExcelAutoFill() {
+  const el = document.getElementById('inputExcelAutoFill');
+  if (el) el.click();
+}
+window.triggerUploadExcelAutoFill = triggerUploadExcelAutoFill;
+
+function downloadTemplateExcelPermintaan() {
+  const modal = document.getElementById('excelTemplateOverlay');
+  if (modal) {
+    modal.style.display = 'flex';
+  } else {
+    unduhTemplateExcelProses('DEFAULT');
+  }
+}
+window.downloadTemplateExcelPermintaan = downloadTemplateExcelPermintaan;
+
+function closeExcelTemplateModal() {
+  const modal = document.getElementById('excelTemplateOverlay');
+  if (modal) modal.style.display = 'none';
+}
+window.closeExcelTemplateModal = closeExcelTemplateModal;
+
+function unduhTemplateExcelProses(jenisType) {
+  closeExcelTemplateModal();
+
+  if (typeof XLSX === 'undefined') {
+    if (typeof showNotif === 'function') showNotif('Library XLSX belum dimuat.', 'warning');
+    return;
+  }
+
+  let templateData = [];
+  const isDus = (jenisType === 'DUS');
+
+  if (isDus) {
+    // Format DUS: TYPE, SERI, PERMINTAAN, SN DUS, ALASAN, QTY
+    templateData = [
+      {
+        'TYPE': 'TV 43 INCH',
+        'SERI': 'SN12345678',
+        'PERMINTAAN': 'UNIT TV DUS',
+        'SN DUS': 'SNDUS987654',
+        'ALASAN': 'TUKAR DUS BARU',
+        'QTY': 1
+      }
+    ];
+  } else {
+    // Format DEFAULT: TYPE, SERI, PERMINTAAN, ALASAN, QTY
+    templateData = [
+      {
+        'TYPE': 'AC 1PK',
+        'SERI': 'SN12345678',
+        'PERMINTAAN': 'MODUL INDOOR',
+        'ALASAN': 'RUSAK / MATI TOTAL',
+        'QTY': 1
+      }
+    ];
+  }
+
+  const sheetName = isDus ? 'Template DUS' : 'Template DEFAULT';
+  const fileName = isDus ? 'Template_Permintaan_DUS.xlsx' : 'Template_Permintaan_DEFAULT.xlsx';
+
+  const worksheet = XLSX.utils.json_to_sheet(templateData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  XLSX.writeFile(workbook, fileName);
+
+  if (typeof showNotif === 'function') {
+    showNotif(`TEMPLATE EXCEL ${isDus ? 'DUS' : 'DEFAULT'} BERHASIL DI-DOWNLOAD!`, 'success');
+  }
+}
+window.unduhTemplateExcelProses = unduhTemplateExcelProses;
+
 function applyParsedDataToForm(parsedData) {
   if (!parsedData) return;
 
-  // 1. Toko
   if (parsedData.toko) {
     const tokoSelect = document.getElementById('toko');
     if (tokoSelect) {
@@ -14837,7 +13726,6 @@ function applyParsedDataToForm(parsedData) {
     }
   }
 
-  // 2. Jenis
   const jenisEl = document.getElementById('jenisPermintaan');
   if (jenisEl) {
     const isDus = String(parsedData.jenis || '').toUpperCase().includes('DUS');
@@ -14847,20 +13735,18 @@ function applyParsedDataToForm(parsedData) {
     }
   }
 
-  // 3. Catatan
   if (parsedData.catatan) {
     const catEl = document.getElementById('catatan');
     if (catEl) catEl.value = parsedData.catatan;
   }
 
-  // 4. Items (Detail Rows)
   const detailContainer = document.getElementById('detailContainer');
   if (detailContainer) {
     detailContainer.innerHTML = '';
     const items = Array.isArray(parsedData.items) && parsedData.items.length > 0 ? parsedData.items : [parsedData];
 
     items.forEach(item => {
-      tambahRow();
+      if (typeof tambahRow === 'function') tambahRow();
       const row = detailContainer.lastElementChild;
       if (row) {
         const inpType = row.querySelector('.typeBarang');
@@ -14870,14 +13756,15 @@ function applyParsedDataToForm(parsedData) {
         const inpAlasan = row.querySelector('.alasan');
         const inpQty = row.querySelector('.qty');
 
-        if (inpType) inpType.value = item.typeBarang || item.tipeBarang || item.type || item.tipe || '';
+        const typeVal = item.typeBarang || item.type || item.tipe || item.jenisBarang || item.kategori || item.model || '';
+        if (inpType) inpType.value = typeVal;
         if (inpSeri) inpSeri.value = item.noSeri || item.seriBarang || item.sn || item.serial || '';
         if (inpNama) inpNama.value = item.permintaanBarang || item.namaBarang || item.permintaan || item.deskripsi || '';
         if (inpSeriDus) inpSeriDus.value = item.noSeriDus || item.seriDusBarang || item.seriDus || item.snDus || '';
         if (inpAlasan) inpAlasan.value = item.alasan || item.alasanPermintaan || '';
         if (inpQty) inpQty.value = item.qty || item.jumlah || 1;
 
-        if (inpSeri && inpSeri.value && typeof lookupTypeRow === 'function') {
+        if (inpSeri && inpSeri.value && !inpType.value && typeof lookupTypeRow === 'function') {
           lookupTypeRow(inpSeri);
         }
       }
@@ -14886,44 +13773,6 @@ function applyParsedDataToForm(parsedData) {
 }
 window.applyParsedDataToForm = applyParsedDataToForm;
 
-// ==========================================================================
-// EXCEL FORM AUTO-FILL ENGINE
-// ==========================================================================
-function triggerUploadExcelAutoFill() {
-  const inputEl = document.getElementById('inputExcelAutoFill');
-  if (inputEl) {
-    inputEl.click();
-  }
-}
-window.triggerUploadExcelAutoFill = triggerUploadExcelAutoFill;
-
-function downloadTemplateExcelPermintaan() {
-  const templateData = [
-    {
-      "TOKO": "TOKO DEMO SBY",
-      "JENIS PERMINTAAN": "DEFAULT",
-      "TYPE BARANG": "LAPTOP CORE I5",
-      "NO SERI": "SN123456789",
-      "NO SERI DUS": "",
-      "PERMINTAAN BARANG": "GANTI UNIT BARU",
-      "ALASAN": "BARANG RUSAK / MATI TOTAL",
-      "QTY": 1,
-      "CATATAN": "Catatan tambahan jika ada"
-    }
-  ];
-
-  if (typeof XLSX === 'undefined') {
-    showNotif('LIBRARY XLSX BELUM SIAP!', 'error');
-    return;
-  }
-
-  const worksheet = XLSX.utils.json_to_sheet(templateData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "PermintaanToko");
-  XLSX.writeFile(workbook, "TEMPLATE_INPUT_PERMINTAAN_TOKO.xlsx");
-}
-window.downloadTemplateExcelPermintaan = downloadTemplateExcelPermintaan;
-
 async function prosesExcelAutoFill(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -14931,12 +13780,12 @@ async function prosesExcelAutoFill(event) {
   const validExts = ['.xlsx', '.xls', '.csv'];
   const fileName = file.name.toLowerCase();
   if (!validExts.some(ext => fileName.endsWith(ext))) {
-    showNotif('BERKAS HARUS BERFORMAT EXCEL (.xlsx, .xls) ATAU CSV!', 'warning');
+    if (typeof showNotif === 'function') showNotif('BERKAS HARUS BERFORMAT EXCEL (.xlsx, .xls) ATAU CSV!', 'warning');
     event.target.value = '';
     return;
   }
 
-  showLoading('📊 MEMBACA DOKUMEN EXCEL...');
+  if (typeof showLoading === 'function') showLoading('Membaca dokumen...');
 
   try {
     const data = await new Promise((resolve, reject) => {
@@ -14982,15 +13831,19 @@ async function prosesExcelAutoFill(event) {
       }
       if (!parsedCatatan) parsedCatatan = getVal(['catatan', 'keterangan', 'notes']);
 
-      const typeBarang = getVal(['type barang', 'tipe barang', 'type', 'tipe', 'nama barang']);
-      const noSeri = getVal(['no seri', 'nomor seri', 'sn', 'serial', 'seri barang']);
-      const noSeriDus = getVal(['no seri dus', 'nomor seri dus', 'sn dus', 'seri dus']);
-      const permintaanBarang = getVal(['permintaan barang', 'permintaan', 'barang permintaan', 'deskripsi']);
+      const typeBarang = getVal(['type', 'type barang', 'tipe', 'tipe barang', 'jenis barang', 'kategori', 'merk', 'model']);
+      const noSeri = getVal(['seri', 'no seri', 'nomor seri', 'sn', 'serial', 'seri barang', 'seri unit']);
+      const noSeriDus = getVal(['sn dus', 'no seri dus', 'nomor seri dus', 'seri dus']);
+      const permintaanBarang = getVal(['permintaan', 'permintaan barang', 'barang permintaan', 'deskripsi', 'nama barang']);
       const alasan = getVal(['alasan', 'alasan permintaan', 'reason']);
-      const qtyVal = getVal(['qty', 'jumlah', 'quantity']);
+      const qtyVal = getVal(['qty', 'qyt', 'jumlah', 'quantity']);
       const qty = parseInt(qtyVal, 10) || 1;
 
-      if (typeBarang || noSeri || permintaanBarang || alasan) {
+      if (noSeriDus) {
+        parsedJenis = 'DUS';
+      }
+
+      if (typeBarang || noSeri || noSeriDus || permintaanBarang || alasan) {
         items.push({
           typeBarang,
           noSeri,
@@ -15013,29 +13866,372 @@ async function prosesExcelAutoFill(event) {
       items: items
     });
 
-    hideLoading();
-    showNotif(`BERHASIL MEMBACA EXCEL! ${items.length} BARANG TERISI KEDALAM FORM.`, 'info');
+    if (typeof hideLoading === 'function') hideLoading();
+    if (typeof showNotif === 'function') showNotif('BERHASIL MEMBACA DOKUMEN. SILAHKAN CEK TERLEBIH DAHULU', 'success');
   } catch (err) {
-    hideLoading();
-    showNotif('GAGAL MEMBACA EXCEL: ' + (err.message || String(err)), 'warning');
+    if (typeof hideLoading === 'function') hideLoading();
+    if (typeof showNotif === 'function') showNotif('GAGAL MEMBACA EXCEL: ' + (err.message || String(err)), 'warning');
   } finally {
     event.target.value = '';
   }
 }
 window.prosesExcelAutoFill = prosesExcelAutoFill;
 
-function aturGeminiApiKey() {
-  const currentKey = getGeminiApiKey();
-  const inputKey = prompt('MASUKKAN / UBAH GEMINI API KEY:', currentKey);
-  if (inputKey !== null) {
-    const cleanKey = inputKey.trim();
-    if (cleanKey) {
-      appStorage.setItem('GEMINI_API_KEY', cleanKey);
-      showNotif('GEMINI API KEY BERHASIL DISIMPAN!', 'info');
-    } else {
-      appStorage.removeItem('GEMINI_API_KEY');
-      showNotif('GEMINI API KEY DIHAPUS (MENGGUNAKAN KEY DEFAULT).', 'info');
+async function prosesPdfAutoFillGemini(event) {
+  const abortController = new AbortController();
+  window._cancelGeminiProcess = () => abortController.abort();
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    if (typeof showNotif === 'function') showNotif('BERKAS HARUS BERFORMAT PDF!', 'warning');
+    event.target.value = '';
+    return;
+  }
+
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    aturGeminiApiKey();
+    event.target.value = '';
+    return;
+  }
+
+  if (typeof showLoading === 'function') showLoading('Membaca dokumen...', true);
+
+  try {
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        const b64 = result.split(',')[1] || result;
+        resolve(b64);
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+
+    const modelCandidates = await getBestActiveGeminiModel(apiKey);
+    const promptText = `
+Anda adalah sistem pengurai data dokumen permintaan toko / barang yang sangat teliti.
+Tolong baca seluruh isi dokumen PDF ini dan uraikan datanya secara akurat.
+Kembalikan hasilnya HANYA dalam format JSON murni TANPA pembungkus markdown.
+
+Format JSON wajib persis seperti berikut:
+{
+  "toko": "NAMA TOKO",
+  "jenis": "DEFAULT atau DUS",
+  "catatan": "Catatan atau keterangan jika ada",
+  "items": [
+    {
+      "typeBarang": "Nama / Tipe Barang",
+      "noSeri": "Nomor Seri Barang",
+      "noSeriDus": "Nomor Seri Dus jika ada",
+      "permintaanBarang": "Deskripsi atau Nama Barang Permintaan",
+      "alasan": "Alasan Permintaan",
+      "qty": 1
     }
+  ]
+}
+`;
+
+    const generatePayload = {
+      contents: [
+        {
+          parts: [
+            { text: promptText },
+            {
+              inlineData: {
+                mimeType: "application/pdf",
+                data: base64Data
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    const uniqueModelNames = Array.isArray(modelCandidates) ? modelCandidates : ['gemini-3.6-flash', 'gemini-3.5-flash'];
+
+    const requestsToTry = [];
+    uniqueModelNames.forEach(mod => {
+      requestsToTry.push({
+        url: `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${apiKey}`,
+        options: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(generatePayload),
+          signal: abortController.signal
+        },
+        type: 'generateContent'
+      });
+    });
+
+    let response = null;
+    let rawText = '';
+
+    for (const reqObj of requestsToTry) {
+      try {
+        const res = await fetch(reqObj.url, reqObj.options);
+        if (res.ok) {
+          const resJson = await res.json();
+          if (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content) {
+            const parts = resJson.candidates[0].content.parts || [];
+            rawText = parts.map(p => p.text || '').join('');
+            if (rawText.trim()) {
+              response = res;
+              break;
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!response || !rawText) {
+      throw new Error('Gagal terhubung ke Gemini AI atau format PDF tidak terbaca.');
+    }
+
+    const parsedData = extractFirstValidJSON(rawText);
+
+    if (!parsedData) {
+      throw new Error('Format JSON dari Gemini AI tidak valid.');
+    }
+
+    applyParsedDataToForm(parsedData);
+    if (typeof hideLoading === 'function') hideLoading();
+    if (typeof showNotif === 'function') showNotif('BERHASIL MEMBACA DOKUMEN. SILAHKAN CEK TERLEBIH DAHULU', 'success');
+
+  } catch(err) {
+    if (typeof hideLoading === 'function') hideLoading();
+    if (err.name === 'AbortError' || (abortController && abortController.signal.aborted)) {
+      return;
+    }
+    if (typeof showNotif === 'function') showNotif('GAGAL PROSES PDF: ' + (err.message || String(err)), 'warning');
+  } finally {
+    window._cancelGeminiProcess = null;
+    event.target.value = '';
   }
 }
-window.aturGeminiApiKey = aturGeminiApiKey;
+window.prosesPdfAutoFillGemini = prosesPdfAutoFillGemini;
+
+async function prosesGambarAutoFillGemini(event) {
+  const abortController = new AbortController();
+  window._cancelGeminiProcess = () => abortController.abort();
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    aturGeminiApiKey();
+    event.target.value = '';
+    return;
+  }
+
+  if (typeof showLoading === 'function') showLoading('Membaca dokumen...', true);
+
+  try {
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        const b64 = result.split(',')[1] || result;
+        resolve(b64);
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+
+    const modelCandidates = await getBestActiveGeminiModel(apiKey);
+    const promptText = `
+Anda adalah sistem pengurai data gambar dokumen permintaan toko / barang yang sangat teliti.
+Tolong baca seluruh gambar ini dan uraikan datanya secara akurat.
+Kembalikan hasilnya HANYA dalam format JSON murni TANPA pembungkus markdown.
+
+Format JSON wajib persis seperti berikut:
+{
+  "toko": "NAMA TOKO",
+  "jenis": "DEFAULT atau DUS",
+  "catatan": "Catatan atau keterangan jika ada",
+  "items": [
+    {
+      "typeBarang": "Nama / Tipe Barang",
+      "noSeri": "Nomor Seri Barang",
+      "noSeriDus": "Nomor Seri Dus jika ada",
+      "permintaanBarang": "Deskripsi atau Nama Barang Permintaan",
+      "alasan": "Alasan Permintaan",
+      "qty": 1
+    }
+  ]
+}
+`;
+
+    const generatePayload = {
+      contents: [
+        {
+          parts: [
+            { text: promptText },
+            {
+              inlineData: {
+                mimeType: file.type || "image/jpeg",
+                data: base64Data
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    const uniqueModelNames = Array.isArray(modelCandidates) ? modelCandidates : ['gemini-3.6-flash', 'gemini-3.5-flash'];
+
+    const requestsToTry = [];
+    uniqueModelNames.forEach(mod => {
+      requestsToTry.push({
+        url: `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${apiKey}`,
+        options: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(generatePayload),
+          signal: abortController.signal
+        },
+        type: 'generateContent'
+      });
+    });
+
+    let response = null;
+    let rawText = '';
+
+    for (const reqObj of requestsToTry) {
+      try {
+        const res = await fetch(reqObj.url, reqObj.options);
+        if (res.ok) {
+          const resJson = await res.json();
+          if (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content) {
+            const parts = resJson.candidates[0].content.parts || [];
+            rawText = parts.map(p => p.text || '').join('');
+            if (rawText.trim()) {
+              response = res;
+              break;
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!response || !rawText) {
+      throw new Error('Gagal terhubung ke Gemini Vision AI.');
+    }
+
+    const parsedData = extractFirstValidJSON(rawText);
+
+    if (!parsedData) {
+      throw new Error('Format JSON dari Gemini Vision AI tidak valid.');
+    }
+
+    applyParsedDataToForm(parsedData);
+    if (typeof hideLoading === 'function') hideLoading();
+    if (typeof showNotif === 'function') showNotif('BERHASIL MEMBACA DOKUMEN. SILAHKAN CEK TERLEBIH DAHULU', 'success');
+
+  } catch(err) {
+    if (typeof hideLoading === 'function') hideLoading();
+    if (err.name === 'AbortError' || (abortController && abortController.signal.aborted)) {
+      return;
+    }
+    if (typeof showNotif === 'function') showNotif('GAGAL PROSES GAMBAR: ' + (err.message || String(err)), 'warning');
+  } finally {
+    window._cancelGeminiProcess = null;
+    event.target.value = '';
+  }
+}
+window.prosesGambarAutoFillGemini = prosesGambarAutoFillGemini;
+
+function extractFirstValidJSON(text) {
+  if (!text) return null;
+
+  let cleaned = String(text).trim();
+  cleaned = cleaned.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e1) {}
+
+  const startIdx = cleaned.indexOf('{');
+  if (startIdx !== -1) {
+    let braceCount = 0;
+    let inString = false;
+    let isEscaped = false;
+
+    for (let i = startIdx; i < cleaned.length; i++) {
+      const char = cleaned[i];
+
+      if (isEscaped) {
+        isEscaped = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        isEscaped = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (!inString) {
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+
+        if (braceCount === 0) {
+          const jsonSub = cleaned.substring(startIdx, i + 1);
+          try {
+            return JSON.parse(jsonSub);
+          } catch (eSub) {
+            const fixCommas = jsonSub.replace(/,\s*([\}\]])/g, '$1');
+            try {
+              return JSON.parse(fixCommas);
+            } catch (eFix) {}
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      return JSON.parse(match[0]);
+    } catch (eMatch) {
+      const fixCommas = match[0].replace(/,\s*([\}\]])/g, '$1');
+      try {
+        return JSON.parse(fixCommas);
+      } catch (eFix) {}
+    }
+  }
+
+  return null;
+}
+window.extractFirstValidJSON = extractFirstValidJSON;
+
+async function getBestActiveGeminiModel(apiKey) {
+  const defaultPriority = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-flash-latest'];
+  try {
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      if (listData && Array.isArray(listData.models)) {
+        const activeList = listData.models
+          .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+          .map(m => m.name.replace(/^models\//, ''));
+        
+        const matched = defaultPriority.filter(m => activeList.includes(m));
+        if (matched.length > 0) return matched;
+
+        const extra = activeList.filter(m => !m.includes('tts') && !m.includes('audio') && !m.includes('image') && !m.includes('embedding') && !m.includes('video') && !m.includes('robotics'));
+        if (extra.length > 0) return extra;
+      }
+    }
+  } catch (e) {}
+  return defaultPriority;
+}
+window.getBestActiveGeminiModel = getBestActiveGeminiModel;

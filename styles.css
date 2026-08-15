@@ -7299,3 +7299,23 @@ button.btnBatal:active {
     padding: 8px 10px !important;
   }
 }
+
+.btnBatalLoading {
+  margin-top: 14px;
+  padding: 8px 18px;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 5px !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.3) !important;
+  transition: all 0.2s ease !important;
+  display: inline-block !important;
+}
+.btnBatalLoading:hover {
+  background: #dc2626 !important;
+  transform: translateY(-1px) !important;
+}
+
