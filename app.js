@@ -17,6 +17,16 @@ const supabase = (window.supabase && typeof window.supabase.createClient === 'fu
 window.isFirebaseOnline = true;
 window.isSupabaseOnline = true;
 
+
+// GLOBAL PHOTO VIEWER VARIABLES (HOISTED & SAFE FOR ALL FUNCTIONS)
+var currentViewerPhotos = currentViewerPhotos || [];
+var currentViewerIndex = currentViewerIndex || 0;
+var viewerPhotos = viewerPhotos || [];
+var viewerCurrentIndex = viewerCurrentIndex || 0;
+var viewerCurrentZoom = viewerCurrentZoom || 1;
+var viewerPanX = viewerPanX || 0;
+var viewerPanY = viewerPanY || 0;
+
 function updateGlobalConnectionDotStatus() {
   const dot = document.getElementById('firebaseOnlineDot');
   if (!dot) return;
@@ -217,25 +227,77 @@ window.muatMetrikKapasitasDatabase = muatMetrikKapasitasDatabase;
 // PARSE PHOTOS HELPER FUNCTION (HANDLES ARRAYS, JSON STRINGS, SINGLE URLS)
 function parsePhotosArray(rawPhotos) {
   if (!rawPhotos) return [];
+
+  const extractUrl = (item) => {
+    if (!item) return '';
+    if (Array.isArray(item)) {
+      for (const el of item) {
+        const u = extractUrl(el);
+        if (u) return u;
+      }
+      return '';
+    }
+    if (typeof item === 'string') {
+      const trimmed = item.trim();
+      if (!trimmed || trimmed === '[object Object]') return '';
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          return extractUrl(parsed);
+        } catch (e) {}
+      }
+      return trimmed;
+    }
+    if (typeof item === 'object') {
+      const val = item.url || item.src || item.path || item.link || item.photo || item.uri || item.image || '';
+      return typeof val === 'string' ? val.trim() : '';
+    }
+    const str = String(item).trim();
+    return str === '[object Object]' ? '' : str;
+  };
+
   if (Array.isArray(rawPhotos)) {
-    return rawPhotos.map(p => typeof p === 'string' ? p.trim() : (p ? String(p) : '')).filter(p => p.length > 0);
+    const list = [];
+    rawPhotos.forEach(p => {
+      if (Array.isArray(p)) {
+        p.forEach(subP => {
+          const u = extractUrl(subP);
+          if (u && u !== '[object Object]') list.push(u);
+        });
+      } else {
+        const u = extractUrl(p);
+        if (u && u !== '[object Object]') list.push(u);
+      }
+    });
+    return list;
   }
+
   if (typeof rawPhotos === 'string') {
     const trimmed = rawPhotos.trim();
     if (!trimmed) return [];
-    if (trimmed.startsWith('[')) {
+
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
       try {
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
-          return parsed.map(p => typeof p === 'string' ? p.trim() : (p ? String(p) : '')).filter(p => p.length > 0);
+          return parsePhotosArray(parsed);
+        } else if (typeof parsed === 'object') {
+          const u = extractUrl(parsed);
+          return u ? [u] : [];
         }
       } catch (e) {}
     }
-    if (trimmed.startsWith('http') || trimmed.startsWith('data:') || trimmed.startsWith('/')) {
-      return [trimmed];
+
+    if (trimmed.includes(',')) {
+      return trimmed.split(',').map(s => extractUrl(s)).filter(Boolean);
     }
+
+    const u = extractUrl(trimmed);
+    return u ? [u] : [];
   }
-  return [];
+
+  const singleUrl = extractUrl(rawPhotos);
+  return singleUrl ? [singleUrl] : [];
 }
 window.parsePhotosArray = parsePhotosArray;
 
@@ -505,10 +567,10 @@ async function setGlobalAdminTheme(themeName) {
       try {
         try {
           await supabase.from('lookup').upsert({
-            code: 'GLOBAL_THEME',
-            type: themeName,
+            key: 'global_theme',
+            value: themeName,
             updated_at: new Date().toISOString()
-          });
+          }, { onConflict: 'key' });
         } catch (e) {}
 
         const themeRow = {
@@ -521,12 +583,13 @@ async function setGlobalAdminTheme(themeName) {
           catatan: JSON.stringify({ theme: themeName, updatedBy: currentUser.username, time: now }),
           items: [],
           photos: [],
+          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'ADMIN',
           created_at: new Date().toISOString()
         };
-        await supabase.from('permintaan_toko').upsert(themeRow);
+        await supabase.from('permintaan_toko').upsert(themeRow, { onConflict: 'no_surat' });
       } catch(e) {
         console.warn('[SUPABASE GLOBAL THEME SAVE ERROR]:', e);
       }
@@ -735,12 +798,13 @@ function tambahNotifikasiSistem(targetRoles, targetArea, message, noSurat = '') 
         catatan: JSON.stringify(payload),
         items: [],
         photos: [],
+        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: 'SYSTEM',
         created_at: new Date().toISOString()
       };
-      supabase.from('permintaan_toko').upsert(systemNotifRow).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(systemNotifRow, { onConflict: 'no_surat' }).then(({ error }) => {
         if (error) console.warn('[SUPABASE NOTIF SAVE NOTICE]:', error.message);
       });
     } catch(e) {}
@@ -1153,12 +1217,13 @@ function markNotifAsRead(notifId, noSurat = '') {
           catatan: JSON.stringify(payload),
           items: [],
           photos: [],
+          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        supabase.from('permintaan_toko').upsert(systemNotifRow).then(({ error }) => {
+        supabase.from('permintaan_toko').upsert(systemNotifRow, { onConflict: 'no_surat' }).then(({ error }) => {
           if (error) console.warn('[SUPABASE NOTIF SAVE NOTICE]:', error.message);
         });
       } catch(e) {}
@@ -1218,12 +1283,13 @@ function markAllNotifAsRead(silent = false) {
         catatan: JSON.stringify(payload),
         items: [],
         photos: [],
+        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: 'SYSTEM',
         created_at: new Date().toISOString()
       };
-      supabase.from('permintaan_toko').upsert(systemNotifRow).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(systemNotifRow, { onConflict: 'no_surat' }).then(({ error }) => {
         if (error) console.warn('[SUPABASE NOTIF SAVE NOTICE]:', error.message);
       });
     } catch(e) {}
@@ -1280,12 +1346,13 @@ function hapusSemuaNotifikasiSystem() {
             catatan: JSON.stringify(emptyNotifsPayload),
             items: [],
             photos: [],
+            artemis_photos: [],
             status: 'DONE',
             service_approve: true,
             created_by: 'SYSTEM',
             created_at: new Date().toISOString()
           };
-          await supabase.from('permintaan_toko').upsert(systemNotifRow);
+          await supabase.from('permintaan_toko').upsert(systemNotifRow, { onConflict: 'no_surat' });
         } catch(sbErr) {
           console.warn('[SUPABASE NOTIF DELETE ERROR]:', sbErr);
         }
@@ -1463,8 +1530,8 @@ let lastX = 0;
 let lastY = 0;
 let activeScanInput = null;
 let html5QrCodeScanner = null;
-let viewerPhotos = [];
-let viewerCurrentIndex = 0;
+var viewerPhotos = [];
+var viewerCurrentIndex = 0;
 
 function getFormattedDateDDMMYYYY(dObj = new Date()) {
   const d = (dObj instanceof Date && !isNaN(dObj.getTime())) ? dObj : new Date();
@@ -1633,10 +1700,8 @@ async function toggleAdminReminderFeature() {
       await supabase.from('lookup').upsert({
         key: 'adminReminder',
         value: valStr,
-        code: 'ADMIN_REMINDER',
-        type: valStr,
         updated_at: new Date().toISOString()
-      });
+      }, { onConflict: 'key' });
 
       const sysRow = {
         id: '__SYSTEM_REMINDER_SETTINGS__',
@@ -1648,12 +1713,13 @@ async function toggleAdminReminderFeature() {
         catatan: JSON.stringify({ adminReminder: valStr, adminReminderTime: timeVal, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
         items: [],
         photos: [],
+        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(sysRow);
+      await supabase.from('permintaan_toko').upsert(sysRow, { onConflict: 'no_surat' });
     } catch(err) {
       console.warn('[SUPABASE REMINDER TOGGLE ERROR]:', err);
     }
@@ -1716,8 +1782,6 @@ async function simpanAdminReminderTime() {
       await supabase.from('lookup').upsert({
         key: 'adminReminderTime',
         value: val,
-        code: 'ADMIN_REMINDER_TIME',
-        type: val,
         updated_at: new Date().toISOString()
       }, { onConflict: 'key' });
 
@@ -1731,6 +1795,7 @@ async function simpanAdminReminderTime() {
         catatan: JSON.stringify({ adminReminder: isEnabledStr, adminReminderTime: val, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
         items: [],
         photos: [],
+        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser?.fullName || 'ADMIN',
@@ -1738,7 +1803,7 @@ async function simpanAdminReminderTime() {
       };
       await supabase.from('permintaan_toko').upsert(sysRow, { onConflict: 'no_surat' });
     } catch(err) {
-      console.warn('[SUPABASE REMINDER TIME ERROR]:', err);
+      console.warn('[SUPABASE SIMPAN JADWAL REMINDER ERROR]:', err);
     }
   }
 
@@ -3371,13 +3436,10 @@ async function syncSupabaseLookupToLocalCache() {
           if (typeof updatePhotoSectionVisibility === 'function') updatePhotoSectionVisibility();
         }
         if (item.key === 'global_theme' || item.code === 'GLOBAL_THEME') {
-          const cloudTheme = item.value ? (typeof item.value === 'object' ? item.value.theme : String(item.value)) : (item.type || 'dark-mode');
+          // SIMPAN METADATA CLOUD THEME TANPA MERUBAH TEMA AKTIF PERANGKAT LOKAL USER
+          const cloudTheme = item.value ? (typeof item.value === 'object' ? item.value.theme : String(item.value)) : (item.type || '');
           if (cloudTheme) {
             appStorage.setItem(GLOBAL_THEME_KEY, cloudTheme);
-            appStorage.setItem(THEME_KEY, cloudTheme);
-            try { localStorage.setItem('APP_SELECTED_THEME', cloudTheme); } catch(e) {}
-            try { localStorage.setItem(THEME_KEY, cloudTheme); } catch(e) {}
-            if (typeof updateBodyClasses === 'function') updateBodyClasses(cloudTheme);
           }
         }
         if (item.key === 'fonteToken' || item.code === 'FONTE_TOKEN' || item.key === 'FONTE_TOKEN') {
@@ -3544,15 +3606,26 @@ async function pushCentralCloudDB() {
     if (typeof supabase !== 'undefined' && supabase) {
       try {
         const supaPayloads = requests.map(r => ({
+          id: r.id || ('PRMT_' + String(r.noSurat || Date.now()).replace(/[\/\.]/g, '_')),
           no_surat: r.noSurat,
           tanggal: r.tanggal,
           toko: r.toko,
           area: r.area,
           jenis: r.jenis,
           catatan: r.catatan || '',
+          items: r.items || [],
+          photos: r.photos || [],
+          artemis_photos: r.artemisPhotos || [],
           status: r.status,
           service_approve: !!r.serviceApprove,
-          created_by: r.createdBy || ''
+          service_user_name: r.serviceUserName || '',
+          service_ttd: r.serviceTTD || '',
+          dm_user_name: r.dmUserName || '',
+          dm_ttd: r.dmTTD || '',
+          created_by: r.createdBy || '',
+          created_at: r.createdAt || '',
+          user_id: r.userId || '',
+          log: r.log || []
         }));
         if (supaPayloads.length > 0) {
           await safeSupabaseUpsert('permintaan_toko', supaPayloads, 'no_surat');
@@ -3590,13 +3663,14 @@ async function pushCentralCloudDB() {
               catatan: JSON.stringify(unitMap),
               items: [],
               photos: [],
+              artemis_photos: [],
               status: 'DONE',
               service_approve: true,
               created_by: 'SYSTEM',
               created_at: new Date().toISOString()
             };
             try {
-              await supabase.from('permintaan_toko').upsert(systemUnitRow);
+              await supabase.from('permintaan_toko').upsert(systemUnitRow, { onConflict: 'no_surat' });
             } catch(e) {}
           }
         }
@@ -3612,12 +3686,13 @@ async function pushCentralCloudDB() {
           catatan: JSON.stringify(ttdMap),
           items: [],
           photos: [],
+          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        await supabase.from('permintaan_toko').upsert(systemTtdRow);
+        await supabase.from('permintaan_toko').upsert(systemTtdRow, { onConflict: 'no_surat' });
 
         const isPhotoEnabled = getFeaturePhotosEnabled();
         const photoFeatureVal = isPhotoEnabled ? 'true' : 'false';
@@ -3631,12 +3706,13 @@ async function pushCentralCloudDB() {
           catatan: JSON.stringify({ featurePhotos: photoFeatureVal, enabled: isPhotoEnabled, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
           items: [],
           photos: [],
+          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        await supabase.from('permintaan_toko').upsert(systemPhotoRow);
+        await supabase.from('permintaan_toko').upsert(systemPhotoRow, { onConflict: 'no_surat' });
 
         const currentFonteToken = getFonteToken();
         if (currentFonteToken) {
@@ -3650,21 +3726,20 @@ async function pushCentralCloudDB() {
             catatan: JSON.stringify({ fonteToken: currentFonteToken, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
             items: [],
             photos: [],
+            artemis_photos: [],
             status: 'DONE',
             service_approve: true,
             created_by: 'SYSTEM',
             created_at: new Date().toISOString()
           };
-          await supabase.from('permintaan_toko').upsert(systemFonteRow);
+          await supabase.from('permintaan_toko').upsert(systemFonteRow, { onConflict: 'no_surat' });
 
           try {
             await supabase.from('lookup').upsert({
               key: 'fonteToken',
               value: currentFonteToken,
-              code: 'FONTE_TOKEN',
-              type: currentFonteToken,
               updated_at: new Date().toISOString()
-            });
+            }, { onConflict: 'key' });
           } catch(e) {}
         }
 
@@ -3681,28 +3756,25 @@ async function pushCentralCloudDB() {
           catatan: JSON.stringify({ adminReminder: reminderEnabledVal, adminReminderTime: reminderTimeVal, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
           items: [],
           photos: [],
+          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        await supabase.from('permintaan_toko').upsert(systemReminderRow);
+        await supabase.from('permintaan_toko').upsert(systemReminderRow, { onConflict: 'no_surat' });
 
         try {
           await supabase.from('lookup').upsert({
             key: 'adminReminder',
             value: reminderEnabledVal,
-            code: 'ADMIN_REMINDER',
-            type: reminderEnabledVal,
             updated_at: new Date().toISOString()
-          });
+          }, { onConflict: 'key' });
           await supabase.from('lookup').upsert({
             key: 'adminReminderTime',
             value: reminderTimeVal,
-            code: 'ADMIN_REMINDER_TIME',
-            type: reminderTimeVal,
             updated_at: new Date().toISOString()
-          });
+          }, { onConflict: 'key' });
         } catch(e) {}
 
         // Push Chat Messages to Supabase (Lookup & Permintaan_Toko)
@@ -3713,14 +3785,13 @@ async function pushCentralCloudDB() {
               await supabase.from('lookup').upsert({
                 key: 'chat_messages',
                 value: JSON.stringify(currentChats),
-                code: 'CHAT_MESSAGES',
-                type: 'CHAT',
                 updated_at: new Date().toISOString()
               }, { onConflict: 'key' });
             } catch(e) {}
 
             try {
               const systemChatRow = {
+                id: '__SYSTEM_CHAT_MESSAGES__',
                 no_surat: '__SYSTEM_CHAT_MESSAGES__',
                 tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
                 toko: 'SYSTEM',
@@ -3729,6 +3800,7 @@ async function pushCentralCloudDB() {
                 catatan: JSON.stringify(currentChats),
                 items: [],
                 photos: [],
+                artemis_photos: [],
                 status: 'DONE',
                 service_approve: true,
                 created_by: 'SYSTEM',
@@ -3878,6 +3950,7 @@ async function setFeaturePhotosEnabled(enabled) {
         catatan: JSON.stringify({ featurePhotos: valStr, enabled: !!enabled, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
         items: [],
         photos: [],
+        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser?.fullName || 'ADMIN',
@@ -3890,8 +3963,6 @@ async function setFeaturePhotosEnabled(enabled) {
         await supabase.from('lookup').upsert({
           key: 'FEATURE_PHOTOS',
           value: JSON.stringify({ enabled: valStr, updatedAt: new Date().toISOString() }),
-          code: 'FEATURE_PHOTOS',
-          type: valStr,
           updated_at: new Date().toISOString()
         }, { onConflict: 'key' });
       } catch(e) {}
@@ -4348,10 +4419,8 @@ async function simpanFonteToken() {
       await supabase.from('lookup').upsert({
         key: 'fonteToken',
         value: token,
-        code: 'FONTE_TOKEN',
-        type: token,
         updated_at: new Date().toISOString()
-      });
+      }, { onConflict: 'key' });
 
       // Broadcast row sistem permintaan_toko ke seluruh perangkat
       const systemFonteRow = {
@@ -4364,12 +4433,13 @@ async function simpanFonteToken() {
         catatan: JSON.stringify({ fonteToken: token, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
         items: [],
         photos: [],
+        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser?.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
-      await supabase.from('permintaan_toko').upsert(systemFonteRow);
+      await supabase.from('permintaan_toko').upsert(systemFonteRow, { onConflict: 'no_surat' });
     } catch (err) {
       console.warn('[SUPABASE SIMPAN FONTE TOKEN ERROR]:', err);
     }
@@ -4399,11 +4469,123 @@ async function simpanFonteToken() {
   showNotif(token ? 'TOKEN WA BERHASIL DISIMPAN!' : 'TOKEN WA DIKOSONGKAN!', 'success');
 }
 
+const GOOGLE_SCRIPT_URL_KEY = 'STORE_GOOGLE_SCRIPT_URL_KEY_V1';
+
+function getGoogleScriptUrl() {
+  let url = appStorage.getItem(GOOGLE_SCRIPT_URL_KEY);
+  if (!url) {
+    try { url = localStorage.getItem(GOOGLE_SCRIPT_URL_KEY); } catch(e) {}
+  }
+  return (url || '').trim();
+}
+
+function loadGoogleScriptUrl() {
+  const input = document.getElementById('googleScriptUrlInput');
+  if (input) {
+    input.value = getGoogleScriptUrl();
+  }
+}
+
+async function simpanGoogleScriptUrl() {
+  const input = document.getElementById('googleScriptUrlInput');
+  const url = input ? input.value.trim() : '';
+  appStorage.setItem(GOOGLE_SCRIPT_URL_KEY, url);
+  try { localStorage.setItem(GOOGLE_SCRIPT_URL_KEY, url); } catch(e) {}
+
+  if (typeof supabase !== 'undefined' && supabase) {
+    safeSupabaseUpsert('lookup', { key: 'googleScriptUrl', value: url }, 'key');
+  }
+  showNotif(url ? 'URL GOOGLE SCRIPT SHEET "SETING" BERHASIL DISIMPAN!' : 'URL GOOGLE SCRIPT DIKOSONGKAN!', 'success');
+}
+
+async function syncDataFromGoogleSheetSeting() {
+  const scriptUrl = getGoogleScriptUrl();
+  if (!scriptUrl || !scriptUrl.startsWith('http')) {
+    showNotif('⚠️ SILAKAN ISI URL GOOGLE SCRIPT (WEB APP) TERLEBIH DAHULU!', 'warning');
+    return;
+  }
+
+  showLoading('MENARIK DATA USER & PENGATURAN WA DARI GOOGLE SHEET "seting"...');
+  try {
+    const res = await fetch(`${scriptUrl}?action=get_settings`);
+    const data = await res.json();
+    hideLoading();
+
+    console.log('[GOOGLE SHEET SETING DATA]:', data);
+    if (data && (data.status === 'success' || Array.isArray(data.items) || Array.isArray(data.data))) {
+      const rows = data.items || data.data || [];
+      if (rows.length > 0) {
+        let allUsers = getUsersFromDB();
+        let updatedCount = 0;
+        let foundToken = '';
+
+        rows.forEach(row => {
+          const nama = String(row.Nama || row.nama || row.name || '').trim();
+          const area = String(row.Area || row.area || '').trim().toUpperCase();
+          const kategori = String(row.Kategori || row.kategori || row.category || row.role || '').trim().toUpperCase();
+          const noHp = String(row['No HP'] || row.noHp || row.phone || row.wa || '').trim();
+          const token = String(row['Token Fonte'] || row.tokenFonte || row.token || '').trim();
+
+          if (token && !foundToken) {
+            foundToken = token;
+          }
+
+          if (nama || noHp) {
+            const uIdx = allUsers.findIndex(u => 
+              (u.username && nama && u.username.toUpperCase() === nama.toUpperCase()) ||
+              (u.fullName && nama && u.fullName.toUpperCase() === nama.toUpperCase())
+            );
+            if (uIdx !== -1) {
+              if (noHp) allUsers[uIdx].phone = noHp;
+              if (area) allUsers[uIdx].area = area;
+              if (kategori) allUsers[uIdx].category = kategori;
+              updatedCount++;
+            } else if (nama && noHp) {
+              allUsers.push({
+                id: `USR-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                username: nama.toLowerCase().replace(/\s+/g, '_'),
+                fullName: nama,
+                phone: noHp,
+                category: kategori || 'SERVICE',
+                area: area || 'BDG'
+              });
+              updatedCount++;
+            }
+          }
+        });
+
+        if (foundToken) {
+          appStorage.setItem(FONTE_TOKEN_KEY, foundToken);
+          try { localStorage.setItem(FONTE_TOKEN_KEY, foundToken); } catch(e) {}
+          loadFonteToken();
+        }
+
+        saveUsersToDB(allUsers);
+        showNotif(`✅ BERHASIL SINKRONISASI SHEET "seting"! ${updatedCount} User & Token Fonte Diperbarui.`, 'success');
+      } else {
+        showNotif('⚠️ SHEET "seting" TERBACA TETAPI BELUM ADA BARIS DATA.', 'warning');
+      }
+    } else {
+      showNotif('⚠️ RESPON GOOGLE SCRIPT TIDAK SESUAI FORMAT.', 'warning');
+    }
+  } catch(err) {
+    hideLoading();
+    console.error('[SYNC GOOGLE SHEET SETING ERROR]:', err);
+    showNotif('GAGAL MENARIK DATA DARI GOOGLE SHEET: ' + err.message, 'error');
+  }
+}
+
+window.getGoogleScriptUrl = getGoogleScriptUrl;
+window.loadGoogleScriptUrl = loadGoogleScriptUrl;
+window.simpanGoogleScriptUrl = simpanGoogleScriptUrl;
+window.syncDataFromGoogleSheetSeting = syncDataFromGoogleSheetSeting;
+
 function loadFonteToken() {
   const input = document.getElementById('fonteTokenInput');
   if (input) {
     input.value = getFonteToken();
   }
+  loadGoogleScriptUrl();
 }
 
 async function tesKoneksiFonteToken() {
@@ -4550,9 +4732,11 @@ async function kirimNotifikasiWA(targetPhone, message, forceSend = false) {
   }
 
   const token = getFonteToken();
-  if (!token) {
-    console.warn('[FONTE WA WARNING]: Token Fonnte belum diset!');
-    return { success: false, error: 'Token Fonnte belum diset.' };
+  const scriptUrl = getGoogleScriptUrl();
+
+  if (!token && !scriptUrl) {
+    console.warn('[FONTE WA WARNING]: Token Fonnte & URL Google Script belum diset!');
+    return { success: false, error: 'Token Fonnte & URL Google Script belum diset.' };
   }
 
   const phoneList = formatCleanPhoneList(targetPhone);
@@ -4572,32 +4756,61 @@ async function kirimNotifikasiWA(targetPhone, message, forceSend = false) {
     }
     sentWaCache[msgHash] = now;
 
-    try {
-      const formData = new FormData();
-      formData.append('target', cleanPhone);
-      formData.append('message', message);
-      formData.append('countryCode', '62');
-
-      const response = await fetch('https://api.fonnte.com/send', {
-        method: 'POST',
-        headers: {
-          'Authorization': token.trim()
-        },
-        body: formData
-      });
-
-      const data = await response.json();
-      console.log('[FONTE WA API RESPONSE]:', cleanPhone, data);
-      if (data && (data.status === true || data.status === 'true' || data.id)) {
-        successCount++;
-      } else {
-        const reason = data ? (data.reason || data.message || JSON.stringify(data)) : 'Unknown error';
-        lastError = reason;
-        console.warn('[FONTE WA SEND REJECTED]:', cleanPhone, reason);
+    // 1. OPSI UTAMA: KIRIM VIA GOOGLE APPS SCRIPT WEB APP (SHEET "seting")
+    let sentViaScript = false;
+    if (scriptUrl && scriptUrl.startsWith('http')) {
+      try {
+        const scriptRes = await fetch(scriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'send_wa',
+            target: cleanPhone,
+            message: message,
+            fonteToken: token
+          })
+        });
+        const scriptData = await scriptRes.json();
+        console.log('[GOOGLE SCRIPT WA RESPONSE]:', cleanPhone, scriptData);
+        if (scriptData && (scriptData.status === 'success' || scriptData.status === true || scriptData.success === true)) {
+          successCount++;
+          sentViaScript = true;
+          continue;
+        }
+      } catch(scriptErr) {
+        console.warn('[GOOGLE SCRIPT WA SEND ERROR, FALLBACK TO DIRECT FONTE]:', cleanPhone, scriptErr);
       }
-    } catch (err) {
-      console.error('[FONTE WA API NETWORK ERROR]:', cleanPhone, err);
-      lastError = err.message;
+    }
+
+    // 2. FALLBACK LANGSUNG VIA FONTE API
+    if (!sentViaScript && token) {
+      try {
+        const formData = new FormData();
+        formData.append('target', cleanPhone);
+        formData.append('message', message);
+        formData.append('countryCode', '62');
+
+        const response = await fetch('https://api.fonnte.com/send', {
+          method: 'POST',
+          headers: {
+            'Authorization': token.trim()
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+        console.log('[FONTE WA API RESPONSE]:', cleanPhone, data);
+        if (data && (data.status === true || data.status === 'true' || data.id)) {
+          successCount++;
+        } else {
+          const reason = data ? (data.reason || data.message || JSON.stringify(data)) : 'Unknown error';
+          lastError = reason;
+          console.warn('[FONTE WA SEND REJECTED]:', cleanPhone, reason);
+        }
+      } catch (err) {
+        console.error('[FONTE WA API NETWORK ERROR]:', cleanPhone, err);
+        lastError = err.message;
+      }
     }
   }
 
@@ -4893,13 +5106,14 @@ function toggleTheme() {
         catatan: JSON.stringify({ theme: t.id, time: now, by: currentUser.username }),
         items: [],
         photos: [],
+        artemis_photos: [],
         status: 'DONE',
         service_approve: true,
         created_by: currentUser.fullName || 'ADMIN',
         created_at: new Date().toISOString()
       };
 
-      supabase.from('permintaan_toko').upsert(themePayload).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(themePayload, { onConflict: 'no_surat' }).then(({ error }) => {
         if (!error) {
           console.log('⚡ [SUPABASE GLOBAL THEME SYNC SUCCESS]: Tema disebar ke semua perangkat!', t.id);
         }
@@ -5177,8 +5391,9 @@ async function catatLogLogin(username, nama, area, status) {
     try {
       await supabase.from('lookup').upsert({
         key: `login_log_${Date.now()}`,
-        value: { username, nama, area, status, time: new Date().toISOString() }
-      });
+        value: { username, nama, area, status, time: new Date().toISOString() },
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
     } catch (e) {}
   }
 }
@@ -6020,7 +6235,7 @@ function tambahRow() {
       <input type="text" inputmode="text" class="seriDusBarang" placeholder="NO SERI DUS" autocomplete="off">
       <input type="text" inputmode="text" class="alasan" placeholder="ALASAN" autocomplete="off">
       <input type="number" class="qty" value="1" min="1" style="text-align: left;" autocomplete="off">
-      <button type="button" class="btnHapusRow" onclick="hapusRow(this)"><span class="material-symbols-rounded">remove</span></button>
+      <button type="button" class="btnHapusRow" onclick="hapusRow(this)" title="Hapus Baris"><span class="material-symbols-rounded">delete</span></button>
     `;
   } else {
     div.innerHTML = `
@@ -6032,7 +6247,7 @@ function tambahRow() {
       <input type="text" inputmode="text" class="namaBarang" placeholder="PERMINTAAN" autocomplete="off">
       <input type="text" inputmode="text" class="alasan" placeholder="ALASAN" autocomplete="off">
       <input type="number" class="qty" value="1" min="1" style="text-align: left;" autocomplete="off">
-      <button type="button" class="btnHapusRow" onclick="hapusRow(this)"><span class="material-symbols-rounded">remove</span></button>
+      <button type="button" class="btnHapusRow" onclick="hapusRow(this)" title="Hapus Baris"><span class="material-symbols-rounded">delete</span></button>
     `;
   }
 
@@ -6525,7 +6740,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       };
 
       if (typeof supabase !== 'undefined' && supabase) {
-        supabase.from('permintaan_toko').upsert(supaEditRow).then(({ error }) => {
+        supabase.from('permintaan_toko').upsert(supaEditRow, { onConflict: 'no_surat' }).then(({ error }) => {
           if (error) console.warn('[SUPABASE UPDATE NOTICE]:', error.message);
         }).catch(e => console.warn(e));
       }
@@ -6604,12 +6819,15 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     }
 
     let autoServiceTTD = '';
+    let serviceUserNameVal = '';
     if (isDMUser) {
       const users = getUsersFromDB();
       const areaSvcUser = users.find(u => u && u.category === 'SERVICE' && isAreaMatch(u.area, targetArea));
       if (areaSvcUser) {
+        serviceUserNameVal = areaSvcUser.fullName || areaSvcUser.username || `SERVICE ${targetArea}`;
         autoServiceTTD = areaSvcUser.ttd || ttdMap[areaSvcUser.id] || ttdMap[areaSvcUser.username] || ttdMap[areaSvcUser.fullName] || ttdMap['SERVICE_' + targetArea] || '';
       } else {
+        serviceUserNameVal = `SERVICE ${targetArea}`;
         autoServiceTTD = ttdMap['SERVICE_' + targetArea] || '';
       }
     }
@@ -6678,8 +6896,6 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
       service_ttd: newRecord.serviceTTD || '',
       dm_user_name: '',
       dm_ttd: '',
-      toko_ttd: newRecord.tokoTTD || '',
-      pemohon_ttd: newRecord.pemohonTTD || '',
       created_by: newRecord.createdBy || '',
       created_at: newRecord.createdAt || '',
       user_id: newRecord.userId || '',
@@ -6688,7 +6904,7 @@ async function prosesSimpanKeDB(toko, jenis, catatan, items) {
     };
 
     if (typeof supabase !== 'undefined' && supabase) {
-      supabase.from('permintaan_toko').upsert(supaNewRow).then(({ error }) => {
+      supabase.from('permintaan_toko').upsert(supaNewRow, { onConflict: 'no_surat' }).then(({ error }) => {
         if (error) console.warn('[SUPABASE SAVE NOTICE]:', error.message);
       }).catch(e => console.warn(e));
     }
@@ -6984,15 +7200,14 @@ function lihatFotoByNoSurat(noSurat) {
   
   let photos = [];
   if (req) {
-    const regP = parsePhotosArray(req.photos);
-    const artP = parsePhotosArray(req.artemisPhotos);
+    const regP = parsePhotosArray(req.photos || req.foto || req.photo);
+    const artP = parsePhotosArray(req.artemisPhotos || req.artemis_photos);
     photos = [...regP, ...artP];
     photos = Array.from(new Set(photos.filter(Boolean)));
   }
 
-  // FOTO BUKTI PROSES ARTEMIS (STATUS DONE) SELALU DIIZINKAN DILIHAT DI SEMUA PERANGKAT!
-  const isDoneOrHasArtemis = req && (req.status === 'DONE' || (req.artemisPhotos && req.artemisPhotos.length > 0));
-  if (!isDoneOrHasArtemis && !getFeaturePhotosEnabled()) {
+  const isDoneOrHasArtemis = req && (req.status === 'DONE' || (req.artemisPhotos && req.artemisPhotos.length > 0) || (req.artemis_photos && req.artemis_photos.length > 0));
+  if (!isDoneOrHasArtemis && typeof getFeaturePhotosEnabled === 'function' && !getFeaturePhotosEnabled()) {
     showNotif('FITUR UPLOAD FOTO FORM PERMINTAAN SEDANG DINONAKTIFKAN OLEH ADMIN!', 'warning');
     return;
   }
@@ -7005,158 +7220,221 @@ function lihatFotoByNoSurat(noSurat) {
 }
 window.lihatFotoByNoSurat = lihatFotoByNoSurat;
 
-let viewerCurrentZoom = 1;
-let viewerPanX = 0;
-let viewerPanY = 0;
+var viewerCurrentZoom = 1;
+var viewerPanX = 0;
+var viewerPanY = 0;
 let isDraggingViewerImage = false;
 let startDragX = 0;
 let startDragY = 0;
 let initialPinchDistance = 0;
 let initialPinchZoom = 1;
 
-function applyViewerTransform() {
+
+// ==========================================================================
+
+// ==========================================================================
+// BULLETPROOF REAL-TIME PHOTO PAN & ZOOM ENGINE (PC MOUSE & HP TOUCH)
+// ==========================================================================
+let isPanningViewerActive = false;
+let startPanX = 0;
+let startPanY = 0;
+let basePanX = 0;
+let basePanY = 0;
+
+function updateImageTransform(isSmooth = false) {
   const img = document.getElementById('viewerImage');
   if (!img) return;
-  if (viewerCurrentZoom <= 1) {
+  if (!viewerCurrentZoom || isNaN(viewerCurrentZoom) || viewerCurrentZoom <= 1) {
     viewerCurrentZoom = 1;
     viewerPanX = 0;
     viewerPanY = 0;
   }
+  if (isNaN(viewerPanX)) viewerPanX = 0;
+  if (isNaN(viewerPanY)) viewerPanY = 0;
+
+  img.style.transition = isSmooth ? 'transform 0.2s cubic-bezier(0.1, 0.9, 0.2, 1)' : 'none';
   img.style.transform = `translate(${viewerPanX}px, ${viewerPanY}px) scale(${viewerCurrentZoom})`;
-  img.style.cursor = viewerCurrentZoom > 1 ? (isDraggingViewerImage ? 'grabbing' : 'grab') : 'pointer';
+  img.style.cursor = viewerCurrentZoom > 1 ? (isPanningViewerActive ? 'grabbing' : 'grab') : 'pointer';
 }
+window.updateImageTransform = updateImageTransform;
+window.applyViewerTransform = updateImageTransform;
 
-function zoomImage(delta) {
-  viewerCurrentZoom += delta;
-  if (viewerCurrentZoom < 1) viewerCurrentZoom = 1;
-  if (viewerCurrentZoom > 5) viewerCurrentZoom = 5;
-  applyViewerTransform();
-}
-
-function resetZoom() {
-  viewerCurrentZoom = 1;
-  viewerPanX = 0;
-  viewerPanY = 0;
-  applyViewerTransform();
-}
-
-function initPhotoViewerGestureListeners() {
-  const modal = document.getElementById('imageViewer');
+function attachPhotoPanListeners() {
   const img = document.getElementById('viewerImage');
-  if (!modal || !img || modal.dataset.gesturesInited) return;
-  modal.dataset.gesturesInited = 'true';
+  const canvas = document.getElementById('imageViewerCanvas');
+  const modal = document.getElementById('imageViewer');
+  if (!img) return;
 
-  // Touch Start (Pinch or Pan)
-  modal.addEventListener('touchstart', (e) => {
-    if (e.target.closest('#navViewerLeft') || e.target.closest('#navViewerRight') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar')) {
-      return;
+  img.ondragstart = () => false;
+  if (canvas) canvas.ondragstart = () => false;
+
+  const handleStart = (clientX, clientY, isInteractiveTarget) => {
+    if (isInteractiveTarget) return;
+    if (viewerCurrentZoom > 1) {
+      isPanningViewerActive = true;
+      startPanX = clientX;
+      startPanY = clientY;
+      basePanX = viewerPanX;
+      basePanY = viewerPanY;
+      img.style.cursor = 'grabbing';
     }
+  };
 
-    if (e.touches.length === 2) {
-      isDraggingViewerImage = false;
+  const handleMove = (clientX, clientY, e) => {
+    if (isPanningViewerActive && viewerCurrentZoom > 1) {
+      const dx = clientX - startPanX;
+      const dy = clientY - startPanY;
+      viewerPanX = basePanX + dx;
+      viewerPanY = basePanY + dy;
+      updateImageTransform(false);
+      if (e && e.cancelable) e.preventDefault();
+    }
+  };
+
+  const handleEnd = () => {
+    if (isPanningViewerActive) {
+      isPanningViewerActive = false;
+      updateImageTransform(false);
+    }
+  };
+
+  // Mouse pan
+  const onMouseDown = (e) => {
+    const isInteractive = !!e.target.closest('#navViewerLeft, #navViewerRight, .closeViewer, .viewerBottomBar');
+    handleStart(e.clientX, e.clientY, isInteractive);
+  };
+
+  const onMouseMove = (e) => {
+    handleMove(e.clientX, e.clientY, e);
+  };
+
+  const onMouseUp = () => handleEnd();
+
+  img.onmousedown = onMouseDown;
+  if (canvas) canvas.onmousedown = onMouseDown;
+  window.onmousemove = onMouseMove;
+  window.onmouseup = onMouseUp;
+
+  // Touch pan (mobile HP)
+  const onTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      const isInteractive = !!e.target.closest('#navViewerLeft, #navViewerRight, .closeViewer, .viewerBottomBar');
+      handleStart(e.touches[0].clientX, e.touches[0].clientY, isInteractive);
+    } else if (e.touches.length === 2) {
+      isPanningViewerActive = false;
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
-      initialPinchDistance = Math.hypot(dx, dy);
-      initialPinchZoom = viewerCurrentZoom;
-    } else if (e.touches.length === 1 && viewerCurrentZoom > 1) {
-      isDraggingViewerImage = true;
-      startDragX = e.touches[0].clientX - viewerPanX;
-      startDragY = e.touches[0].clientY - viewerPanY;
+      window.initialPinchDist = Math.hypot(dx, dy);
+      window.initialPinchZoomVal = viewerCurrentZoom;
     }
-  }, { passive: false });
+  };
 
-  // Touch Move
-  modal.addEventListener('touchmove', (e) => {
-    if (e.touches.length === 2 && initialPinchDistance > 0) {
-      if (e.cancelable) e.preventDefault();
+  const onTouchMove = (e) => {
+    if (e.touches.length === 1) {
+      handleMove(e.touches[0].clientX, e.touches[0].clientY, e);
+    } else if (e.touches.length === 2 && window.initialPinchDist > 0) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.hypot(dx, dy);
       if (dist > 0) {
-        viewerCurrentZoom = initialPinchZoom * (dist / initialPinchDistance);
+        viewerCurrentZoom = window.initialPinchZoomVal * (dist / window.initialPinchDist);
         if (viewerCurrentZoom < 1) viewerCurrentZoom = 1;
         if (viewerCurrentZoom > 5) viewerCurrentZoom = 5;
-        applyViewerTransform();
+        updateImageTransform(false);
+        if (e.cancelable) e.preventDefault();
       }
-    } else if (e.touches.length === 1 && isDraggingViewerImage && viewerCurrentZoom > 1) {
-      if (e.cancelable) e.preventDefault();
-      viewerPanX = e.touches[0].clientX - startDragX;
-      viewerPanY = e.touches[0].clientY - startDragY;
-      applyViewerTransform();
     }
-  }, { passive: false });
+  };
 
-  // Touch End
-  modal.addEventListener('touchend', (e) => {
-    if (e.touches.length < 2) {
-      initialPinchDistance = 0;
-    }
-    if (e.touches.length === 0) {
-      isDraggingViewerImage = false;
-    }
-  });
+  const onTouchEnd = (e) => {
+    if (e.touches.length === 0) handleEnd();
+  };
 
-  // Mouse Drag (PC/Laptop)
-  img.addEventListener('mousedown', (e) => {
-    if (viewerCurrentZoom > 1) {
-      isDraggingViewerImage = true;
-      startDragX = e.clientX - viewerPanX;
-      startDragY = e.clientY - viewerPanY;
-      applyViewerTransform();
-      e.preventDefault();
-    }
-  });
+  img.ontouchstart = onTouchStart;
+  img.ontouchmove = onTouchMove;
+  img.ontouchend = onTouchEnd;
 
-  window.addEventListener('mousemove', (e) => {
-    if (isDraggingViewerImage && viewerCurrentZoom > 1) {
-      viewerPanX = e.clientX - startDragX;
-      viewerPanY = e.clientY - startDragY;
-      applyViewerTransform();
-    }
-  });
+  if (canvas) {
+    canvas.ontouchstart = onTouchStart;
+    canvas.ontouchmove = onTouchMove;
+    canvas.ontouchend = onTouchEnd;
+  }
 
-  window.addEventListener('mouseup', () => {
-    if (isDraggingViewerImage) {
-      isDraggingViewerImage = false;
-      applyViewerTransform();
-    }
-  });
-
-  // Mouse Wheel Zoom
-  modal.addEventListener('wheel', (e) => {
+  // Mouse wheel zoom
+  const onWheel = (e) => {
     if (e.target.closest('.viewerBottomBar')) return;
     if (e.cancelable) e.preventDefault();
-    if (e.deltaY < 0) {
-      zoomImage(0.25);
+    const delta = e.deltaY < 0 ? 0.3 : -0.3;
+    zoomImage(delta);
+  };
+  if (modal) modal.onwheel = onWheel;
+
+  // Double click / double tap
+  const onDblClick = (e) => {
+    if (e.target.closest('#navViewerLeft, #navViewerRight, .closeViewer, .viewerBottomBar')) return;
+    if (viewerCurrentZoom > 1.2) {
+      resetZoom();
     } else {
-      zoomImage(-0.25);
+      viewerCurrentZoom = 2.5;
+      updateImageTransform(true);
     }
-  }, { passive: false });
+  };
+  img.ondblclick = onDblClick;
+  if (canvas) canvas.ondblclick = onDblClick;
 }
+window.attachPhotoPanListeners = attachPhotoPanListeners;
+window.initPhotoViewerGestureListeners = attachPhotoPanListeners;
+
 
 function tampilkanFotoViewerAktif() {
   viewerCurrentZoom = 1;
   viewerPanX = 0;
   viewerPanY = 0;
-  applyViewerTransform();
+  if (typeof updateImageTransform === 'function') updateImageTransform(false);
+
+  const photos = parsePhotosArray(currentViewerPhotos && currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
+  if (photos && photos.length > 0) {
+    viewerPhotos = photos;
+    currentViewerPhotos = photos;
+  }
+
+  if (viewerCurrentIndex < 0) viewerCurrentIndex = 0;
+  if (viewerCurrentIndex >= viewerPhotos.length) viewerCurrentIndex = Math.max(0, viewerPhotos.length - 1);
+  currentViewerIndex = viewerCurrentIndex;
 
   const img = document.getElementById('viewerImage');
   if (img && viewerPhotos.length > 0) {
     img.src = viewerPhotos[viewerCurrentIndex];
+    img.style.display = 'block';
+    img.style.visibility = 'visible';
+    img.style.opacity = '1';
   }
+
   const modal = document.getElementById('imageViewer');
   if (modal) {
-    modal.style.display = 'flex';
-    initPhotoViewerGestureListeners();
+    modal.classList.add('show');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('z-index', '999999999', 'important');
+    if (typeof attachPhotoPanListeners === 'function') attachPhotoPanListeners();
   }
-  
+
   const btnLeft = document.getElementById('navViewerLeft');
   const btnRight = document.getElementById('navViewerRight');
   const textCounter = document.getElementById('viewerCounter');
-  
-  if (btnLeft) btnLeft.style.display = viewerPhotos.length > 1 ? 'flex' : 'none';
-  if (btnRight) btnRight.style.display = viewerPhotos.length > 1 ? 'flex' : 'none';
-  if (textCounter) textCounter.textContent = `${viewerCurrentIndex + 1} / ${viewerPhotos.length}`;
+
+  if (btnLeft) {
+    btnLeft.style.setProperty('display', viewerPhotos.length > 1 ? 'flex' : 'none', 'important');
+    btnLeft.style.setProperty('top', '50%', 'important');
+    btnLeft.style.setProperty('transform', 'translateY(-50%)', 'important');
+  }
+  if (btnRight) {
+    btnRight.style.setProperty('display', viewerPhotos.length > 1 ? 'flex' : 'none', 'important');
+    btnRight.style.setProperty('top', '50%', 'important');
+    btnRight.style.setProperty('transform', 'translateY(-50%)', 'important');
+  }
+  if (textCounter) {
+    textCounter.textContent = (viewerCurrentIndex + 1) + ' / ' + viewerPhotos.length;
+  }
 }
 
 function gantiFotoViewer(arah) {
@@ -8392,7 +8670,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   if (allReqPhotos.length > 0) {
     const isDoneState = req.status === 'DONE';
     actionButtons.push(`
-      <button type="button" class="btnIcon btnPhotoView btnIconOnly" title="${isDoneState ? 'LIHAT BUKTI PROSES ARTEMIS / DONE' : 'LIHAT FOTO BUKTI BARANG'} (${allReqPhotos.length})" onclick="tutupDetailBarangV2(); lihatFotoByNoSurat('${req.noSurat || req.id}');" style="${isDoneState ? 'background: linear-gradient(135deg, #059669, #10b981) !important; color: #ffffff !important;' : ''}">
+      <button type="button" class="btnIcon btnPhotoView btnIconOnly" title="${isDoneState ? 'LIHAT BUKTI PROSES ARTEMIS / DONE' : 'LIHAT FOTO BUKTI BARANG'} (${allReqPhotos.length})" onclick="tutupDetailBarangV2(); lihatFotoByNoSurat('${req.noSurat || req.id}');" style="background: ${isDoneState ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #0284c7, #0369a1)'} !important; color: #ffffff !important; border-radius: 5px !important; border: none !important;">
         <span class="material-symbols-rounded">image</span>
       </button>
     `);
@@ -8988,10 +9266,23 @@ function updatePdfModelSelectorButtons() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `btnPdfNumSimple ${isActive ? 'active' : ''}`;
-    btn.style.background = btnBg;
-    if (isActive) {
-      btn.style.color = '#ffffff';
-    }
+    btn.style.cssText = `
+      width: 72px !important;
+      min-width: 72px !important;
+      height: 38px !important;
+      font-size: 16px !important;
+      font-weight: 900 !important;
+      border-radius: 8px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      margin: 0 !important;
+      border: ${isActive ? '2px solid #ffffff' : '1.5px solid var(--border-color)'} !important;
+      background: ${btnBg} !important;
+      color: ${isActive ? '#ffffff' : 'var(--text-main)'} !important;
+      box-shadow: ${isActive ? '0 6px 18px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.1)'} !important;
+    `;
 
     btn.onclick = () => switchPdfPreviewModel(m.id);
     btn.innerHTML = `${num}`;
@@ -9891,9 +10182,6 @@ function simpanTTD() {
         } else if (currentUser.category === 'GBJ' && (r.createdBy === currentUser.username || r.createdBy === currentUser.fullName || r.isGBJ)) {
           r.pemohonTTD = png;
           reqsChanged = true;
-          if (typeof supabase !== 'undefined' && supabase) {
-            supabase.from('permintaan_toko').update({ pemohon_ttd: png }).eq('no_surat', r.noSurat).then(() => {}, () => {});
-          }
         }
       });
       if (reqsChanged) saveRequestsToDB(allReqs);
@@ -9912,12 +10200,13 @@ function simpanTTD() {
           catatan: JSON.stringify(ttdMap),
           items: [],
           photos: [],
+          artemis_photos: [],
           status: 'DONE',
           service_approve: true,
           created_by: 'SYSTEM',
           created_at: new Date().toISOString()
         };
-        supabase.from('permintaan_toko').upsert(systemTtdRow).then(({ error }) => {
+        supabase.from('permintaan_toko').upsert(systemTtdRow, { onConflict: 'no_surat' }).then(({ error }) => {
           if (error) console.warn('[SUPABASE TTD SAVE NOTICE]:', error.message);
           else console.log('⚡ [SUPABASE TTD SUCCESS]: TTD berhasil di-upload ke Supabase!');
         });
@@ -9926,10 +10215,8 @@ function simpanTTD() {
         supabase.from('lookup').upsert({
           key: 'SYSTEM_TTD_MAP',
           value: JSON.stringify(ttdMap),
-          type: 'TTD',
-          code: 'TTD_MAP',
           updated_at: new Date().toISOString()
-        }).then(() => {}, () => {});
+        }, { onConflict: 'key' }).then(() => {}, () => {});
 
         if (currentUser && currentUser.id) {
           supabase.from('users').update({ ttd: png }).eq('id', currentUser.id).then(() => {}, () => {});
@@ -11159,13 +11446,12 @@ function hapusSemuaChatAdmin() {
             await supabase.from('lookup').upsert({
               key: 'chat_messages',
               value: JSON.stringify(clearPayload),
-              code: 'CHAT_MESSAGES',
-              type: 'CHAT',
               updated_at: new Date().toISOString()
             }, { onConflict: 'key' });
           } catch(e) {}
           try {
             const systemChatRow = {
+              id: '__SYSTEM_CHAT_MESSAGES__',
               no_surat: '__SYSTEM_CHAT_MESSAGES__',
               tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
               toko: 'SYSTEM',
@@ -11174,6 +11460,7 @@ function hapusSemuaChatAdmin() {
               catatan: JSON.stringify(clearPayload),
               items: [],
               photos: [],
+              artemis_photos: [],
               status: 'DONE',
               service_approve: true,
               created_by: 'SYSTEM',
@@ -11716,86 +12003,102 @@ async function simpanUserData() {
   });
   appStorage.setItem(DELETED_USERS_KEY, JSON.stringify(cleanDelUsers));
 
-  const newUser = {
-    id: `USR-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-    username,
-    password,
-    fullName,
-    storeCode: storeCode || generateStoreCode(fullName),
-    phone,
-    category,
-    area,
-    createdAt: getFormattedDateDDMMYYYY()
-  };
-
-  users.push(newUser);
-  saveUsersToDB(users);
-
-  const docId = String(username).toUpperCase();
-  if (typeof supabase !== 'undefined' && supabase) {
-    await supabase.from('users').upsert({
-      id: newUser.id,
-      username: newUser.username,
-      password: newUser.password,
-      full_name: newUser.fullName,
-      store_code: newUser.storeCode,
-      phone: newUser.phone,
-      category: newUser.category,
-      area: newUser.area,
-      created_at: newUser.createdAt
-    });
-
-    if (category === 'TOKO') {
-      try {
-        await supabase.from('toko_list').upsert({
-          id: newUser.id,
-          full_name: newUser.fullName,
-          area: newUser.area,
-          store_code: newUser.storeCode,
-          created_by: currentUser ? currentUser.fullName : 'ADMIN'
-        });
-      } catch (e) {}
-    }
-  }
-
-  if (category === 'TOKO') {
+  showMiniLoading('MENYIMPAN USER / TOKO BARU...');
+  setTimeout(async () => {
     try {
-      const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
-      if (!localStores.some(s => s.id === newUser.id || (s.fullName && s.fullName.toUpperCase() === fullName.toUpperCase()))) {
-        localStores.push({
+      const startTime = Date.now();
+      const newUser = {
+        id: `USR-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+        username,
+        password,
+        fullName,
+        storeCode: storeCode || generateStoreCode(fullName),
+        phone,
+        category,
+        area,
+        createdAt: getFormattedDateDDMMYYYY()
+      };
+
+      users.push(newUser);
+      saveUsersToDB(users);
+
+      const docId = String(username).toUpperCase();
+      if (typeof supabase !== 'undefined' && supabase) {
+        await supabase.from('users').upsert({
           id: newUser.id,
-          fullName: newUser.fullName,
+          username: newUser.username,
+          password: newUser.password,
+          full_name: newUser.fullName,
+          store_code: newUser.storeCode,
+          phone: newUser.phone,
+          category: newUser.category,
           area: newUser.area,
-          storeCode: newUser.storeCode,
-          createdBy: currentUser ? currentUser.fullName : 'ADMIN'
+          created_at: newUser.createdAt
         });
-        appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
+
+        if (category === 'TOKO') {
+          try {
+            await supabase.from('toko_list').upsert({
+              id: newUser.id,
+              full_name: newUser.fullName,
+              area: newUser.area,
+              store_code: newUser.storeCode,
+              created_by: currentUser ? currentUser.fullName : 'ADMIN'
+            });
+          } catch (e) {}
+        }
       }
-    } catch (e) {}
-  }
 
-  if (typeof syncSupabaseUsersToLocalCache === 'function') {
-    await syncSupabaseUsersToLocalCache();
-  }
-  if (typeof syncSupabaseStoresToLocalCache === 'function') {
-    await syncSupabaseStoresToLocalCache();
-  }
-  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-    dbFirestore.collection('users').doc(docId).set(newUser).catch(e => console.warn(e));
-  }
-  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-    dbRealtime.ref(`users/${docId}`).set(newUser).catch(e => console.warn(e));
-  }
-  if (typeof pushCentralCloudDB === 'function') {
-    pushCentralCloudDB();
-  }
+      if (category === 'TOKO') {
+        try {
+          const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
+          if (!localStores.some(s => s.id === newUser.id || (s.fullName && s.fullName.toUpperCase() === fullName.toUpperCase()))) {
+            localStores.push({
+              id: newUser.id,
+              fullName: newUser.fullName,
+              area: newUser.area,
+              storeCode: newUser.storeCode,
+              createdBy: currentUser ? currentUser.fullName : 'ADMIN'
+            });
+            appStorage.setItem(STORES_DB_KEY, JSON.stringify(localStores));
+          }
+        } catch (e) {}
+      }
 
-  showNotif(`USER ${fullName} (${username}) BERHASIL DISIMPAN!`, 'success');
+      if (typeof syncSupabaseUsersToLocalCache === 'function') {
+        await syncSupabaseUsersToLocalCache();
+      }
+      if (typeof syncSupabaseStoresToLocalCache === 'function') {
+        await syncSupabaseStoresToLocalCache();
+      }
+      if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+        dbFirestore.collection('users').doc(docId).set(newUser).catch(e => console.warn(e));
+      }
+      if (typeof dbRealtime !== 'undefined' && dbRealtime) {
+        dbRealtime.ref(`users/${docId}`).set(newUser).catch(e => console.warn(e));
+      }
+      if (typeof pushCentralCloudDB === 'function') {
+        pushCentralCloudDB();
+      }
 
-  tutupUserModal();
-  loadUsersManagement();
-  if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
-  if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 650) {
+        await new Promise(r => setTimeout(r, 650 - elapsed));
+      }
+
+      hideMiniLoading();
+      showNotif(`USER ${fullName} (${username}) BERHASIL DISIMPAN!`, 'success');
+
+      tutupUserModal();
+      loadUsersManagement();
+      if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
+      if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
+    } catch(err) {
+      hideMiniLoading();
+      console.error('[SIMPAN USER ERROR]:', err);
+      showNotif('GAGAL MENYIMPAN USER: ' + (err.message || err), 'error');
+    }
+  }, 50);
 }
 
 function hapusUser(userId) {
@@ -11818,9 +12121,10 @@ function hapusUser(userId) {
   }
 
   showConfirm(`HAPUS USER '${u.fullName || u.username}' (${u.username})?`, () => {
-    showLoading('MENGHAPUS USER...');
+    showMiniLoading(`MENGHAPUS USER '${u.fullName || u.username}'...`);
     setTimeout(async () => {
       try {
+        const startTime = Date.now();
         // 1. UPDATE DELETED KEYS & LOKAL STORAGE FOR USERS & STORES
         try {
           const delUsers = JSON.parse(appStorage.getItem(DELETED_USERS_KEY) || '[]');
@@ -11882,21 +12186,23 @@ function hapusUser(userId) {
         if (typeof pushCentralCloudDB === 'function') {
           try { await pushCentralCloudDB(); } catch(e) {}
         }
-        if (typeof pullCentralCloudDB === 'function') {
-          try { await pullCentralCloudDB(); } catch(e) {}
+
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 650) {
+          await new Promise(r => setTimeout(r, 650 - elapsed));
         }
 
-        hideLoading();
+        hideMiniLoading();
         showNotif(`USER ${u.username} BERHASIL DIHAPUS!`, 'info');
         if (typeof loadUsersManagement === 'function') loadUsersManagement();
         if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
         if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
       } catch (err) {
-        hideLoading();
+        hideMiniLoading();
         console.error('[HAPUS USER ERROR]:', err);
         showNotif('TERJADI KESALAHAN SAAT MENGHAPUS USER: ' + (err.message || err), 'error');
       }
-    }, 300);
+    }, 50);
   });
 }
 window.hapusUser = hapusUser;
@@ -12585,7 +12891,7 @@ function loadDaftarTokoModal(filterKeyword = '') {
       <td style="padding: 8px; text-align: center; color: var(--primary); font-weight: 700;">${code}</td>
       <td style="padding: 8px; text-align: center; white-space: nowrap;">
         <button type="button" class="btnIcon btnEdit" onclick="editTokoCustom('${s.id}')" title="EDIT TOKO" style="margin-right: 4px;"><span class="material-symbols-rounded">edit</span></button>
-        <button type="button" class="btnIcon btnDelete" onclick="hapusTokoCustom('${s.id}')" title="HAPUS TOKO"><span class="material-symbols-rounded">delete</span></button>
+        <button type="button" class="btnIcon btnDelete" id="btnHapusToko_${s.id}" onclick="hapusTokoCustom('${s.id}', this)" title="HAPUS TOKO"><span class="material-symbols-rounded">delete</span></button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -12624,11 +12930,19 @@ function simpanTokoBaru() {
     return;
   }
 
+  // TAMPILKAN ANIMASI LOADING BERPUTAR PADA TOMBOL
+  if (btnSimpan) {
+    btnSimpan.disabled = true;
+    btnSimpan.style.opacity = '0.9';
+    btnSimpan.innerHTML = `<span class="btn-spinner-ring"></span> <span style="vertical-align: middle; font-weight: 700;">${editStoreId ? 'MEMPERBARUI...' : 'MENYIMPAN...'}</span>`;
+  }
+
   if (editStoreId) {
     // MODES EDIT TOKO
-    showLoading('MEMPERBARUI DATA TOKO...');
+    showMiniLoading('MEMPERBARUI DATA TOKO...');
     setTimeout(async () => {
       try {
+        const startTime = Date.now();
         const targetStore = existingStores.find(s => s.id === editStoreId);
         const oldName = targetStore ? targetStore.fullName : '';
         const newCode = generateStoreCode(namaToko);
@@ -12704,30 +13018,44 @@ function simpanTokoBaru() {
           try { await pushCentralCloudDB(); } catch (e) {}
         }
 
-        hideLoading();
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 650) {
+          await new Promise(r => setTimeout(r, 650 - elapsed));
+        }
+
+        hideMiniLoading();
         showNotif(`TOKO BERHASIL DIPERBARUHI MENJADI '${namaToko}' (AREA ${targetArea})!`, 'success');
 
         editStoreId = null;
         if (inputEl) inputEl.value = '';
         if (btnSimpan) {
-          btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle;">save</span> SIMPAN`;
-          btnSimpan.style.background = '#16a34a';
+          btnSimpan.disabled = false;
+          btnSimpan.style.opacity = '1';
+          btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span> SIMPAN`;
+          btnSimpan.style.background = 'var(--primary)';
         }
         if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
         if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions(namaToko);
         if (typeof loadUsersManagement === 'function') loadUsersManagement();
       } catch (err) {
-        hideLoading();
+        hideMiniLoading();
+        if (btnSimpan) {
+          btnSimpan.disabled = false;
+          btnSimpan.style.opacity = '1';
+          btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span> SIMPAN EDIT`;
+        }
         console.error('[EDIT TOKO ERROR]:', err);
         showNotif('GAGAL MEMPERBARUI TOKO: ' + (err.message || err), 'error');
       }
-    }, 300);
+    }, 50);
     return;
   }
 
-  showLoading('MENYIMPAN TOKO BARU...');
+  // MODES TAMBAH TOKO BARU
+  showMiniLoading('MENYIMPAN TOKO BARU...');
   setTimeout(async () => {
     try {
+      const startTime = Date.now();
       const storeKey = `${namaToko}_${targetArea}`;
       let deletedStoreKeys = JSON.parse(appStorage.getItem(DELETED_STORES_KEY) || '[]');
       if (deletedStoreKeys.includes(storeKey)) {
@@ -12813,36 +13141,57 @@ function simpanTokoBaru() {
         await pushCentralCloudDB();
       }
 
-      // AMBIL DATA TERBARU DARI CLOUD SEHINGGA DATA LANGSUNG MASUK KE DATABASE & MENU USER ADMIN
-      if (typeof syncAllDataToCache === 'function') {
-        await syncAllDataToCache().catch(() => {});
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 650) {
+        await new Promise(r => setTimeout(r, 650 - elapsed));
       }
 
-      hideLoading();
+      hideMiniLoading();
       showNotif(`TOKO '${namaToko}' BERHASIL DITAMBAHKAN!`, 'success');
       if (inputEl) inputEl.value = '';
+      if (btnSimpan) {
+        btnSimpan.disabled = false;
+        btnSimpan.style.opacity = '1';
+        btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span> SIMPAN`;
+        btnSimpan.style.background = 'var(--primary)';
+      }
       if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
       if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions(namaToko);
       if (typeof loadUsersManagement === 'function') loadUsersManagement();
     } catch (err) {
-      hideLoading();
+      hideMiniLoading();
+      if (btnSimpan) {
+        btnSimpan.disabled = false;
+        btnSimpan.style.opacity = '1';
+        btnSimpan.innerHTML = `<span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span> SIMPAN`;
+      }
       console.error('[SIMPAN TOKO ERROR]:', err);
       showNotif('GAGAL MENYIMPAN TOKO!', 'error');
     }
-  }, 300);
+  }, 50);
 }
 window.simpanTokoBaru = simpanTokoBaru;
 
-function hapusTokoCustom(id) {
+function hapusTokoCustom(id, btnElement) {
   const allStores = getStoresFromDB();
   const store = allStores.find(s => s.id === id);
   const name = store ? store.fullName : 'TOKO';
   const storeArea = store ? store.area : (currentUser ? currentUser.area : '');
 
+  const btnDel = btnElement || document.getElementById(`btnHapusToko_${id}`);
+
   showConfirm(`HAPUS TOKO '${name}' DARI DAFTAR?`, () => {
-    showLoading('MENGHAPUS TOKO...');
+    if (btnDel) {
+      btnDel.disabled = true;
+      btnDel.innerHTML = `<span class="btn-spinner-ring danger"></span>`;
+      const tr = btnDel.closest ? btnDel.closest('tr') : null;
+      if (tr) tr.style.opacity = '0.5';
+    }
+
+    showMiniLoading(`MENGHAPUS TOKO '${name}'...`);
     setTimeout(async () => {
       try {
+        const startTime = Date.now();
         // 1. UPDATE CACHE LOKAL & DELETED KEYS
         try {
           const localStores = JSON.parse(appStorage.getItem(STORES_DB_KEY) || '[]');
@@ -12890,29 +13239,29 @@ function hapusTokoCustom(id) {
           await pushCentralCloudDB();
         }
 
-        if (typeof syncAllDataToCache === 'function') {
-          await syncAllDataToCache().catch(() => {});
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 650) {
+          await new Promise(r => setTimeout(r, 650 - elapsed));
         }
 
-        hideLoading();
+        hideMiniLoading();
         showNotif(`TOKO '${name}' BERHASIL DIHAPUS!`, 'info');
-
-        // Buka kembali modal tambah toko jika tertutup oleh konfirmasi
-        const popupToko = document.getElementById('popupTambahToko');
-        if (popupToko) {
-          popupToko.style.display = 'flex';
-          popupToko.classList.add('show');
-        }
 
         if (typeof loadDaftarTokoModal === 'function') loadDaftarTokoModal();
         if (typeof updateStoreDropdownOptions === 'function') updateStoreDropdownOptions();
         if (typeof loadUsersManagement === 'function') loadUsersManagement();
       } catch (err) {
-        hideLoading();
+        hideMiniLoading();
+        if (btnDel) {
+          btnDel.disabled = false;
+          btnDel.innerHTML = `<span class="material-symbols-rounded">delete</span>`;
+          const tr = btnDel.closest ? btnDel.closest('tr') : null;
+          if (tr) tr.style.opacity = '1';
+        }
         console.error('[HAPUS TOKO ERROR]:', err);
         showNotif('GAGAL MENGHAPUS TOKO!', 'error');
       }
-    }, 300);
+    }, 50);
   });
 }
 window.hapusTokoCustom = hapusTokoCustom;
@@ -13213,7 +13562,6 @@ function confirmYes() {
   const cb = confirmCallback;
   confirmCallback = null;
   closeConfirm();
-  closeAllPopups();
   if (typeof cb === 'function') {
     cb();
   }
@@ -13297,227 +13645,89 @@ function closePopup() {
   }
 }
 
-function showLoading() {
+function showLoading(msg) {
   const modal = document.getElementById('loadingOverlay');
-  if (modal) modal.style.display = 'flex';
+  if (modal) {
+    modal.classList.add('show');
+    modal.style.display = 'flex';
+    const textEl = document.getElementById('loadingText');
+    if (textEl) {
+      if (msg && typeof msg === 'string' && msg.trim() !== '') {
+        textEl.textContent = msg;
+        textEl.style.display = 'block';
+      } else {
+        textEl.style.display = 'none';
+      }
+    }
+  }
 }
 
 function hideLoading() {
   const modal = document.getElementById('loadingOverlay');
-  if (modal) modal.style.display = 'none';
-}
-
-let currentZoom = 1;
-let panX = 0;
-let panY = 0;
-let isPanningImage = false;
-let startPointerX = 0;
-let startPointerY = 0;
-let initialPanX = 0;
-let initialPanY = 0;
-
-let currentRotation = 0;
-
-function applyImageTransform(isSmooth = false) {
-  const img = document.getElementById('viewerImage');
-  if (!img) return;
-
-  if (currentZoom <= 1) {
-    panX = 0;
-    panY = 0;
-  }
-
-  img.style.transition = isSmooth ? 'transform 0.22s cubic-bezier(0.1, 0.9, 0.2, 1)' : 'none';
-  img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom}) rotate(${currentRotation}deg)`;
-  img.style.cursor = isPanningImage ? 'grabbing' : (currentZoom > 1 ? 'grab' : 'pointer');
-}
-
-function toggleRotation() {
-  currentRotation = (currentRotation + 90) % 360;
-  applyImageTransform(true);
-}
-window.toggleRotation = toggleRotation;
-window.rotateImage = toggleRotation;
-
-function initImagePanListeners() {
-  const canvas = document.getElementById('imageViewerCanvas');
-  const img = document.getElementById('viewerImage');
-  if (!canvas || !img || canvas.dataset.panInitialized) return;
-  canvas.dataset.panInitialized = 'true';
-
-  img.addEventListener('dragstart', (e) => e.preventDefault());
-
-  canvas.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('button') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar')) return;
-
-    isPanningImage = true;
-    startPointerX = e.clientX;
-    startPointerY = e.clientY;
-    initialPanX = panX;
-    initialPanY = panY;
-
-    try {
-      canvas.setPointerCapture(e.pointerId);
-    } catch(err) {}
-
-    applyImageTransform(false);
-  });
-
-  canvas.addEventListener('pointermove', (e) => {
-    if (!isPanningImage) return;
-    e.preventDefault();
-
-    const dx = e.clientX - startPointerX;
-    const dy = e.clientY - startPointerY;
-
-    panX = initialPanX + dx;
-    panY = initialPanY + dy;
-
-    applyImageTransform(false);
-  });
-
-  const stopPan = (e) => {
-    if (isPanningImage) {
-      isPanningImage = false;
-      try {
-        if (e && e.pointerId && canvas.hasPointerCapture(e.pointerId)) {
-          canvas.releasePointerCapture(e.pointerId);
-        }
-      } catch(err) {}
-      applyImageTransform(false);
-    }
-  };
-
-  canvas.addEventListener('pointerup', stopPan);
-  canvas.addEventListener('pointercancel', stopPan);
-
-  canvas.addEventListener('dblclick', (e) => {
-    if (e.target.closest('button') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar')) return;
-    if (currentZoom > 1.2) {
-      resetZoom();
-    } else {
-      currentZoom = 2.5;
-      applyImageTransform(true);
-    }
-  });
-}
-
-let currentViewerPhotos = [];
-let currentViewerIndex = 0;
-
-function updateViewerCounter() {
-  const counter = document.getElementById('viewerCounter');
-  const navLeft = document.getElementById('navViewerLeft');
-  const navRight = document.getElementById('navViewerRight');
-
-  const photos = parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
-  const total = photos.length || 1;
-  const current = (currentViewerIndex || 0) + 1;
-
-  if (counter) counter.textContent = `${current} / ${total}`;
-
-  if (navLeft) navLeft.style.display = total > 1 ? 'flex' : 'none';
-  if (navRight) navRight.style.display = total > 1 ? 'flex' : 'none';
-}
-
-function gantiFotoViewer(direction) {
-  const photos = parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
-  if (!photos || photos.length <= 1) return;
-  
-  currentViewerIndex = (currentViewerIndex + direction + photos.length) % photos.length;
-  viewerCurrentIndex = currentViewerIndex;
-  currentViewerPhotos = photos;
-  viewerPhotos = photos;
-  
-  resetZoom();
-  
-  const img = document.getElementById('viewerImage');
-  if (img) {
-    img.src = photos[currentViewerIndex];
-    applyImageTransform(false);
-  }
-  updateViewerCounter();
-}
-
-function bukaViewGambar(src, startIdx = 0) {
-  const photoList = parsePhotosArray(src);
-  if (!photoList || photoList.length === 0) {
-    showNotif('TIDAK ADA FOTO BUKTI PENDUKUNG!', 'warning');
-    return;
-  }
-
-  currentViewerPhotos = photoList;
-  viewerPhotos = photoList;
-  currentViewerIndex = Math.max(0, Math.min(startIdx, photoList.length - 1));
-  viewerCurrentIndex = currentViewerIndex;
-
-  currentZoom = 1;
-  panX = 0;
-  panY = 0;
-  isPanningImage = false;
-
-  const modal = document.getElementById('imageViewer');
-  const img = document.getElementById('viewerImage');
-
-  if (img) {
-    img.src = photoList[currentViewerIndex];
-  }
-
   if (modal) {
-    modal.style.display = 'flex';
-  }
-
-  applyImageTransform(false);
-  updateViewerCounter();
-  initImagePanListeners();
-
-  setTimeout(() => {
-    applyImageTransform(false);
-  }, 50);
-
-  if (typeof pushPopupHistoryState === 'function') {
-    pushPopupHistoryState();
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+    const textEl = document.getElementById('loadingText');
+    if (textEl) textEl.style.display = 'none';
   }
 }
-window.bukaViewGambar = bukaViewGambar;
-window.zoomFoto = bukaViewGambar;
 
-function tutupImageViewer() {
-  const modal = document.getElementById('imageViewer');
-  if (modal) modal.style.display = 'none';
-  resetZoom();
-}
-
-function zoomImage(step) {
-  currentZoom += step;
-  if (currentZoom < 0.2) currentZoom = 0.2;
-  if (currentZoom > 8) currentZoom = 8;
-  if (currentZoom <= 1.05 && step < 0) {
-    currentZoom = 1;
-    panX = 0;
-    panY = 0;
+function showMiniLoading(msg = 'MEMPROSES...') {
+  if (!document.getElementById('miniLoadingGlobalStyle')) {
+    const st = document.createElement('style');
+    st.id = 'miniLoadingGlobalStyle';
+    st.textContent = `
+      @keyframes spinSmoothMini {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes spinReverseMini {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(-360deg); }
+      }
+      @keyframes spinnerPopMini {
+        0% { transform: scale(0.85); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(st);
   }
-  applyImageTransform(true);
-}
 
-function resetZoom() {
-  currentZoom = 1;
-  currentRotation = 0;
-  panX = 0;
-  panY = 0;
-  isPanningImage = false;
-  applyImageTransform(true);
-}
-
-// MOUSE WHEEL SCROLL ZOOM IN / ZOOM OUT FOR IMAGE VIEWER
-document.addEventListener('wheel', function(e) {
-  const imageViewer = document.getElementById('imageViewer');
-  if (imageViewer && (imageViewer.style.display === 'flex' || imageViewer.style.display === 'block')) {
-    e.preventDefault();
-    const step = e.deltaY < 0 ? 0.25 : -0.25;
-    zoomImage(step);
+  let el = document.getElementById('miniCenterLoading');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'miniCenterLoading';
+    document.body.appendChild(el);
   }
-}, { passive: false });
+  
+  el.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; height: 100dvh !important; background: rgba(10, 15, 30, 0.65) !important; backdrop-filter: blur(6px) !important; -webkit-backdrop-filter: blur(6px) !important; display: flex !important; align-items: center !important; justify-content: center !important; z-index: 2147483647 !important; pointer-events: auto !important; visibility: visible !important; opacity: 1 !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box !important;';
+  
+  el.innerHTML = `
+    <div style="display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 14px !important; padding: 22px 28px !important; min-width: 180px !important; border-radius: 16px !important; background: #0f172a !important; border: 1.5px solid #38bdf8 !important; box-shadow: 0 25px 60px rgba(0,0,0,0.85), 0 0 35px rgba(56,189,248,0.5) !important; animation: spinnerPopMini 0.25s ease-out !important; box-sizing: border-box !important; text-align: center !important;">
+      <div style="width: 44px !important; height: 44px !important; position: relative !important; border-radius: 50% !important; border: 4px solid rgba(255,255,255,0.15) !important; border-top: 4px solid #38bdf8 !important; border-right: 4px solid #818cf8 !important; animation: spinSmoothMini 0.75s linear infinite !important; filter: drop-shadow(0 0 16px rgba(56,189,248,0.95)) !important; box-sizing: border-box !important; margin: 0 auto !important;">
+        <div style="position: absolute !important; inset: 5px !important; border-radius: 50% !important; border: 3px solid transparent !important; border-top: 3px solid #34d399 !important; border-left: 3px solid #38bdf8 !important; animation: spinReverseMini 0.95s linear infinite !important; box-sizing: border-box !important;"></div>
+      </div>
+      <div id="miniCenterLoadingText" style="color: #ffffff !important; font-size: 12.5px !important; font-weight: 800 !important; letter-spacing: 0.7px !important; text-transform: uppercase !important; text-align: center !important; text-shadow: 0 2px 8px rgba(0,0,0,0.8) !important; max-width: 240px !important; line-height: 1.35 !important; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;">${msg || 'MEMPROSES...'}</div>
+    </div>
+  `;
+
+  if (document.body && el.parentNode !== document.body) {
+    document.body.appendChild(el);
+  }
+}
+
+function hideMiniLoading() {
+  const el = document.getElementById('miniCenterLoading');
+  if (el) {
+    el.style.cssText = 'display: none !important; visibility: hidden !important;';
+    el.classList.remove('show');
+  }
+}
+
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+window.showMiniLoading = showMiniLoading;
+window.hideMiniLoading = hideMiniLoading;
 
 function initDraggableElement(element, storageKey) {
   const el = typeof element === 'string' ? document.getElementById(element) : element;
@@ -13905,5 +14115,253 @@ document.addEventListener('touchmove', function (e) {
     if (!isInsideTable) {
       if (e.cancelable) e.preventDefault();
     }
+  }
+}, { passive: false });
+
+
+// ==========================================================================
+
+/* ==========================================================================
+   PERFECT ROCK-SOLID PHOTO VIEWER PAN & ZOOM ENGINE (TOUCH & MOUSE)
+   ========================================================================== */
+var currentZoom = 1;
+var panX = 0;
+var panY = 0;
+var currentRotation = 0;
+var isPanningImage = false;
+var startPointerX = 0;
+var startPointerY = 0;
+var initialPanX = 0;
+var initialPanY = 0;
+
+var currentViewerPhotos = [];
+var currentViewerIndex = 0;
+var viewerPhotos = [];
+var viewerCurrentIndex = 0;
+var viewerCurrentZoom = 1;
+var viewerPanX = 0;
+var viewerPanY = 0;
+
+function applyImageTransform(animate = false) {
+  const img = document.getElementById('viewerImage');
+  if (!img) return;
+  img.style.transition = animate ? 'transform 0.18s cubic-bezier(0.25, 1, 0.5, 1)' : 'none';
+  img.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${currentZoom}) rotate(${currentRotation}deg)`;
+  img.style.cursor = currentZoom > 1 ? (isPanningImage ? 'grabbing' : 'grab') : 'default';
+  viewerCurrentZoom = currentZoom;
+  viewerPanX = panX;
+  viewerPanY = panY;
+}
+window.applyImageTransform = applyImageTransform;
+window.updateImageTransform = applyImageTransform;
+
+function zoomImage(step) {
+  currentZoom = Math.max(0.3, Math.min(10, currentZoom + step));
+  if (currentZoom <= 1.05 && step < 0) {
+    currentZoom = 1;
+    panX = 0;
+    panY = 0;
+  }
+  applyImageTransform(true);
+}
+window.zoomImage = zoomImage;
+
+function resetZoom() {
+  currentZoom = 1;
+  panX = 0;
+  panY = 0;
+  currentRotation = 0;
+  isPanningImage = false;
+  applyImageTransform(true);
+}
+window.resetZoom = resetZoom;
+
+function rotateImage(deg = 90) {
+  currentRotation = (currentRotation + deg) % 360;
+  applyImageTransform(true);
+}
+window.rotateImage = rotateImage;
+
+function updateViewerCounter() {
+  const counter = document.getElementById('viewerCounter');
+  const navLeft = document.getElementById('navViewerLeft');
+  const navRight = document.getElementById('navViewerRight');
+
+  const photos = typeof parsePhotosArray === 'function' 
+    ? parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos)
+    : (currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
+    
+  const total = (photos && photos.length) || 1;
+  const current = (currentViewerIndex || 0) + 1;
+
+  if (counter) counter.textContent = `${current} / ${total}`;
+  if (navLeft) navLeft.style.setProperty('display', total > 1 ? 'flex' : 'none', 'important');
+  if (navRight) navRight.style.setProperty('display', total > 1 ? 'flex' : 'none', 'important');
+}
+
+function gantiFotoViewer(direction) {
+  const photos = typeof parsePhotosArray === 'function' 
+    ? parsePhotosArray(currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos)
+    : (currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
+
+  if (!photos || photos.length <= 1) return;
+  
+  currentViewerIndex = (currentViewerIndex + direction + photos.length) % photos.length;
+  viewerCurrentIndex = currentViewerIndex;
+  currentViewerPhotos = photos;
+  viewerPhotos = photos;
+  
+  resetZoom();
+  
+  const img = document.getElementById('viewerImage');
+  if (img) {
+    img.src = photos[currentViewerIndex];
+    applyImageTransform(false);
+  }
+  updateViewerCounter();
+}
+window.gantiFotoViewer = gantiFotoViewer;
+
+function bukaViewGambar(src, startIdx = 0) {
+  const photoList = typeof parsePhotosArray === 'function' ? parsePhotosArray(src) : (Array.isArray(src) ? src : [src]);
+  if (!photoList || photoList.length === 0) {
+    if (typeof showNotif === 'function') showNotif('TIDAK ADA FOTO BUKTI PENDUKUNG!', 'warning');
+    return;
+  }
+
+  currentViewerPhotos = photoList;
+  viewerPhotos = photoList;
+  currentViewerIndex = Math.max(0, Math.min(startIdx, photoList.length - 1));
+  viewerCurrentIndex = currentViewerIndex;
+
+  tampilkanFotoViewerAktif();
+}
+window.bukaViewGambar = bukaViewGambar;
+window.zoomFoto = bukaViewGambar;
+
+function tampilkanFotoViewerAktif() {
+  resetZoom();
+
+  const photos = typeof parsePhotosArray === 'function' 
+    ? parsePhotosArray(currentViewerPhotos && currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos)
+    : (currentViewerPhotos.length > 0 ? currentViewerPhotos : viewerPhotos);
+
+  if (photos && photos.length > 0) {
+    viewerPhotos = photos;
+    currentViewerPhotos = photos;
+  }
+
+  if (currentViewerIndex < 0) currentViewerIndex = 0;
+  if (currentViewerIndex >= viewerPhotos.length) currentViewerIndex = Math.max(0, viewerPhotos.length - 1);
+  viewerCurrentIndex = currentViewerIndex;
+
+  const img = document.getElementById('viewerImage');
+  if (img && viewerPhotos.length > 0) {
+    img.src = viewerPhotos[currentViewerIndex];
+    img.style.display = 'block';
+    img.style.visibility = 'visible';
+    img.style.opacity = '1';
+  }
+
+  const modal = document.getElementById('imageViewer');
+  if (modal) {
+    modal.classList.add('show');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('z-index', '999999999', 'important');
+  }
+
+  initImagePanListeners();
+  updateViewerCounter();
+  applyImageTransform(false);
+}
+window.tampilkanFotoViewerAktif = tampilkanFotoViewerAktif;
+
+function tutupImageViewer() {
+  const modal = document.getElementById('imageViewer');
+  if (modal) {
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+  }
+  resetZoom();
+}
+window.tutupImageViewer = tutupImageViewer;
+
+function initImagePanListeners() {
+  const canvas = document.getElementById('imageViewerCanvas');
+  const img = document.getElementById('viewerImage');
+  if (!canvas || !img || canvas.dataset.panInitialized === 'true') return;
+  canvas.dataset.panInitialized = 'true';
+
+  img.addEventListener('dragstart', (e) => e.preventDefault());
+
+  const onPointerDown = (e) => {
+    if (e.target.closest('button') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar') || e.target.closest('#navViewerLeft') || e.target.closest('#navViewerRight')) {
+      return;
+    }
+
+    isPanningImage = true;
+    startPointerX = e.clientX;
+    startPointerY = e.clientY;
+    initialPanX = panX;
+    initialPanY = panY;
+
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch(err) {}
+
+    applyImageTransform(false);
+  };
+
+  const onPointerMove = (e) => {
+    if (!isPanningImage) return;
+    e.preventDefault();
+
+    const dx = e.clientX - startPointerX;
+    const dy = e.clientY - startPointerY;
+
+    panX = initialPanX + dx;
+    panY = initialPanY + dy;
+
+    applyImageTransform(false);
+  };
+
+  const onPointerUp = (e) => {
+    if (isPanningImage) {
+      isPanningImage = false;
+      try {
+        if (e && e.pointerId && canvas.hasPointerCapture(e.pointerId)) {
+          canvas.releasePointerCapture(e.pointerId);
+        }
+      } catch(err) {}
+      applyImageTransform(false);
+    }
+  };
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', onPointerUp);
+
+  // Double click or tap to toggle zoom
+  canvas.addEventListener('dblclick', (e) => {
+    if (e.target.closest('button') || e.target.closest('.closeViewer') || e.target.closest('.viewerBottomBar')) return;
+    if (currentZoom > 1.2) {
+      resetZoom();
+    } else {
+      currentZoom = 2.5;
+      applyImageTransform(true);
+    }
+  });
+}
+window.initImagePanListeners = initImagePanListeners;
+window.attachPhotoPanListeners = initImagePanListeners;
+
+// Mouse wheel zoom
+document.addEventListener('wheel', function(e) {
+  const imageViewer = document.getElementById('imageViewer');
+  if (imageViewer && (imageViewer.style.display === 'flex' || imageViewer.style.display === 'block')) {
+    e.preventDefault();
+    const step = e.deltaY < 0 ? 0.25 : -0.25;
+    zoomImage(step);
   }
 }, { passive: false });
