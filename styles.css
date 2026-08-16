@@ -1365,14 +1365,15 @@ input:focus, select:focus, textarea:focus {
 }
 
 #detailDashboard {
-  height: calc(100vh - 195px) !important;
-  max-height: calc(100vh - 195px) !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
   flex: 1 1 auto !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
   margin-top: 1mm !important;
-  margin-bottom: 1mm !important;
+  margin-bottom: 0 !important;
   padding: 0 !important;
   border-radius: 5px !important;
   -webkit-clip-path: inset(0 round 5px) !important;
@@ -2080,7 +2081,8 @@ section#masterDbPage.page.active {
 #masterDbPage .tableWrap {
   flex: 1 1 100% !important;
   flex-grow: 1 !important;
-  display: block !important;
+  display: flex !important;
+  flex-direction: column !important;
   width: 100% !important;
   height: 100% !important;
   min-height: 0 !important;
@@ -2097,7 +2099,7 @@ section#masterDbPage.page.active {
   position: relative !important;
   box-sizing: border-box !important;
   margin-top: 1mm !important;
-  margin-bottom: -1mm !important;
+  margin-bottom: 0 !important;
   padding-bottom: 0 !important;
 }
 
@@ -2983,7 +2985,8 @@ table th,
   box-shadow: none !important;
   text-shadow: none !important;
   filter: none !important;
-  border-radius: 0 !important;
+  border-top-left-radius: 5px !important;
+  border-top-right-radius: 5px !important;
   background: var(--primary) !important;
 }
 
@@ -4184,8 +4187,8 @@ table th,
   #masterDbPage.active {
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 58px - 1.6cm) !important;
-    max-height: calc(100vh - 58px - 1.6cm) !important;
+    height: calc(100vh - 60px - 1mm) !important;
+    max-height: calc(100vh - 60px - 1mm) !important;
     overflow: hidden !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -4512,8 +4515,8 @@ button.btnKembali {
     max-width: 100% !important;
     overflow: hidden !important;
     overflow-y: hidden !important;
-    height: calc(100vh - 58px - 1.6cm) !important;
-    max-height: calc(100vh - 58px - 1.6cm) !important;
+    height: calc(100vh - 60px - 1mm) !important;
+    max-height: calc(100vh - 60px - 1mm) !important;
     box-sizing: border-box !important;
     margin-bottom: 0 !important;
   }
@@ -5285,7 +5288,7 @@ div.rowHighlightOrange {
 .popupCardBodyContainerV2 {
   width: 100% !important;
   min-width: 100% !important;
-  padding: 0 0 14px 0 !important;
+  padding: 0 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
   background: var(--bg-box) !important;
@@ -5418,12 +5421,15 @@ div.rowHighlightOrange {
   filter: none !important;
 }
 
-.popupDetailActionsV2 {
-  padding: 4px 14px !important;
-  margin: 0 !important;
+.popupDetailActionsV2,
+.popupDetailActions {
+  padding: 2px 14px 0 14px !important;
+  padding-bottom: 0 !important;
+  margin: 4px 0 2mm 0 !important;
+  margin-bottom: 2mm !important;
   border-top: none !important;
   background: transparent !important;
-  border-radius: 0 0 9.5px 9.5px !important;
+  border-radius: 0 0 5px 5px !important;
   flex-shrink: 0 !important;
   display: flex !important;
   align-items: center !important;
@@ -5896,6 +5902,11 @@ html body.design-mode-normal .confirmBox {
    APPLIES TO DASHBOARD TABLE, RIWAYAT TABLE, MASTER DB, DETAIL & INPUT TABLES
    ============================================================================= */
 .tableWrap,
+/* =============================================================================
+   UNIVERSAL FULL-HEIGHT CARDS WITH 5PX SMOOTH 90-DEGREE ROUNDED CORNERS
+   LINES ONLY APPEAR ON ACTUAL DATA ROWS (LAST ROW HAS NO BOTTOM BORDER)
+   ============================================================================= */
+.tableWrap,
 .dashboardTableContainer,
 #detailDashboard,
 #detailDashboard .tableWrap,
@@ -5905,6 +5916,12 @@ html body.design-mode-normal .confirmBox {
 #popupDetailBarangV2 .tableWrap,
 .tableCardV2,
 .tableCardV2.tableWrap {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
   border-radius: 5px !important;
   -webkit-clip-path: inset(0 round 5px) !important;
   clip-path: inset(0 round 5px) !important;
@@ -5912,9 +5929,10 @@ html body.design-mode-normal .confirmBox {
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-x pan-y !important;
-  border: 0 !important;
-  border-style: none !important;
-  box-shadow: none !important;
+  border: 1px solid var(--border-color) !important;
+  background: var(--bg-box) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  box-sizing: border-box !important;
 }
 
 html body table th,
@@ -5940,7 +5958,6 @@ html body .lastHeader > div {
   border-left: none !important;
   border-right: none !important;
   border-bottom: 2px solid rgba(0, 0, 0, 0.18) !important;
-  border-radius: 0 !important;
   box-shadow: none !important;
   text-shadow: none !important;
   outline: none !important;
@@ -5951,34 +5968,22 @@ html body .lastHeader > div {
   -webkit-backdrop-filter: none !important;
 }
 
-/* Header & Table 90 Degree Sharp Square Corners */
-table thead tr:first-child th:first-child,
-.dashboardTable thead tr:first-child th:first-child,
-.historyTable thead tr:first-child th:first-child,
-.detailTableV2 thead tr:first-child th:first-child,
-table thead tr:first-child th:last-child,
-.dashboardTable thead tr:first-child th:last-child,
-.historyTable thead tr:first-child th:last-child,
-.detailTableV2 thead tr:first-child th:last-child,
-table tbody tr:last-child td:first-child,
-.dashboardTable tbody tr:last-child td:first-child,
-.historyTable tbody tr:last-child td:first-child,
-#riwayatData tr:last-child td:first-child,
-#masterDbTableBody tr:last-child td:first-child,
-#lastData tr:last-child td:first-child,
-.detailTableV2 tbody tr:last-child td:first-child,
-table tbody tr:last-child td:last-child,
-.dashboardTable tbody tr:last-child td:last-child,
-.historyTable tbody tr:last-child td:last-child,
-#riwayatData tr:last-child td:last-child,
-#masterDbTableBody tr:last-child td:last-child,
-#lastData tr:last-child td:last-child,
-.detailTableV2 tbody tr:last-child td:last-child {
-  border-radius: 0 !important;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
+/* DATA ROWS BORDER LINES: ONLY APPEAR WHEN ROW HAS DATA */
+.dashboardTable tbody tr td,
+.historyTable tbody tr td,
+.masterDbTable tbody tr td,
+.detailTableV2 tbody tr td,
+.detailTable2 tbody tr td {
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* LAST ROW HAS NO BOTTOM BORDER LINE TO KEEP EMPTY BACKGROUND AREA CLEAN */
+.dashboardTable tbody tr:last-child td,
+.historyTable tbody tr:last-child td,
+.masterDbTable tbody tr:last-child td,
+.detailTableV2 tbody tr:last-child td,
+.detailTable2 tbody tr:last-child td {
+  border-bottom: none !important;
 }
 
 /* ANIMASI BERKEDIP SANGAT JELAS PADA BARIS TABEL (TR) UNTUK STATUS TUNGGU SERVICE & TUNGGU DM */
@@ -6053,22 +6058,22 @@ table.detailTableV2 {
 /* Dashboard Table Grid Rounded Corners */
 #detailDashboard .lastHeader,
 .lastHeader {
-  border-radius: 5px !important;
+  border-radius: 5px 5px 0 0 !important;
 }
 
 #detailDashboard .lastHeader > div:first-child,
 .lastHeader > div:first-child {
-  border-top-left-radius: 13px !important;
+  border-top-left-radius: 5px !important;
 }
 
 #detailDashboard .lastHeader > div:last-child,
 .lastHeader > div:last-child {
-  border-top-right-radius: 13px !important;
+  border-top-right-radius: 5px !important;
 }
 
 #detailDashboard #lastData .lastItem:last-child,
 .lastItem:last-child {
-  border-radius: 0 0 9.5px 9.5px !important;
+  border-radius: 0 0 5px 5px !important;
 }
 
 html body thead,
@@ -6268,8 +6273,8 @@ body:has(#masterDbPage.active) {
 #masterDbPage.page.active {
   display: flex !important;
   flex-direction: column !important;
-  height: calc(100vh - 58px - 1.6cm) !important;
-  max-height: calc(100vh - 58px - 1.6cm) !important;
+  height: calc(100vh - 60px - 1mm) !important;
+  max-height: calc(100vh - 60px - 1mm) !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
   touch-action: auto !important;
@@ -6826,12 +6831,40 @@ html body .popupHeaderV2,
 html body .rejectHeaderPopup,
 html body .artemisHeaderPopup,
 html body .cardHeader,
+html body thead,
+html body thead tr,
+html body .historyTable thead,
+html body .dashboardTable thead,
+html body .masterDbTable thead,
+html body .lastHeader,
 html body .dashboardTable th,
 html body .historyTable th,
 html body .masterDbTable th,
 html body .detailTableV2 th {
+  border-top-left-radius: 5px !important;
+  border-top-right-radius: 5px !important;
   border-radius: 5px 5px 0 0 !important;
   text-align: center !important;
+}
+
+html body thead th:first-child,
+html body .historyTable th:first-child,
+html body .dashboardTable th:first-child,
+html body .masterDbTable th:first-child,
+html body .detailTable2 th:first-child,
+html body .detailTableV2 th:first-child,
+html body .lastHeader > div:first-child {
+  border-top-left-radius: 5px !important;
+}
+
+html body thead th:last-child,
+html body .historyTable th:last-child,
+html body .dashboardTable th:last-child,
+html body .masterDbTable th:last-child,
+html body .detailTable2 th:last-child,
+html body .detailTableV2 th:last-child,
+html body .lastHeader > div:last-child {
+  border-top-right-radius: 5px !important;
 }
 
 /* 5. POPUP BODIES & BOTTOM CORNERS */
@@ -6903,8 +6936,8 @@ html body .cardStat .icon {
   html body section#dashboardPage.page.active,
   html body section#riwayatPage.page.active,
   html body section#masterDbPage.page.active {
-    height: calc(100vh - 58px - 1.6cm) !important; /* 52px height bottomMenu + 6px bottom offset + 1.6cm gap */
-    max-height: calc(100vh - 58px - 1.6cm) !important;
+    height: calc(100vh - 60px - 1mm) !important;
+    max-height: calc(100vh - 60px - 1mm) !important;
     display: flex !important;
     flex-direction: column !important;
     padding-bottom: 0 !important;
@@ -6979,9 +7012,9 @@ html body #masterDbPage.page.active,
 html body section#masterDbPage {
   display: flex !important;
   flex-direction: column !important;
-  height: calc(100vh - 58px - 1.6cm) !important;
-  max-height: calc(100vh - 58px - 1.6cm) !important;
-  min-height: calc(100vh - 58px - 1.6cm) !important;
+  height: calc(100vh - 60px - 1mm) !important;
+  max-height: calc(100vh - 60px - 1mm) !important;
+  min-height: calc(100vh - 60px - 1mm) !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
 }
@@ -7011,7 +7044,7 @@ html body #masterDbPage .searchToolbar {
   flex-shrink: 0 !important;
 }
 
-/* MANDATORY TABLE HEADER CENTER ALIGNMENT & SOLID FULL HEIGHT WRAPPER */
+/* MANDATORY TABLE HEADER CENTER ALIGNMENT & SOLID FULL HEIGHT WRAPPER WITH 16PX ROUNDED CLIP-PATH */
 html body #riwayatPage .historyTable th,
 html body #masterDbPage .masterDbTable th,
 html body .historyTable th,
@@ -7027,21 +7060,22 @@ html body section#riwayatPage .tableWrap,
 html body #riwayatPage .riwayatContent .tableWrap,
 html body #masterDbPage .tableWrap,
 html body section#masterDbPage .tableWrap {
-  display: block !important;
-  flex: 1 1 0px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 100% !important;
   flex-grow: 1 !important;
-  flex-shrink: 1 !important;
-  flex-basis: 0px !important;
-  height: calc(100% - 85px) !important;
-  min-height: calc(100% - 85px) !important;
+  height: 100% !important;
+  min-height: 0 !important;
   max-height: 100% !important;
   align-self: stretch !important;
   background: var(--bg-box, #ffffff) !important;
   border: 1px solid var(--border-color, #e2e8f0) !important;
   border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
   box-sizing: border-box !important;
   margin-top: 1mm !important;
-  margin-bottom: -1mm !important;
+  margin-bottom: 0 !important;
   overflow-y: auto !important;
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch !important;
@@ -7049,43 +7083,133 @@ html body section#masterDbPage .tableWrap {
 }
 
 html body #riwayatPage .historyTable,
-html body #masterDbPage .masterDbTable,
-html body #masterDbPage .historyTable,
-html body .historyTable,
-html body .masterDbTable {
-  min-height: auto !important;
-  height: auto !important;
+html body .historyTable {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 100% !important;
+  flex-grow: 1 !important;
+  min-height: 100% !important;
+  height: 100% !important;
+  width: 100% !important;
+  min-width: 680px !important;
   background: var(--bg-box, #ffffff) !important;
   box-sizing: border-box !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  margin: 0 !important;
+}
+
+html body #riwayatPage .historyTable thead {
+  flex: 0 0 auto !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+}
+
+html body #riwayatPage .historyTable thead tr {
+  display: flex !important;
+  width: 100% !important;
 }
 
 html body #riwayatData,
-html body #masterDbTableBody,
-html body .historyTable tbody,
-html body .masterDbTable tbody {
+html body .historyTable tbody {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 100% !important;
+  flex-grow: 1 !important;
   background: var(--bg-box, #ffffff) !important;
-  min-height: auto !important;
+  min-height: 100% !important;
+  height: 100% !important;
 }
 
-/* BARIS TABEL KOSONG PELENGKAP CONTAINER PENUH KE BAWAH */
+html body #riwayatData tr:not(.table-spacer-fill-row),
+html body .historyTable tbody tr:not(.table-spacer-fill-row) {
+  display: flex !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+}
+
+html body #riwayatData tr:not(.table-spacer-fill-row) td,
+html body .historyTable tbody tr:not(.table-spacer-fill-row) td {
+  display: flex !important;
+  align-items: center !important;
+  padding: 8px 12px !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  box-sizing: border-box !important;
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
+  font-size: 12px !important;
+}
+
+/* COLUMN FLEX SIZES FOR HISTORY TABLE */
+.historyTable th:nth-child(1), .historyTable td:nth-child(1) { width: 130px !important; flex: 0 0 130px !important; justify-content: center !important; }
+.historyTable th:nth-child(2), .historyTable td:nth-child(2) { width: 95px !important; flex: 0 0 95px !important; }
+.historyTable th:nth-child(3), .historyTable td:nth-child(3) { width: 140px !important; flex: 0 0 140px !important; }
+.historyTable th:nth-child(4), .historyTable td:nth-child(4) { width: 180px !important; flex: 0 0 180px !important; }
+.historyTable th:nth-child(5), .historyTable td:nth-child(5) { width: 85px !important; flex: 0 0 85px !important; }
+.historyTable th:nth-child(6), .historyTable td:nth-child(6) { width: 110px !important; flex: 0 0 110px !important; }
+.historyTable th:nth-child(7), .historyTable td:nth-child(7) { flex: 1 1 auto !important; min-width: 120px !important; }
+
+/* LAST ACTUAL DATA ROW HAS NO BOTTOM BORDER LINE TO KEEP EMPTY BACKGROUND AREA CLEAN */
+#riwayatData tr:not(.table-spacer-fill-row):last-of-type td,
+.historyTable tbody tr:not(.table-spacer-fill-row):last-of-type td {
+  border-bottom: none !important;
+}
+
+/* SPACER DENGAN BACKGROUND SOLID SAMA ISI BEBAS TANPA GARIS UNTUK MEMENUHI CONTAINER */
+html body #riwayatData tr.table-spacer-fill-row,
+html body .historyTable tbody tr.table-spacer-fill-row {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  background: var(--bg-box) !important;
+  border: none !important;
+}
+
+html body #riwayatData tr.table-spacer-fill-row td,
+html body .historyTable tbody tr.table-spacer-fill-row td {
+  display: block !important;
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: var(--bg-box) !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* EMPTY GRID ROWS (BARIS KOSONG) FILL FULL HEIGHT WITHOUT BORDER LINES */
 tr.empty-grid-row,
-html body tr.empty-grid-row {
+html body tr.empty-grid-row,
+#riwayatData tr.empty-grid-row {
+  display: flex !important;
+  width: 100% !important;
   height: 42px !important;
-  max-height: 42px !important;
-  background: var(--bg-box, #ffffff) !important;
-  pointer-events: none !important;
+  background: var(--bg-box) !important;
+  border: none !important;
 }
 
 tr.empty-grid-row td,
-html body tr.empty-grid-row td {
-  height: 42px !important;
-  border-bottom: 1px solid rgba(0,0,0,0.04) !important;
-  border-right: none !important;
+html body tr.empty-grid-row td,
+#riwayatData tr.empty-grid-row td {
+  display: flex !important;
+  align-items: center !important;
+  border: none !important;
+  border-bottom: none !important;
   border-left: none !important;
-  border-top: none !important;
-  background: var(--bg-box, #ffffff) !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
+  border-right: none !important;
+  background: var(--bg-box) !important;
+  height: 42px !important;
+  padding: 8px 12px !important;
+  color: transparent !important;
+}
+
+tr.empty-grid-row:last-child td,
+html body tr.empty-grid-row:last-child td,
+#riwayatData tr.empty-grid-row:last-child td {
+  border: none !important;
+  border-bottom: none !important;
 }
 
 /* ==========================================================================
@@ -7599,4 +7723,39 @@ html body #rejectOverlay .rejectHeaderPopup .popupClose,
     padding: 8px 12px !important;
     font-size: 11px !important;
   }
+}
+
+/* POPUP DETAIL PERMINTAAN (#popupDetail & #popupDetailBarangV2) - ENFORCE 90 DEGREE NORMAL CORNERS (FLAT/SHARP 0 RADIUS FOR HEADERS & TABLE HEADERS) */
+html body #popupDetail .popupHeader,
+html body #popupDetailBarangV2 .popupHeaderV2,
+html body #popupDetail .popupBoxDetail,
+html body #popupDetailBarangV2 .popupBoxDetailV2,
+html body #popupDetail table th,
+html body #popupDetailBarangV2 table th,
+html body #popupDetail .detailTable2 th,
+html body #popupDetailBarangV2 .detailTableV2 th,
+html body #popupDetail table thead,
+html body #popupDetailBarangV2 table thead,
+html body #popupDetail table thead tr,
+html body #popupDetailBarangV2 table thead tr,
+html body #popupDetail table th:first-child,
+html body #popupDetailBarangV2 table th:first-child,
+html body #popupDetail table th:last-child,
+html body #popupDetailBarangV2 table th:last-child,
+html body .detailTable2 th:first-child,
+html body .detailTableV2 th:first-child,
+html body .detailTable2 th:last-child,
+html body .detailTableV2 th:last-child,
+#popupDetail .popupHeader,
+#popupDetailBarangV2 .popupHeaderV2,
+.popupHeader,
+.popupHeaderV2,
+.detailHeaderV2,
+.detailTableV2 th,
+.detailTable2 th {
+  border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
 }

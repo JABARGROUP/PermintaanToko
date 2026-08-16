@@ -293,19 +293,83 @@ function updateBodyClasses(specificTheme) {
   document.body.classList.add(savedTheme);
   document.body.classList.add('design-mode-normal');
 
-  if (typeof THEME_MODES !== 'undefined' && Array.isArray(THEME_MODES)) {
-    const idx = THEME_MODES.findIndex(t => t.id === savedTheme);
-    currentThemeIndex = idx !== -1 ? idx : 0;
-  }
   if (typeof updateThemeIcon === 'function') {
     updateThemeIcon();
+  }
+  if (typeof applyAppBackground === 'function') {
+    applyAppBackground(null, false);
   }
 }
 window.updateBodyClasses = updateBodyClasses;
 window.applyThemeToDocument = updateBodyClasses;
 
+// ==========================================================================
+// BACKGROUND SCENERY CHANGER (DISIMPAN DI LOKAL STORAGE PERANGKAT)
+// ==========================================================================
+const BG_STORAGE_KEY = 'STORE_BG_IMAGE_CHOICE_V2';
+
+function applyAppBackground(bgChoice, saveToLocal = true) {
+  if (!bgChoice) {
+    try {
+      bgChoice = localStorage.getItem(BG_STORAGE_KEY) || 'bg-scenery-2.jpg';
+    } catch(e) {
+      bgChoice = 'bg-scenery-2.jpg';
+    }
+  }
+
+  if (saveToLocal) {
+    try {
+      localStorage.setItem(BG_STORAGE_KEY, bgChoice);
+    } catch(e) {}
+  }
+
+  const bgEl = document.querySelector('.aesthetic-bg-image');
+  if (bgEl) {
+    if (bgChoice === 'none' || !bgChoice) {
+      bgEl.style.backgroundImage = 'none';
+      bgEl.style.display = 'none';
+    } else {
+      bgEl.style.display = 'block';
+      bgEl.style.backgroundImage = `url('${bgChoice}')`;
+    }
+  }
+
+  document.documentElement.style.setProperty('--app-bg-image', bgChoice === 'none' || !bgChoice ? 'none' : `url('${bgChoice}')`);
+}
+
+function gantiBackgroundApp() {
+  let currentBg = 'bg-scenery-2.jpg';
+  try {
+    currentBg = localStorage.getItem(BG_STORAGE_KEY) || 'bg-scenery-2.jpg';
+  } catch(e) {}
+
+  let nextBg = 'bg-scenery-2.jpg';
+  let nextName = 'Malam Bulan Fantasi';
+
+  if (currentBg === 'bg-scenery-2.jpg') {
+    nextBg = 'bg-scenery.jpg';
+    nextName = 'Danau & Pegunungan';
+  } else if (currentBg === 'bg-scenery.jpg') {
+    nextBg = 'none';
+    nextName = 'Polos / Tanpa Gambar';
+  } else {
+    nextBg = 'bg-scenery-2.jpg';
+    nextName = 'Malam Bulan Fantasi';
+  }
+
+  applyAppBackground(nextBg, true);
+}
+window.applyAppBackground = applyAppBackground;
+window.gantiBackgroundApp = gantiBackgroundApp;
+
+// Auto init background immediately
+try {
+  applyAppBackground(null, false);
+} catch(e) {}
+
 function loadSavedDesignMode() {
   updateBodyClasses();
+  applyAppBackground(null, false);
 }
 
 function toggleDesignMode() {
@@ -5216,7 +5280,7 @@ async function bukaMainApp() {
 
   updateAdminNavVisibility();
   const isAdmin = checkIsAdminUser();
-  isAdminChat = typeof isServiceTSMUser === 'function' ? isServiceTSMUser() : (isAdmin || (currentUser && currentUser.category === 'SERVICE'));
+  isAdminChat = isServiceTSMUser();
 
   // 1. CEK PENYIMPANAN LOKAL DULU
   const localRequests = getRequestsFromDB();
@@ -6773,7 +6837,21 @@ function filterRiwayat() {
   tbody.innerHTML = '';
 
   if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">BELUM ADA DATA PERMINTAAN.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted); border-bottom: 1px solid var(--border-color) !important;">BELUM ADA DATA PERMINTAAN.</td></tr>`;
+    for (let k = 1; k < 12; k++) {
+      const emptyTr = document.createElement('tr');
+      emptyTr.className = 'empty-grid-row';
+      emptyTr.innerHTML = `
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      `;
+      tbody.appendChild(emptyTr);
+    }
     return;
   }
 
@@ -6914,6 +6992,24 @@ function filterRiwayat() {
     `;
     tbody.appendChild(tr);
   });
+
+  const emptyRowsNeeded = 12 - data.length;
+  if (emptyRowsNeeded > 0) {
+    for (let k = 0; k < emptyRowsNeeded; k++) {
+      const emptyTr = document.createElement('tr');
+      emptyTr.className = 'empty-grid-row';
+      emptyTr.innerHTML = `
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      `;
+      tbody.appendChild(emptyTr);
+    }
+  }
 }
 
 function lihatFotoByNoSurat(noSurat) {
@@ -8089,25 +8185,28 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     try { itemsList = JSON.parse(rawItems || '[]'); } catch (e) { itemsList = []; }
   }
 
-  const thBase = "background: var(--primary) !important; color: #ffffff !important; padding: 8px 12px !important; border: 1px solid var(--border-color) !important; position: sticky !important; top: 0 !important; z-index: 100 !important; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.3px !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important; box-shadow: none !important; text-shadow: none !important;";
+  const thBase = "background: var(--primary) !important; color: #ffffff !important; padding: 8px 12px !important; border: none !important; border-bottom: 2px solid rgba(0,0,0,0.18) !important; border-radius: 0 !important; border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; position: sticky !important; top: 0 !important; z-index: 100 !important; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.3px !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important; box-shadow: none !important; text-shadow: none !important; -webkit-clip-path: none !important; clip-path: none !important;";
   const thStyleAutofit = `${thBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
   const thStyleLeft = `${thBase} text-align: left !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
 
-  const tdBase = "padding: 8px 12px !important; border: 1px solid var(--border-color) !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;";
-  const tdStyleAutofit = `${tdBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
-  const tdStyleLeft = `${tdBase} text-align: left !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
+  const isLastRowIndex = (idx, total) => idx === total - 1;
+  const getTdBorder = (idx, total) => isLastRowIndex(idx, total) ? "border-bottom: none !important;" : "border-bottom: 1px solid var(--border-color) !important;";
+
+  const tdBase = "padding: 8px 12px !important; border-top: none !important; border-left: none !important; border-right: none !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;";
+  const getTdStyleAutofit = (idx, total) => `${tdBase} ${getTdBorder(idx, total)} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
+  const getTdStyleLeft = (idx, total) => `${tdBase} ${getTdBorder(idx, total)} text-align: left !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
 
   const role = currentUser ? (currentUser.category || '').toUpperCase() : '';
   const isAdminUser = currentUser && (role === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
   const isServiceUser = (role === 'SERVICE' || isAdminUser);
   
-  // HANYA MUNCUL TOMBOL AKSI BARIS (TIDAK DIPENUHI & EDIT KETERANGAN PART) APABILA STATUSNYA SUDAH APPROVE
   const canServiceRowActions = isServiceUser && (req.status === 'APPROVE');
-  
-  // KOLOM KETERANGAN PART HANYA DITAMPILKAN JIKA STATUS APPROVE ATAU DONE (PENDING & REJECT TIDAK DITAMPILKAN)
   const showKetPartCol = (req.status === 'APPROVE' || req.status === 'DONE');
 
   let itemsHtml = itemsList.map((i, idx) => {
+    const tdStyleAutofit = getTdStyleAutofit(idx, itemsList.length);
+    const tdStyleLeft = getTdStyleLeft(idx, itemsList.length);
+
     const isUnfulfilled = i.unfulfilled === true;
     const strikeStyle = isUnfulfilled ? "text-decoration: line-through !important; text-decoration-thickness: 1.5px !important; color: #ef4444 !important; font-weight: 600 !important; opacity: 0.85;" : "";
 
@@ -8118,7 +8217,6 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     const alasanVal = i.alasan || i.keterangan || '-';
     const qtyVal = i.qty || i.jumlah || 1;
 
-    // RENDER BADGE NO / STATUS PART (OTOMATIS 'DIPENUHI' JIKA STATUS DONE DAN TERPENUHI)
     let statusPartVal = (i.statusPart || i.keteranganPart || i.noPart || '').trim();
     if (req.status === 'DONE' && !isUnfulfilled && !statusPartVal) {
       statusPartVal = 'DIPENUHI';
@@ -8136,16 +8234,16 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         badgeBg = 'rgba(16, 185, 129, 0.15)';
         badgeColor = '#10b981';
         badgeBorder = '#10b981';
-      } else if (up.includes('INDENT') || up.includes('ORDER') || up.includes('PROSES') || up.includes('PESAN')) {
-        badgeBg = 'rgba(245, 158, 11, 0.15)';
-        badgeColor = '#f59e0b';
-        badgeBorder = '#f59e0b';
-      } else if (up.includes('BATAL') || up.includes('KOSONG') || up.includes('TIDAK DIPENUHI')) {
+      } else if (up.includes('TIDAK') || up.includes('KOSONG') || up.includes('REJECT') || up.includes('HABIS')) {
         badgeBg = 'rgba(239, 68, 68, 0.15)';
         badgeColor = '#ef4444';
         badgeBorder = '#ef4444';
+      } else if (up.includes('PROSES') || up.includes('PENDING') || up.includes('ORDER')) {
+        badgeBg = 'rgba(245, 158, 11, 0.15)';
+        badgeColor = '#f59e0b';
+        badgeBorder = '#f59e0b';
       }
-      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 700; font-size: 11px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">${statusPartVal}</span>`;
+      statusPartBadgeHtml = `<span style="display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 700; font-size: 11.5px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">${statusPartVal}</span>`;
     }
 
     let ketPartTdHtml = showKetPartCol ? `<td style="${tdStyleLeft} ${strikeStyle}">${statusPartBadgeHtml}</td>` : '';
@@ -8167,7 +8265,6 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         `;
       }
 
-      // TOMBOL EDIT KETERANGAN PART (MANUAL FREE TEXT) PERSIS DI SEBELAH TOMBOL TIDAK DIPENUHI
       const editPartBtn = `
         <button type="button" class="btnIcon btnEditPartRow" onclick="bukaModalEditKetPartSingle('${req.noSurat}', ${idx})" title="EDIT KETERANGAN / NO PART (FREE TEXT)" style="padding: 3px 6px !important; border-radius: 6px !important; line-height: 1 !important; height: auto !important; background: #0284c7 !important; color: #ffffff !important; border: none !important; cursor: pointer !important; margin-left: 4px !important;">
           <span class="material-symbols-rounded" style="font-size: 15px !important;">edit_note</span>
@@ -8339,7 +8436,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
 
   if (actionButtons.length > 0) {
     bottomActionsHtml = `
-      <div class="popupDetailActionsV2" style="margin: 0 !important; padding: 2px 14px !important;">
+      <div class="popupDetailActionsV2" style="margin: 4px 0 2mm 0 !important; margin-bottom: 2mm !important; padding: 2px 14px 0px 14px !important; padding-bottom: 0px !important;">
         ${actionButtons.join('')}
       </div>
     `;
@@ -8378,10 +8475,10 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
   `;
 
   bodyBox.innerHTML = `
-    <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 8px 0px 12px 0px !important; display: flex !important; flex-direction: column !important; gap: 6px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 18px 18px !important; overflow: hidden !important;">
+    <div class="popupCardBodyContainerV2" style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 8px 0px 0px 0px !important; margin: 0 !important; margin-bottom: 0 !important; padding-bottom: 0 !important; display: flex !important; flex-direction: column !important; gap: 4px !important; box-sizing: border-box !important; background: var(--bg-box) !important; border-radius: 0 0 5px 5px !important; overflow: hidden !important;">
       ${headerInfoHtml}
       
-      <div class="tableCardV2 tableWrap" style="display: block !important; border-top: 1px solid var(--border-color) !important; border-bottom: 1px solid var(--border-color) !important; border-left: none !important; border-right: none !important; border-radius: 0 !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: auto !important; overscroll-behavior: contain !important; max-height: 55vh !important; background: var(--bg-box) !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 0 !important; position: relative !important;">
+      <div class="tableCardV2 tableWrap" style="display: flex !important; flex-direction: column !important; border: 1px solid var(--border-color) !important; border-radius: 0 !important; -webkit-clip-path: none !important; clip-path: none !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x pan-y !important; overscroll-behavior: contain !important; min-height: 180px !important; max-height: 55vh !important; background: var(--bg-box) !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 4px 0 !important; position: relative !important;">
         <table class="detailTableV2" style="width: 100% !important; min-width: 100% !important; table-layout: auto !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 0 !important; padding: 0 !important;">
           ${tableHeaderHtml}
           <tbody>
@@ -10099,20 +10196,22 @@ window.addEventListener('storage', (e) => {
 function isServiceTSMUser() {
   if (!currentUser) return false;
   const cat = String(currentUser.category || '').trim().toUpperCase();
+  const role = String(currentUser.role || '').trim().toUpperCase();
   const area = String(currentUser.area || '').trim().toUpperCase();
   const uname = String(currentUser.username || '').trim().toUpperCase();
   const fname = String(currentUser.fullName || '').trim().toUpperCase();
 
-  return (
-    cat === 'SERVICE' || 
-    cat === 'ADMIN' || 
-    uname.includes('SERVICE') || 
-    uname.includes('ADMIN') || 
-    uname.includes('TSM') || 
-    fname.includes('SERVICE') || 
-    area === 'TSM' || 
-    area === 'ALL'
-  );
+  // 1. ADMIN SELALU DIIZINKAN KELOLA CHAT BANTUAN & SIARAN
+  if (cat === 'ADMIN' || role === 'ADMIN' || uname === 'ADMIN' || uname.includes('ADMIN')) return true;
+
+  // 2. KHUSUS SERVICE AREA TSM / TASIKMALAYA / ALL (Service area lain seperti BDG, KRN, CKR tidak bisa siaran/pilih toko)
+  if (cat === 'SERVICE' || uname.includes('SERVICE') || fname.includes('SERVICE')) {
+    if (area === 'TSM' || area === 'TASIKMALAYA' || area === 'ALL' || uname.includes('TSM') || fname.includes('TSM')) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function rebuildRoomsFromChats(allChats) {
@@ -10316,6 +10415,10 @@ function loadDaftarChatAdmin() {
 }
 
 function bukaModalPilihUserChat() {
+  if (!isServiceTSMUser()) {
+    showNotif('FITUR PILIH TOKO HANYA UNTUK AKUN ADMIN & SERVICE TSM!', 'warning');
+    return;
+  }
   const chatList = document.getElementById('chatList');
   const chatUserPicker = document.getElementById('chatUserPicker');
   const searchInput = document.getElementById('cariUserChatInput');
@@ -10420,6 +10523,10 @@ function pilihUserUntukChat(username, fullName, area) {
 window.pilihUserUntukChat = pilihUserUntukChat;
 
 function bukaModalBroadcastChat() {
+  if (!isServiceTSMUser()) {
+    showNotif('FITUR SIARAN PESAN HANYA UNTUK AKUN ADMIN & SERVICE TSM!', 'warning');
+    return;
+  }
   const modal = document.getElementById('chatBroadcastModal');
   const input = document.getElementById('pesanBroadcastChatInput');
   if (modal) modal.style.display = 'flex';
@@ -10437,6 +10544,10 @@ function tutupBroadcastChatModal() {
 window.tutupBroadcastChatModal = tutupBroadcastChatModal;
 
 async function kirimBroadcastChatKeSemuaUser() {
+  if (!isServiceTSMUser()) {
+    showNotif('FITUR SIARAN PESAN HANYA UNTUK AKUN ADMIN & SERVICE TSM!', 'warning');
+    return;
+  }
   const input = document.getElementById('pesanBroadcastChatInput');
   if (!input) return;
   const pesan = input.value.trim().toUpperCase();
