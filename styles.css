@@ -9017,10 +9017,20 @@ html body #inputPage #judulDetailPermintaan,
 /* POPUP PROFIL AKUN (#popupAkun) */
 #popupAkun,
 .popupAkun {
+  align-items: flex-start !important;
+  justify-content: center !important;
   padding-top: 1mm !important;
-  padding-bottom: 2cm !important;
+  padding-bottom: 4px !important;
   padding-left: 4px !important;
   padding-right: 4px !important;
+  box-sizing: border-box !important;
+}
+
+#popupAkun .akunBox,
+.popupAkun .akunBox {
+  max-height: calc(100vh - 8px) !important;
+  max-height: calc(100dvh - 8px) !important;
+  margin: 0 auto !important;
 }
 
 /* POPUP TAMBAH TOKO (#popupTambahToko) */
