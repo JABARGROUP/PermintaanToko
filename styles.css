@@ -7990,8 +7990,8 @@ html body #popupNotifList.popupOverlay,
 html body #popupAkun.popupAkun,
 html body #popupAkun.popupOverlay,
 html body .popupAkun {
-  padding-top: 1cm !important;
-  padding-bottom: 1cm !important;
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
   box-sizing: border-box !important;
   align-items: center !important;
   justify-content: center !important;
@@ -8185,8 +8185,8 @@ html body #popupNotifList.popupOverlay,
 html body #popupAkun.popupAkun,
 html body #popupAkun.popupOverlay,
 html body .popupAkun {
-  padding-top: 1cm !important;
-  padding-bottom: 1cm !important;
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
   box-sizing: border-box !important;
   align-items: center !important;
   justify-content: center !important;
@@ -8381,8 +8381,8 @@ html body #popupNotifList.popupOverlay,
 html body #popupAkun.popupAkun,
 html body #popupAkun.popupOverlay,
 html body .popupAkun {
-  padding-top: 1cm !important;
-  padding-bottom: 1cm !important;
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
   box-sizing: border-box !important;
   align-items: center !important;
   justify-content: center !important;
@@ -8502,7 +8502,7 @@ html body .popupDetailActionsV2 {
   display: none;
   align-items: center !important;
   justify-content: center !important;
-  padding: 1cm 2mm !important; /* DIBATASI 1CM ATAS-BAWAH & 2MM KANAN-KIRI */
+  padding: 1mm 2cm 2mm !important; /* DIBATASI 1CM ATAS-BAWAH & 2MM KANAN-KIRI */
   box-sizing: border-box !important;
 }
 
@@ -8660,7 +8660,7 @@ div[id*="Modal"] {
 
 @media (max-width: 768px) {
   #popupUserManagementModal {
-    padding: 1cm 2mm !important; /* 1CM ATAS-BAWAH & 2MM KANAN-KIRI DI HP */
+    padding: 1mm 2cm 2mm !important; /* 1CM ATAS-BAWAH & 2MM KANAN-KIRI DI HP */
   }
 
   .userManagementBoxPopup {
