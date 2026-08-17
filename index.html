@@ -202,7 +202,7 @@
     </button>
   </div>
   <!-- POPUP DAFTAR NOTIFIKASI SISTEM (STANDAR SAMA DENGAN POPUP NOTIFCARD) -->
-  <div id="popupNotifList" class="popupOverlay" style="align-items: center !important; justify-content: center !important; padding: 1cm 4px !important; box-sizing: border-box !important;">
+  <div id="popupNotifList" class="popupOverlay" style="align-items: center !important; justify-content: center !important; padding-top: 1mm !important; padding-bottom: 2cm !important; padding-left: 4px !important; padding-right: 4px !important; box-sizing: border-box !important;">
     <div class="popupNotifCard" style="width: 1000px !important; max-width: 98vw !important; height: calc(100vh - 2cm) !important; max-height: calc(100vh - 2cm) !important; padding: 10px; border-radius: 5px; text-align: left !important; margin: auto !important; display: flex !important; flex-direction: column !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
       <div style="background: linear-gradient(135deg, #0284c7, #0369a1); margin: -10px -10px 8px -10px; padding: 10px 14px; border-radius: 5px 5px 0 0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
         <span style="display: flex; align-items: center; gap: 8px; font-weight: 800; color: #fff; font-size: 14px; text-transform: uppercase;">
@@ -231,7 +231,7 @@
   </div>
 
   <!-- CHAT WIDGET POPUP (FULL POPUP OVERLAY WITH BACKDROP BLUR) -->
-  <div id="popupBantuan" class="popupOverlay popupBantuan" onclick="if(event.target === this) tutupBantuan()" style="align-items: center !important; justify-content: center !important; padding: 1cm 4px !important; box-sizing: border-box !important;">
+  <div id="popupBantuan" class="popupOverlay popupBantuan" onclick="if(event.target === this) tutupBantuan()" style="align-items: center !important; justify-content: center !important; padding-top: 1mm !important; padding-bottom: 2cm !important; padding-left: 4px !important; padding-right: 4px !important; box-sizing: border-box !important;">
     <div class="chatBox" style="height: calc(100vh - 2cm) !important; max-height: calc(100vh - 2cm) !important; margin: auto !important; border-radius: 5px !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
       <div class="chatHeader">
         <div class="chatInfo">
@@ -810,7 +810,7 @@
        ========================================================================== -->
 
   <!-- 1. POPUP AKUN & PROFILE MODAL (ULTRA COMPACT & ZERO SCROLLING) -->
-  <div id="popupAkun" class="popupAkun" onclick="if(event.target === this || event.target.id === 'popupAkun') tutupAkun();" style="display: none; align-items: center !important; justify-content: center !important; padding: 1cm 4px !important; box-sizing: border-box !important;">
+  <div id="popupAkun" class="popupAkun" onclick="if(event.target === this || event.target.id === 'popupAkun') tutupAkun();" style="display: none; align-items: center !important; justify-content: center !important; padding-top: 1mm !important; padding-bottom: 2cm !important; padding-left: 4px !important; padding-right: 4px !important; box-sizing: border-box !important;">
     <div class="akunBox" style="position: relative; width: 440px !important; max-width: 94vw !important; max-height: calc(100vh - 2cm) !important; margin: auto !important; overflow-y: auto !important; border-radius: 5px !important; padding: 8px 12px !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
       <button type="button" class="popupClose" onclick="tutupAkun()" style="position: absolute !important; top: 8px !important; right: 10px !important; font-size: 24px !important; font-weight: 900 !important; color: var(--primary) !important; background: transparent !important; border: none !important; border-radius: 0 !important; width: auto !important; height: auto !important; padding: 0 4px !important; cursor: pointer !important; z-index: 10 !important;" title="TUTUP PROFIL AKUN">&times;</button>
       <h2 style="margin-top: 0; margin-bottom: 4px; font-size: 14px; font-weight: 900; text-align: center; color: var(--primary);">PROFIL AKUN</h2>
@@ -901,7 +901,7 @@
   </div>
 
   <!-- POPUP TAMBAH TOKO MODAL (UNTUK SEMUA USER - OTOMATIS MASUK AREA USER & GENERATE 2 DIGIT KODE TOKO) -->
-  <div id="popupTambahToko" class="popupOverlay" onclick="if(event.target === this || event.target.id === 'popupTambahToko') { if(typeof window.tutupModalTambahToko==='function') window.tutupModalTambahToko(); else if(typeof tutupModalTambahToko==='function') tutupModalTambahToko(); }" style="display: none; align-items: center !important; justify-content: center !important; padding: 1cm 4px !important; box-sizing: border-box !important;">
+  <div id="popupTambahToko" class="popupOverlay" onclick="if(event.target === this || event.target.id === 'popupTambahToko') { if(typeof window.tutupModalTambahToko==='function') window.tutupModalTambahToko(); else if(typeof tutupModalTambahToko==='function') tutupModalTambahToko(); }" style="display: none; align-items: center !important; justify-content: center !important; padding-top: 1mm !important; padding-bottom: 2cm !important; padding-left: 4px !important; padding-right: 4px !important; box-sizing: border-box !important;">
     <div class="popupBox" style="width: 480px !important; max-width: 92vw !important; height: calc(100vh - 2cm) !important; max-height: calc(100vh - 2cm) !important; overflow: hidden !important; margin: auto !important; padding: 0 !important; border-radius: 5px !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important; display: flex !important; flex-direction: column !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
       
       <!-- HEADER (DIAM / FIXED) -->
@@ -1124,8 +1124,8 @@
     </div>
   </div>
 
-  <div id="popupDetailBarangV2" class="popupOverlay" onclick="if(event.target === this) tutupDetailBarangV2();" style="display:none; padding: 1cm 4px !important; width: 100vw !important; max-width: 100vw !important; box-sizing: border-box !important;">
-    <div class="popupBoxDetailV2" style="width: calc(100vw - 8px) !important; min-width: calc(100vw - 8px) !important; max-width: calc(100vw - 8px) !important; height: calc(100vh - 2cm) !important; max-height: calc(100vh - 2cm) !important; margin: auto !important; border-radius: 5px !important; overflow: hidden !important; box-sizing: border-box !important; display: flex !important; flex-direction: column !important;">
+  <div id="popupDetailBarangV2" class="popupOverlay" onclick="if(event.target === this) tutupDetailBarangV2();" style="display:none; padding-top: 1mm !important; padding-bottom: 1mm !important; padding-left: 4px !important; padding-right: 4px !important; width: 100vw !important; max-width: 100vw !important; box-sizing: border-box !important;">
+    <div class="popupBoxDetailV2" style="width: calc(100vw - 8px) !important; min-width: calc(100vw - 8px) !important; max-width: calc(100vw - 8px) !important; height: calc(100vh - 2mm) !important; max-height: calc(100vh - 2mm) !important; margin: auto !important; border-radius: 5px !important; overflow: hidden !important; box-sizing: border-box !important; display: flex !important; flex-direction: column !important;">
       <div class="popupHeaderV2" style="background: var(--primary) !important; color: #ffffff !important; padding: 14px 18px !important; border-bottom: 1px solid rgba(255,255,255,0.2) !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; border-radius: 5px 5px 0 0 !important; flex: 0 0 auto !important;">
         <span id="popupTitleV2" style="font-weight: 800 !important; text-align: center !important; font-size: 16px !important; letter-spacing: 0.5px !important; text-transform: uppercase !important; color: #ffffff !important; margin: 0 auto !important; width: 100% !important; display: block !important;">DETAIL PERMINTAAN</span>
         <button type="button" class="popupCloseV2" onclick="tutupDetailBarangV2()" title="TUTUP" style="position: absolute !important; right: 14px !important; top: 50% !important; transform: translateY(-50%) !important; font-size: 28px !important; font-weight: 900 !important; color: #ffffff !important; background: transparent !important; border: none !important; cursor: pointer !important; line-height: 1 !important;">&times;</button>
@@ -1219,7 +1219,7 @@
   <!-- ==========================================================================
        POPUP MODAL: MANAJEMEN AKUN USER & HAK AKSES (1CM ATAS-BAWAH, SCROLL 4 ARAH)
        ========================================================================== -->
-  <div id="popupUserManagementModal" class="popupOverlay" onclick="if(event.target === this) tutupPopupUserManagement()">
+  <div id="popupUserManagementModal" class="popupOverlay" onclick="if(event.target === this) tutupPopupUserManagement()" style="padding: 1mm !important; box-sizing: border-box !important;">
     <div class="userManagementBoxPopup" onclick="event.stopPropagation()">
       <!-- Popup Header -->
       <div class="userManagementHeader">
@@ -1275,7 +1275,7 @@
   </div>
 
   <!-- 8. POPUP USER FORM MODAL (SQUARE, COMPACT & RECTANGULAR BOX WITH KODE TOKO) -->
-  <div id="popupUserForm" class="popupOverlay" onclick="if(event.target === this) tutupUserModal();" style="z-index: 10000005;">
+  <div id="popupUserForm" class="popupOverlay" onclick="if(event.target === this) tutupUserModal();" style="z-index: 10000005; padding-top: 1mm !important; padding-bottom: 2cm !important; padding-left: 4px !important; padding-right: 4px !important; box-sizing: border-box !important;">
     <div class="popupBox" style="width: 520px; max-width: 94vw; padding: 12px 16px; border-radius: 5px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; margin: auto;" onclick="event.stopPropagation()">
       <button type="button" class="popupClose" onclick="tutupUserModal()" style="position: absolute; top: 8px; right: 10px; font-size: 24px; font-weight: 900; color: var(--primary); background: transparent; border: none; line-height: 1; cursor: pointer; padding: 2px 6px;" title="TUTUP">&times;</button>
       <h3 id="userFormTitle" style="color: var(--primary); margin-top: 0; margin-bottom: 8px; text-align: center; font-size: 14px; font-weight: 800;">TAMBAH USER BARU</h3>
@@ -1370,19 +1370,6 @@
     </div>
   </div>
 
-  <!-- 10. POPUP PDF DOCUMENT PREVIEW MODAL -->
-  <div id="pdfModal" class="popupOverlay" onclick="if(event.target === this) tutupPdfModal();" style="align-items: center !important; justify-content: center !important; padding: 1cm 4px !important; box-sizing: border-box !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important;">
-    <div class="popupBox" style="position: relative !important; width: 780px !important; max-width: calc(100vw - 8px) !important; height: calc(100vh - 2cm) !important; height: calc(100dvh - 2cm) !important; max-height: calc(100vh - 2cm) !important; max-height: calc(100dvh - 2cm) !important; border-radius: 5px !important; display: flex !important; flex-direction: column !important; margin: auto !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
-      <div class="popupHeader" style="background: var(--primary) !important; background-color: var(--primary) !important; background-image: none !important; color: #ffffff !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 12px 20px !important; min-height: 56px !important; flex-shrink: 0 !important; border-radius: 8px 8px 0 0 !important; width: 100% !important; box-sizing: border-box !important;">
-        <button type="button" class="btnPrintHeader" onclick="cetakDokumenPdf()" title="CETAK PDF / PRINT" style="display: inline-flex !important; align-items: center !important; gap: 8px !important; padding: 8px 18px !important; height: 40px !important; background: #ffffff !important; color: var(--primary) !important; border: 2px solid #ffffff !important; border-radius: 8px !important; font-weight: 800 !important; font-size: 14px !important; cursor: pointer !important;"><span class="material-symbols-rounded" style="font-size: 26px !important; font-weight: 900 !important;">print</span> PRINT</button>
-        <button type="button" class="popupClose" onclick="tutupPdfModal()" style="position: absolute !important; right: 14px !important; top: 10px !important; font-size: 28px !important; font-weight: 900 !important; color: #ffffff !important; background: transparent !important; border: none !important; border-radius: 0 !important; width: auto !important; height: auto !important; padding: 0 4px !important; cursor: pointer !important; z-index: 10 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;" title="TUTUP PDF">&times;</button>
-      </div>
-      <div class="popupContent" id="pdfDocumentContent" style="flex: 1; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important; background: #f8fafc; padding: 14px;">
-        <!-- Injected dynamically -->
-      </div>
-    </div>
-  </div>
-
     <!-- LIGHTBOX IMAGE VIEWER DENGAN KONTROL ZOOM DI BOTTOM BAR -->
   <div id="imageViewer" class="image-viewer-modal" style="display: none; position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; background: #000000 !important; z-index: 999999999 !important; overflow: hidden !important;">
     <span class="closeViewer" onclick="tutupImageViewer()" style="position: fixed !important; top: 18px !important; right: 20px !important; color: #ffffff !important; font-size: 32px !important; font-weight: 900 !important; cursor: pointer !important; z-index: 100000005 !important; background: transparent !important; border: none !important; box-shadow: none !important; line-height: 1 !important;">&times;</span>
@@ -1449,8 +1436,8 @@
   </div>
 
   <!-- 10. POPUP PDF DOCUMENT PREVIEW MODAL -->
-  <div id="pdfModal" class="popupOverlay" onclick="if(event.target === this) tutupPdfModal();" style="align-items: center !important; justify-content: center !important; padding: 1cm 4px !important; box-sizing: border-box !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important;">
-    <div class="popupBox" style="position: relative !important; width: 780px !important; max-width: calc(100vw - 8px) !important; height: calc(100vh - 2cm) !important; height: calc(100dvh - 2cm) !important; max-height: calc(100vh - 2cm) !important; max-height: calc(100dvh - 2cm) !important; border-radius: 0px !important; display: flex !important; flex-direction: column !important; margin: auto !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important; -webkit-clip-path: none !important; clip-path: none !important;">
+  <div id="pdfModal" class="popupOverlay" onclick="if(event.target === this) tutupPdfModal();" style="align-items: center !important; justify-content: center !important; padding: 1mm !important; box-sizing: border-box !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important;">
+    <div class="popupBox" style="position: relative !important; width: 780px !important; max-width: calc(100vw - 2mm) !important; height: calc(100vh - 2mm) !important; height: calc(100dvh - 2mm) !important; max-height: calc(100vh - 2mm) !important; max-height: calc(100dvh - 2mm) !important; border-radius: 0px !important; display: flex !important; flex-direction: column !important; margin: auto !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important; -webkit-clip-path: none !important; clip-path: none !important;">
       <div class="popupHeader" style="background: var(--primary) !important; background-color: var(--primary) !important; background-image: none !important; color: #ffffff !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 12px 20px !important; min-height: 56px !important; flex-shrink: 0 !important; border-radius: 0px !important; width: 100% !important; box-sizing: border-box !important;">
         <button type="button" class="btnPrintHeader" onclick="cetakDokumenPdf()" title="CETAK PDF / PRINT" style="display: inline-flex !important; align-items: center !important; gap: 8px !important; padding: 8px 18px !important; height: 40px !important; background: #ffffff !important; color: var(--primary) !important; border: 2px solid #ffffff !important; border-radius: 0px !important; font-weight: 800 !important; font-size: 14px !important; cursor: pointer !important;"><span class="material-symbols-rounded" style="font-size: 26px !important; font-weight: 900 !important;">print</span> PRINT</button>
         <button type="button" class="popupClose" onclick="tutupPdfModal()" style="position: absolute !important; right: 14px !important; top: 10px !important; font-size: 28px !important; font-weight: 900 !important; color: #ffffff !important; background: transparent !important; border: none !important; border-radius: 0 !important; width: auto !important; height: auto !important; padding: 0 4px !important; cursor: pointer !important; z-index: 10 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;" title="TUTUP PDF">&times;</button>

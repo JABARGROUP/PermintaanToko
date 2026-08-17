@@ -698,8 +698,10 @@ section#masterDbPage.page.active,
   display: none;
   align-items: center !important;
   justify-content: center !important;
-  padding: 12px !important;
-  padding-bottom: calc(52px + 1cm) !important;
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
 }
@@ -753,10 +755,10 @@ section#masterDbPage.page.active,
     max-height: 100vh !important;
     transform: none !important;
     margin: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    padding-top: 1mm !important;
+    padding-bottom: 2cm !important;
     display: none;
     box-sizing: border-box !important;
     align-items: center !important;
@@ -8502,7 +8504,7 @@ html body .popupDetailActionsV2 {
   display: none;
   align-items: center !important;
   justify-content: center !important;
-  padding: 1mm 2cm 2mm !important; /* DIBATASI 1CM ATAS-BAWAH & 2MM KANAN-KIRI */
+  padding: 1mm !important;
   box-sizing: border-box !important;
 }
 
@@ -8538,10 +8540,10 @@ div[id*="Modal"] {
 }
 
 .userManagementBoxPopup {
-  width: calc(100vw - 4mm) !important;
-  max-width: calc(100vw - 4mm) !important;
-  height: calc(100vh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
+  width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
+  height: calc(100vh - 2mm) !important;
+  max-height: calc(100vh - 2mm) !important;
   background: var(--bg-box) !important;
   background-color: var(--bg-box) !important;
   color: var(--text-main) !important;
@@ -8989,4 +8991,73 @@ html body #inputPage #judulDetailPermintaan,
 #popupPdfModelsModal .btnBatal,
 #popupPdfModelsModal .pdf-model-simple-nav button {
   border-radius: 0px !important;
+}
+
+/* POPUP DAFTAR NOTIFIKASI SISTEM (#popupNotifList) */
+#popupNotifList {
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+/* POPUP DETAIL BARANG V2 (#popupDetailBarangV2) */
+#popupDetailBarangV2 {
+  padding-top: 1mm !important;
+  padding-bottom: 1mm !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+#popupDetailBarangV2 .popupBoxDetailV2 {
+  height: calc(100vh - 2mm) !important;
+  max-height: calc(100vh - 2mm) !important;
+}
+
+/* POPUP PROFIL AKUN (#popupAkun) */
+#popupAkun,
+.popupAkun {
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+/* POPUP TAMBAH TOKO (#popupTambahToko) */
+#popupTambahToko {
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+/* POPUP PDF DOKUMEN (#pdfModal) */
+#pdfModal {
+  padding: 1mm !important;
+}
+
+#pdfModal .popupBox {
+  height: calc(100vh - 2mm) !important;
+  max-height: calc(100vh - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
+}
+
+/* POPUP USER MANAGEMENT MODAL (#popupUserManagementModal) */
+#popupUserManagementModal {
+  padding: 1mm !important;
+}
+
+#popupUserManagementModal .userManagementBoxPopup {
+  width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
+  height: calc(100vh - 2mm) !important;
+  max-height: calc(100vh - 2mm) !important;
+}
+
+/* POPUP FORM USER (#popupUserForm) */
+#popupUserForm {
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
 }
