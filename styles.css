@@ -2679,8 +2679,8 @@ div[id*="Modal"] {
   display: none;
   justify-content: center !important;
   align-items: center !important;
-  padding-top: 1cm !important;
-  padding-bottom: 1cm !important;
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
   padding-left: 4px !important;
   padding-right: 4px !important;
   box-sizing: border-box !important;
@@ -2719,8 +2719,8 @@ div[id*="Modal"] {
 @media (max-width: 768px) {
   .popupAkun,
   #popupAkun {
-    padding-top: 1cm !important;
-    padding-bottom: 1cm !important;
+    padding-top: 1mm !important;
+    padding-bottom: 2cm !important;
     padding-left: 4px !important;
     padding-right: 4px !important;
     box-sizing: border-box !important;
@@ -3291,8 +3291,8 @@ html body #popupUserForm.popupOverlay {
   z-index: 10000005 !important;
   align-items: center !important;
   justify-content: center !important;
-  padding-top: 1cm !important;
-  padding-bottom: 1cm !important;
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
   padding-left: 2mm !important;
   padding-right: 2mm !important;
   box-sizing: border-box !important;
@@ -4284,8 +4284,8 @@ html body #popupUserForm .popupBox {
   }
 
   #popupTambahToko {
-    padding-top: 1cm !important;
-    padding-bottom: 1cm !important;
+    padding-top: 1mm !important;
+    padding-bottom: 2cm !important;
     padding-left: 1mm !important;
     padding-right: 1mm !important;
     align-items: center !important;
@@ -4299,8 +4299,8 @@ html body #popupUserForm .popupBox {
     min-width: calc(100vw - 2mm) !important;
     height: calc(100vh - 2cm) !important;
     max-height: calc(100vh - 2cm) !important;
-    margin-top: 1cm !important;
-    margin-bottom: 1cm !important;
+    margin-top: 1mm !important;
+    margin-bottom: 2cm !important;
     margin-left: 1mm !important;
     margin-right: 1mm !important;
     box-sizing: border-box !important;
