@@ -9,6 +9,25 @@ const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SU
 window.isFirebaseOnline = true;
 window.isSupabaseOnline = true;
 
+function klikStatusKoneksiServer() {
+  const isOnline = (typeof navigator !== 'undefined' && navigator.onLine !== false) && (window.isSupabaseOnline !== false);
+  if (isOnline) {
+    if (typeof showNotif === 'function') {
+      showNotif('TERHUBUNG KE SUPABASE CLOUD\n\nStatus: Online & Database Cloud Realtime Aktif.', 'success');
+    } else {
+      alert('TERHUBUNG KE SUPABASE CLOUD (Online & Realtime)');
+    }
+  } else {
+    if (typeof showNotif === 'function') {
+      showNotif('KONEKSI SUPABASE OFFLINE / TERPUTUS\n\nSilakan periksa koneksi internet atau jaringan Anda.', 'warning');
+    } else {
+      alert('KONEKSI SUPABASE OFFLINE / TERPUTUS');
+    }
+  }
+}
+window.klikStatusKoneksiServer = klikStatusKoneksiServer;
+window.bukaModalCloudUsage = klikStatusKoneksiServer;
+
 function updateGlobalConnectionDotStatus() {
   const dot = document.getElementById('firebaseOnlineDot');
   if (!dot) return;
@@ -19,33 +38,19 @@ function updateGlobalConnectionDotStatus() {
   if (fb && sb) {
     dot.style.background = '#10b981';
     dot.style.boxShadow = '0 0 10px #10b981';
-    dot.title = 'STATUS SERVER ONLINE: TERHUBUNG (KLIK UNTUK LIHAT KUOTA & PENGGUNAAN)';
+    dot.title = 'STATUS KONEKSI: TERHUBUNG KE SUPABASE (KLIK UNTUK LIHAT STATUS)';
   } else if (fb || sb) {
     dot.style.background = '#f59e0b';
     dot.style.boxShadow = '0 0 10px #f59e0b';
-    dot.title = 'STATUS SERVER: KONEKSI STABIL (KLIK UNTUK LIHAT KUOTA & PENGGUNAAN)';
+    dot.title = 'STATUS KONEKSI: TERHUBUNG (KLIK UNTUK LIHAT STATUS)';
   } else {
     dot.style.background = '#ef4444';
     dot.style.boxShadow = '0 0 10px #ef4444';
-    dot.title = 'STATUS SERVER: OFFLINE / TERPUTUS (KLIK UNTUK LIHAT KUOTA & PENGGUNAAN)';
+    dot.title = 'STATUS SERVER: OFFLINE / TERPUTUS (KLIK UNTUK LIHAT STATUS)';
   }
-  dot.onclick = () => bukaModalCloudUsage();
+  dot.onclick = () => klikStatusKoneksiServer();
 }
 window.updateGlobalConnectionDotStatus = updateGlobalConnectionDotStatus;
-
-async function bukaModalCloudUsage() {
-  const modal = document.getElementById('popupCloudUsageModal');
-  if (!modal) return;
-  modal.style.display = 'flex';
-  await muatMetrikKapasitasDatabase(false);
-}
-window.bukaModalCloudUsage = bukaModalCloudUsage;
-
-function tutupModalCloudUsage() {
-  const modal = document.getElementById('popupCloudUsageModal');
-  if (modal) modal.style.display = 'none';
-}
-window.tutupModalCloudUsage = tutupModalCloudUsage;
 
 async function muatMetrikKapasitasDatabase(isRefresh = false) {
   if (isRefresh) {
@@ -407,6 +412,9 @@ function updateBodyClasses(specificTheme) {
   if (typeof applyAppBackground === 'function') {
     applyAppBackground(null, false);
   }
+  if (typeof applyAdaptiveTextColors === 'function') {
+    applyAdaptiveTextColors();
+  }
 }
 window.updateBodyClasses = updateBodyClasses;
 window.applyThemeToDocument = updateBodyClasses;
@@ -475,8 +483,101 @@ window.gantiBackgroundApp = gantiBackgroundApp;
 // ==========================================================================
 const BG_OPACITY_KEY = 'STORE_BG_OPACITY_VAL_V1';
 
+function isCurrentThemeDark() {
+  const body = document.body;
+  if (!body) return true;
+  if (body.classList.contains('light-mode') || 
+      body.classList.contains('classic-mode') || 
+      body.classList.contains('forest-mode') || 
+      body.classList.contains('sunset-mode') || 
+      body.classList.contains('ocean-mode')) {
+    return false;
+  }
+  return true;
+}
+window.isCurrentThemeDark = isCurrentThemeDark;
+
+function applyAdaptiveTextColors(numVal) {
+  let num;
+  if (typeof numVal !== 'undefined' && numVal !== null) {
+    num = typeof numVal === 'number' ? numVal : (parseFloat(numVal) || 0);
+  } else {
+    try {
+      num = parseFloat(localStorage.getItem(BG_OPACITY_KEY) || '48') || 48;
+    } catch(e) {
+      num = 48;
+    }
+  }
+
+  const isHighOpacity = num > 30; // > 30% -> PUTIH (#ffffff) untuk SEMUA TEMA
+  const isDark = isCurrentThemeDark();
+  // <= 30% -> HITAM (#000000) untuk TEMA TERANG, PUTIH (#ffffff) untuk TEMA GELAP
+  const targetColor = isHighOpacity ? '#ffffff' : (isDark ? '#ffffff' : '#000000');
+  const needsShadow = isHighOpacity;
+  
+  document.documentElement.style.setProperty('--adaptive-header-color', targetColor);
+
+  // 1. uselogin (Nama User)
+  const namaUserEl = document.getElementById('namaUser');
+  if (namaUserEl) {
+    namaUserEl.style.setProperty('color', targetColor, 'important');
+    if (needsShadow) {
+      namaUserEl.style.setProperty('text-shadow', '0 1px 4px rgba(0,0,0,0.6)', 'important');
+    } else {
+      namaUserEl.style.removeProperty('text-shadow');
+    }
+  }
+
+  // 2. area & kategori user
+  const areaUserEl = document.getElementById('areaUser');
+  if (areaUserEl) {
+    areaUserEl.style.setProperty('color', targetColor, 'important');
+    if (needsShadow) {
+      areaUserEl.style.setProperty('text-shadow', '0 1px 3px rgba(0,0,0,0.6)', 'important');
+    } else {
+      areaUserEl.style.removeProperty('text-shadow');
+    }
+  }
+
+  // 3. Judul Tabel (DI DASHBOARD)
+  const dashboardTitleEl = document.getElementById('dashboardRecentTitle');
+  if (dashboardTitleEl) {
+    dashboardTitleEl.style.setProperty('color', targetColor, 'important');
+    if (needsShadow) {
+      dashboardTitleEl.style.setProperty('text-shadow', '0 1px 4px rgba(0,0,0,0.6)', 'important');
+    } else {
+      dashboardTitleEl.style.removeProperty('text-shadow');
+    }
+  }
+
+  // 4. DETAIL DATA PERMINTAAN (Di detaildata/riwayat page)
+  const riwayatTitleEl = document.getElementById('riwayatPageTitle') || document.querySelector('#riwayatPage .riwayatContent > h3');
+  if (riwayatTitleEl) {
+    riwayatTitleEl.style.setProperty('color', targetColor, 'important');
+    if (needsShadow) {
+      riwayatTitleEl.style.setProperty('text-shadow', '0 1px 4px rgba(0,0,0,0.6)', 'important');
+    } else {
+      riwayatTitleEl.style.removeProperty('text-shadow');
+    }
+  }
+
+  // RESET / PASTIKAN DETAIL PERMINTAAN & FORM PERMINTAAN TOKO TETAP SESUAI TEMA BAWAAN
+  const judulDetailEl = document.getElementById('judulDetailPermintaan');
+  if (judulDetailEl) {
+    judulDetailEl.style.setProperty('color', 'var(--primary)', 'important');
+    judulDetailEl.style.removeProperty('text-shadow');
+  }
+
+  const formPermintaanTitleEl = document.querySelector('#inputPage .box h3:first-child');
+  if (formPermintaanTitleEl) {
+    formPermintaanTitleEl.style.removeProperty('color');
+    formPermintaanTitleEl.style.removeProperty('text-shadow');
+  }
+}
+
 function ubahTransparansiBackground(val) {
-  const opacityFloat = (parseFloat(val) / 100).toFixed(2);
+  const numVal = parseFloat(val) || 0;
+  const opacityFloat = (numVal / 100).toFixed(2);
   document.documentElement.style.setProperty('--bg-opacity-val', opacityFloat);
   
   const bgEl = document.querySelector('.aesthetic-bg-image');
@@ -486,6 +587,8 @@ function ubahTransparansiBackground(val) {
 
   const valText = document.getElementById('bgOpacityValText');
   if (valText) valText.textContent = `${val}%`;
+
+  applyAdaptiveTextColors(numVal);
 
   try {
     localStorage.setItem(BG_OPACITY_KEY, val);
@@ -504,15 +607,19 @@ function loadSavedBgOpacity() {
   const valText = document.getElementById('bgOpacityValText');
   if (valText) valText.textContent = `${savedVal}%`;
 
-  const opacityFloat = (parseFloat(savedVal) / 100).toFixed(2);
+  const numVal = parseFloat(savedVal) || 0;
+  const opacityFloat = (numVal / 100).toFixed(2);
   document.documentElement.style.setProperty('--bg-opacity-val', opacityFloat);
   
   const bgEl = document.querySelector('.aesthetic-bg-image');
   if (bgEl) {
     bgEl.style.setProperty('opacity', opacityFloat, 'important');
   }
+
+  applyAdaptiveTextColors(numVal);
 }
 
+window.applyAdaptiveTextColors = applyAdaptiveTextColors;
 window.ubahTransparansiBackground = ubahTransparansiBackground;
 window.loadSavedBgOpacity = loadSavedBgOpacity;
 
@@ -4823,7 +4930,7 @@ function logout() {
       } catch (e) {}
     }
 
-    tutupAkun();
+    tutupAkun(true);
     tutupNotificationModal();
     const popupBantuan = document.getElementById('popupBantuan');
     if (popupBantuan) popupBantuan.classList.remove('show');
@@ -5038,6 +5145,7 @@ function showPage(pageId) {
   closeAllPopups();
   pindahHalaman(pageId);
   aturTampilanLonceng(pageId);
+  if (typeof applyAdaptiveTextColors === 'function') applyAdaptiveTextColors();
 }
 
 function aturTampilanLonceng(pageId) {
@@ -5107,6 +5215,9 @@ function initMobileBackButtonEngine() {
       document.getElementById('popupUserManagementModal'),
       document.getElementById('artemisOverlay'),
       document.getElementById('popupDetail'),
+      document.getElementById('popupDetailBarangV2'),
+      document.getElementById('popupEditStatusPart'),
+      document.getElementById('popupEditKeteranganPartSingle'),
       document.getElementById('popupNotifList'),
       document.getElementById('popupBantuan'),
       document.getElementById('popupAkun'),
@@ -5117,22 +5228,28 @@ function initMobileBackButtonEngine() {
       document.getElementById('popupPdfModelsModal'),
       document.getElementById('confirmOverlay'),
       document.getElementById('imageViewer'),
-      document.getElementById('scannerModal')
+      document.getElementById('scannerModal'),
+      document.getElementById('modalGeminiApiKey'),
+      document.getElementById('excelTemplateOverlay')
     ];
 
     let closedAnyModal = false;
     openModals.forEach(m => {
       if (m && (m.classList.contains('show') || m.style.display === 'flex' || m.style.display === 'block')) {
         m.classList.remove('show');
-        m.style.display = 'none';
+        m.style.setProperty('display', 'none', 'important');
         closedAnyModal = true;
       }
     });
 
     if (closedAnyModal) {
       if (typeof closeArtemisModal === 'function') closeArtemisModal();
+      if (typeof tutupModalEditStatusPart === 'function') tutupModalEditStatusPart();
+      if (typeof tutupModalEditKetPartSingle === 'function') tutupModalEditKetPartSingle();
+      if (typeof tutupDetailBarangV2 === 'function') tutupDetailBarangV2();
       if (typeof tutupScanner === 'function') tutupScanner();
       if (typeof tutupImageViewer === 'function') tutupImageViewer();
+      if (typeof closeExcelTemplateModal === 'function') closeExcelTemplateModal();
       
       // JAGA AGAR TOMBOL ICON HEADER (LONCENG & BANTUAN) TETAP TERSEDIA DI DASHBOARD
       const activePage = getCurrentActivePageId();
@@ -5310,6 +5427,10 @@ function pindahHalaman(pageId, pushHistory = true) {
     const topHeader = document.getElementById('topHeaderActions');
     if (topHeader) topHeader.style.display = 'flex';
     aturTampilanLonceng(pageId);
+    try {
+      let savedVal = localStorage.getItem(BG_OPACITY_KEY) || '48';
+      if (typeof applyAdaptiveTextColors === 'function') applyAdaptiveTextColors(savedVal);
+    } catch(e) {}
   }
 
   if (pageId === 'dashboardPage') {
@@ -5368,6 +5489,11 @@ function loadDashboard() {
   if (nameEl) nameEl.textContent = currentUser.fullName;
   if (areaEl) areaEl.textContent = `${currentUser.category} - ${formatUserAreaDisplay(currentUser.area)}`;
 
+  try {
+    let savedVal = localStorage.getItem(BG_OPACITY_KEY) || '48';
+    if (typeof applyAdaptiveTextColors === 'function') applyAdaptiveTextColors(savedVal);
+  } catch(e) {}
+
   const data = getAccessibleRequests();
 
   const pending = data.filter(r => r.status === 'PENDING').length;
@@ -5400,6 +5526,7 @@ function loadDashboard() {
   if (titleEl) {
     const iconName = dashboardFilterStatus === 'PENDING' ? 'hourglass_top' : (dashboardFilterStatus === 'APPROVE' ? 'verified' : (dashboardFilterStatus === 'REJECT' ? 'cancel' : 'task_alt'));
     titleEl.innerHTML = `<span class="material-symbols-rounded" style="color: var(--primary); font-size: 22px;">${iconName}</span> PERMINTAAN ${dashboardFilterStatus}`;
+    if (typeof applyAdaptiveTextColors === 'function') applyAdaptiveTextColors();
   }
 
   const lastDataContainer = document.getElementById('lastData');
@@ -7793,12 +7920,15 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     try { itemsList = JSON.parse(rawItems || '[]'); } catch (e) { itemsList = []; }
   }
 
-  const thBase = "background: var(--primary) !important; color: #ffffff !important; padding: 8px 12px !important; border: none !important; border-bottom: 2px solid rgba(0,0,0,0.18) !important; border-radius: 0 !important; border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; position: sticky !important; top: 0 !important; z-index: 100 !important; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.3px !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important; box-shadow: none !important; text-shadow: none !important; -webkit-clip-path: none !important; clip-path: none !important;";
+  const thBase = "background: var(--primary) !important; color: #ffffff !important; padding: 8px 12px !important; border: none !important; border-right: 1px solid rgba(255,255,255,0.35) !important; border-bottom: 2px solid rgba(0,0,0,0.18) !important; border-radius: 0 !important; border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; position: sticky !important; top: 0 !important; z-index: 100 !important; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.3px !important; text-align: center !important; vertical-align: middle !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important; box-shadow: none !important; text-shadow: none !important; -webkit-clip-path: none !important; clip-path: none !important;";
   const thStyleAutofit = `${thBase} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
-  const thStyleLeft = `${thBase} text-align: left !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
+  const thStyleCenter = `${thBase} text-align: center !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;`;
+  const thStyleAutofitLast = `${thBase} width: 1% !important; white-space: nowrap !important; text-align: center !important; border-right: none !important;`;
+  const thStyleCenterLast = `${thBase} text-align: center !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important; border-right: none !important;`;
+  const thStyleLeft = thStyleCenter;
+  const thStyleLeftLast = thStyleCenterLast;
 
-  const isLastRowIndex = (idx, total) => idx === total - 1;
-  const getTdBorder = (idx, total) => isLastRowIndex(idx, total) ? "border-bottom: none !important;" : "border-bottom: 1px solid var(--border-color) !important;";
+  const getTdBorder = (idx, total) => "border-bottom: 1px solid var(--border-color) !important;";
 
   const tdBase = "padding: 8px 12px !important; border-top: none !important; border-left: none !important; border-right: none !important; background: var(--bg-box) !important; color: var(--text-main) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; word-break: keep-all !important; overflow-wrap: normal !important;";
   const getTdStyleAutofit = (idx, total) => `${tdBase} ${getTdBorder(idx, total)} width: 1% !important; white-space: nowrap !important; text-align: center !important;`;
@@ -7995,13 +8125,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
       `);
     }
 
-    if (canServiceRowActions) {
-      actionButtons.push(`
-        <button type="button" class="btnIcon btnSave btnIconOnly" title="SIMPAN PERUBAHAN" onclick="simpanPerubahanDetailAdmin('${req.noSurat}');" style="background: #059669 !important; color: #ffffff !important;">
-          <span class="material-symbols-rounded">save</span>
-        </button>
-      `);
-    }
+    // Button SIMPAN PERUBAHAN removed as per user request
 
     // BATAL APPROVE SERVICE / DM BUTTONS EXCLUSIVELY VISIBLE FOR ADMIN LOGIN ACCOUNT ONLY (HILANGKAN DARI SERVICE, DM, TOKO, SALES)
     if (isAdminUser) {
@@ -8062,8 +8186,8 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
     `;
   }
 
-  const thKetPartHtml = showKetPartCol ? `<th style="${thStyleLeft}">KETERANGAN PART</th>` : '';
-  const thActionHtml = canServiceRowActions ? `<th style="${thStyleAutofit}">AKSI</th>` : '';
+  const thKetPartHtml = showKetPartCol ? `<th style="${canServiceRowActions ? thStyleLeft : thStyleLeftLast}">KETERANGAN PART</th>` : '';
+  const thActionHtml = canServiceRowActions ? `<th style="${thStyleAutofitLast}">AKSI</th>` : '';
 
   const tableHeaderHtml = isDus ? `
     <thead>
@@ -8074,7 +8198,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         <th style="${thStyleLeft}">PERMINTAAN</th>
         <th style="${thStyleLeft}">SERI DUS</th>
         <th style="${thStyleLeft}">ALASAN</th>
-        <th style="${thStyleAutofit}">QTY</th>
+        <th style="${(showKetPartCol || canServiceRowActions) ? thStyleAutofit : thStyleAutofitLast}">QTY</th>
         ${thKetPartHtml}
         ${thActionHtml}
       </tr>
@@ -8087,7 +8211,7 @@ async function lihatDetail(noSuratOrObj, fromDashboard = false) {
         <th style="${thStyleLeft}">SERI BARANG</th>
         <th style="${thStyleLeft}">PERMINTAAN</th>
         <th style="${thStyleLeft}">ALASAN</th>
-        <th style="${thStyleAutofit}">QTY</th>
+        <th style="${(showKetPartCol || canServiceRowActions) ? thStyleAutofit : thStyleAutofitLast}">QTY</th>
         ${thKetPartHtml}
         ${thActionHtml}
       </tr>
@@ -8201,6 +8325,7 @@ function bukaModalEditStatusPart(noSurat) {
   if (modal) {
     modal.style.setProperty('display', 'flex', 'important');
     modal.classList.add('show');
+    try { history.pushState({ modal: 'partStatus' }, '', location.href); } catch(e) {}
   }
 }
 window.bukaModalEditStatusPart = bukaModalEditStatusPart;
@@ -8351,6 +8476,7 @@ function bukaModalEditKetPartSingle(noSurat, itemIndex) {
   if (modal) {
     modal.style.setProperty('display', 'flex', 'important');
     modal.classList.add('show');
+    try { history.pushState({ modal: 'partKet' }, '', location.href); } catch(e) {}
   }
 }
 window.bukaModalEditKetPartSingle = bukaModalEditKetPartSingle;
@@ -8604,6 +8730,9 @@ function tutupModalPdfModels() {
 
 function switchPdfPreviewModel(modelId) {
   currentlyPreviewedModel = modelId;
+  appStorage.setItem(PDF_MODEL_KEY, modelId);
+  try { localStorage.setItem(PDF_MODEL_KEY, modelId); } catch(e) {}
+  updateActivePdfModelBadge();
   renderFullPdfPreviewDocument(currentlyPreviewedModel);
   updatePdfModelSelectorButtons();
 }
@@ -9187,6 +9316,7 @@ function bukaTTD() {
     showNotif('TANDA TANGAN DIGITAL KHUSUS UNTUK SERVICE, DM & GBJ!', 'warning');
     return;
   }
+  if (typeof tutupAkun === 'function') tutupAkun(true);
   const modal = document.getElementById('popupTTD');
   if (modal) {
     modal.classList.add('show');
@@ -12009,22 +12139,33 @@ function prosesBukaAkun() {
   if (elKat) elKat.value = currentUser.category || '';
   if (elPass) elPass.value = '';
 
+  const isToko = (currentUser.category === 'TOKO' || currentUser.category === 'GBJ');
+  const showTTD = (currentUser.category === 'SERVICE' || currentUser.category === 'DM' || currentUser.category === 'GBJ');
+  const showKelolaToko = !isToko;
+
   const menuTTD = document.getElementById('menuTTD');
   if (menuTTD) {
-    menuTTD.style.display = (currentUser.category === 'SERVICE' || currentUser.category === 'DM' || currentUser.category === 'GBJ') ? 'block' : 'none';
+    menuTTD.style.display = showTTD ? 'block' : 'none';
   }
-
-  const isToko = (currentUser.category === 'TOKO' || currentUser.category === 'GBJ');
-  const isAdmin = currentUser && (currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN'));
   
   const menuKelolaTokoAkun = document.getElementById('menuKelolaTokoAkun');
   if (menuKelolaTokoAkun) {
-    menuKelolaTokoAkun.style.display = isToko ? 'none' : 'block';
+    menuKelolaTokoAkun.style.display = showKelolaToko ? 'block' : 'none';
+  }
+
+  const containerKelolaTokoTTD = document.getElementById('containerKelolaTokoTTD');
+  if (containerKelolaTokoTTD) {
+    containerKelolaTokoTTD.style.display = (showTTD || showKelolaToko) ? 'flex' : 'none';
   }
 
   const adminWrap = document.getElementById('adminHapusNotifWrap');
   if (adminWrap) {
     adminWrap.style.display = 'none';
+  }
+
+  const containerHapusStorage = document.getElementById('containerHapusPenyimpananLokalAkun');
+  if (containerHapusStorage) {
+    containerHapusStorage.style.display = 'block';
   }
 
   if (typeof tutupModalTambahToko === 'function') {
@@ -12046,7 +12187,45 @@ function prosesBukaAkun() {
 window.bukaAkun = bukaAkun;
 window.prosesBukaAkun = prosesBukaAkun;
 
-function tutupAkun() {
+function isAkunDirty() {
+  if (!currentUser) return false;
+  const elNama = document.getElementById('akunNama');
+  const elHP = document.getElementById('akunHP');
+  const elPass = document.getElementById('akunPassword');
+
+  const currentNama = (elNama ? elNama.value : '').trim().toUpperCase();
+  const origNama = (currentUser.fullName || '').trim().toUpperCase();
+
+  const currentHP = (elHP ? elHP.value : '').trim();
+  const origHP = (currentUser.phone || '-').trim();
+  const origHPAlt = (currentUser.phone || '').trim();
+
+  const currentPass = (elPass ? elPass.value : '').trim();
+
+  const namaChanged = currentNama !== origNama;
+  const hpChanged = (currentHP !== origHP && currentHP !== origHPAlt);
+  const passChanged = currentPass.length > 0;
+
+  return (namaChanged || hpChanged || passChanged);
+}
+window.isAkunDirty = isAkunDirty;
+
+function tutupAkun(force = false) {
+  if (force !== true && isAkunDirty()) {
+    showConfirm(
+      'SIMPAN PERUBAHAN AKUN?',
+      () => {
+        simpanAkun(true);
+      },
+      () => {
+        tutupAkun(true);
+      },
+      'YA, SIMPAN',
+      'TIDAK'
+    );
+    return;
+  }
+
   const modal = document.getElementById('popupAkun');
   if (modal) {
     modal.classList.remove('show');
@@ -12055,98 +12234,111 @@ function tutupAkun() {
 }
 window.tutupAkun = tutupAkun;
 
-function simpanAkun() {
-  showConfirm('SIMPAN PERUBAHAN DATA AKUN?', () => {
-    const nama = document.getElementById('akunNama').value.trim().toUpperCase();
-    const hp = document.getElementById('akunHP').value.trim();
-    const pass = document.getElementById('akunPassword').value.trim();
-
-    if (!nama) {
-      showNotif('NAMA LENGKAP TIDAK BOLEH KOSONG!', 'warning');
-      return;
-    }
-
-    showLoading('MENYIMPAN PERUBAHAN AKUN...');
-
-    setTimeout(async () => {
-      try {
-        const users = getUsersFromDB();
-        const idx = users.findIndex(u => u.id === currentUser.id);
-
-        if (idx !== -1) {
-          users[idx].fullName = nama;
-          users[idx].phone = hp;
-          if (pass) users[idx].password = pass;
-
-          saveUsersToDB(users);
-          currentUser = users[idx];
-          appStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
-
-          if (typeof supabase !== 'undefined' && supabase) {
-            try {
-              const userPayload = {
-                id: currentUser.id,
-                username: currentUser.username,
-                password: currentUser.password,
-                full_name: currentUser.fullName,
-                phone: currentUser.phone || '-',
-                category: currentUser.category,
-                area: currentUser.area,
-                created_at: currentUser.createdAt || getFormattedDateDDMMYYYY()
-              };
-
-              const { error: upErr } = await supabase.from('users').upsert(userPayload);
-              if (upErr) {
-                console.warn('[SUPABASE AKUN UPSERT NOTICE]:', upErr);
-              }
-            } catch (e) {
-              console.error("Supabase user update error:", e);
-            }
-          }
-
-          if (typeof syncSupabaseUsersToLocalCache === 'function') {
-            await syncSupabaseUsersToLocalCache();
-          }
-
-          if (typeof notifySupabaseDataChanged === 'function') {
-            notifySupabaseDataChanged('users');
-          }
-
-          hideLoading();
-          showNotif('PROFIL AKUN BERHASIL DIPERBARUI!', 'success');
-
-          const akunArea = document.getElementById('akunArea');
-          if (akunArea) akunArea.value = `${currentUser.area} - ${formatUserAreaDisplay(currentUser.area)}`;
-
-          const akunKategori = document.getElementById('akunKategori');
-          if (akunKategori) akunKategori.value = currentUser.category;
-
-          const akunNama = document.getElementById('akunNama');
-          if (akunNama) akunNama.value = currentUser.fullName;
-
-          const akunHP = document.getElementById('akunHP');
-          if (akunHP) akunHP.value = currentUser.phone || '-';
-
-          const akunPassword = document.getElementById('akunPassword');
-          if (akunPassword) akunPassword.value = '';
-
-          if (typeof loadDashboard === 'function') loadDashboard();
-          if (document.getElementById('userTableBody') && typeof loadUsersManagement === 'function') {
-            loadUsersManagement();
-          }
-        } else {
-          hideLoading();
-          showNotif('DATA AKUN TIDAK DITEMUKAN!', 'warning');
-        }
-      } catch (err) {
-        hideLoading();
-        console.error(err);
-        showNotif('GAGAL MENYIMPAN PERUBAHAN AKUN', 'danger');
-      }
-    }, 200);
-  });
+function simpanAkun(autoClose = false) {
+  if (autoClose) {
+    eksekusiSimpanAkun(true);
+  } else {
+    showConfirm('SIMPAN PERUBAHAN DATA AKUN?', () => {
+      eksekusiSimpanAkun(false);
+    }, null, 'YA, SIMPAN', 'BATAL');
+  }
 }
 window.simpanAkun = simpanAkun;
+
+function eksekusiSimpanAkun(autoClose = false) {
+  const nama = document.getElementById('akunNama').value.trim().toUpperCase();
+  const hp = document.getElementById('akunHP').value.trim();
+  const pass = document.getElementById('akunPassword').value.trim();
+
+  if (!nama) {
+    showNotif('NAMA LENGKAP TIDAK BOLEH KOSONG!', 'warning');
+    return;
+  }
+
+  showLoading('MENYIMPAN PERUBAHAN AKUN...');
+
+  setTimeout(async () => {
+    try {
+      const users = getUsersFromDB();
+      const idx = users.findIndex(u => u.id === currentUser.id);
+
+      if (idx !== -1) {
+        users[idx].fullName = nama;
+        users[idx].phone = hp;
+        if (pass) users[idx].password = pass;
+
+        saveUsersToDB(users);
+        currentUser = users[idx];
+        appStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+
+        if (typeof supabase !== 'undefined' && supabase) {
+          try {
+            const userPayload = {
+              id: currentUser.id,
+              username: currentUser.username,
+              password: currentUser.password,
+              full_name: currentUser.fullName,
+              phone: currentUser.phone || '-',
+              category: currentUser.category,
+              area: currentUser.area,
+              created_at: currentUser.createdAt || getFormattedDateDDMMYYYY()
+            };
+
+            const { error: upErr } = await supabase.from('users').upsert(userPayload);
+            if (upErr) {
+              console.warn('[SUPABASE AKUN UPSERT NOTICE]:', upErr);
+            }
+          } catch (e) {
+            console.error("Supabase user update error:", e);
+          }
+        }
+
+        if (typeof syncSupabaseUsersToLocalCache === 'function') {
+          await syncSupabaseUsersToLocalCache();
+        }
+
+        if (typeof notifySupabaseDataChanged === 'function') {
+          notifySupabaseDataChanged('users');
+        }
+
+        hideLoading();
+        showNotif('PROFIL AKUN BERHASIL DIPERBARUI!', 'success');
+
+        const akunArea = document.getElementById('akunArea');
+        if (akunArea) akunArea.value = `${currentUser.area} - ${formatUserAreaDisplay(currentUser.area)}`;
+
+        const akunKategori = document.getElementById('akunKategori');
+        if (akunKategori) akunKategori.value = currentUser.category;
+
+        const akunNama = document.getElementById('akunNama');
+        if (akunNama) akunNama.value = currentUser.fullName;
+
+        const akunHP = document.getElementById('akunHP');
+        if (akunHP) akunHP.value = currentUser.phone || '-';
+
+        const akunPassword = document.getElementById('akunPassword');
+        if (akunPassword) akunPassword.value = '';
+
+        if (typeof loadDashboard === 'function') loadDashboard();
+        if (document.getElementById('userTableBody') && typeof loadUsersManagement === 'function') {
+          loadUsersManagement();
+        }
+
+        if (autoClose) {
+          tutupAkun(true);
+        }
+      } else {
+        hideLoading();
+        showNotif('DATA AKUN TIDAK DITEMUKAN!', 'warning');
+      }
+    } catch (err) {
+      hideLoading();
+      console.error(err);
+      showNotif('GAGAL MENYIMPAN PERUBAHAN AKUN', 'danger');
+    }
+  }, 200);
+}
+window.eksekusiSimpanAkun = eksekusiSimpanAkun;
 
 function bukaModalTambahToko(btnElement = null) {
   if (!currentUser) return;
@@ -12157,7 +12349,7 @@ function bukaModalTambahToko(btnElement = null) {
   showLoading('MEMBUKA DAFTAR TOKO...');
 
   if (typeof tutupAkun === 'function') {
-    tutupAkun();
+    tutupAkun(true);
   }
 
   setTimeout(() => {
@@ -12306,10 +12498,10 @@ function loadDaftarTokoModal(filterKeyword = '') {
     const code = s.storeCode || generateStoreCode(s.fullName);
     const areaBadge = s.area || 'BDG';
     tr.innerHTML = `
-      <td style="padding: 8px; font-weight: 600; color: var(--text-main);"><div class="namaTokoWrap" style="color: var(--text-main);">${s.fullName}</div></td>
-      <td style="padding: 8px; text-align: center; font-weight: 700; color: var(--primary);">${areaBadge}</td>
-      <td style="padding: 8px; text-align: center; color: var(--text-main); font-weight: 700;">${code}</td>
-      <td style="padding: 8px; text-align: center; white-space: nowrap;">
+      <td style="padding: 8px 10px; font-weight: 600; color: var(--text-main); border-bottom: 1px solid var(--border-color) !important;"><div class="namaTokoWrap" style="color: var(--text-main);">${s.fullName}</div></td>
+      <td style="padding: 8px 10px; text-align: center; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border-color) !important;">${areaBadge}</td>
+      <td style="padding: 8px 10px; text-align: center; color: var(--text-main); font-weight: 700; border-bottom: 1px solid var(--border-color) !important;">${code}</td>
+      <td style="padding: 8px 10px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--border-color) !important;">
         <button type="button" class="btnIcon btnEdit" onclick="editTokoCustom('${s.id}')" title="EDIT TOKO" style="margin-right: 4px;"><span class="material-symbols-rounded">edit</span></button>
         <button type="button" class="btnIcon btnDelete" onclick="hapusTokoCustom('${s.id}', this)" title="HAPUS TOKO"><span class="material-symbols-rounded">delete</span></button>
       </td>
@@ -12319,9 +12511,13 @@ function loadDaftarTokoModal(filterKeyword = '') {
 
   for (let k = 0; k < 2; k++) {
     const emptyTr = document.createElement('tr');
-    emptyTr.className = 'empty-grid-row';
+    emptyTr.className = 'empty-toko-row';
+    emptyTr.style.backgroundColor = 'var(--bg-box)';
     emptyTr.innerHTML = `
-      <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+      <td style="padding: 8px; border: none; background: var(--bg-box);">&nbsp;</td>
+      <td style="padding: 8px; border: none; background: var(--bg-box);">&nbsp;</td>
+      <td style="padding: 8px; border: none; background: var(--bg-box);">&nbsp;</td>
+      <td style="padding: 8px; border: none; background: var(--bg-box);">&nbsp;</td>
     `;
     tbody.appendChild(emptyTr);
   }
@@ -12929,10 +13125,19 @@ function closeAllPopups() {
 }
 window.closeAllPopups = closeAllPopups;
 
-function showConfirm(msg, callback) {
+let confirmCancelCallback = null;
+
+function showConfirm(msg, callback, cancelCallback = null, customYesText = 'YA, LANJUT', customNoText = 'BATAL') {
   const msgEl = document.getElementById('confirmMessage');
   if (msgEl) msgEl.innerHTML = msg;
   confirmCallback = callback;
+  confirmCancelCallback = cancelCallback;
+
+  const btnBatal = document.querySelector('#confirmOverlay .btnBatal');
+  const btnOk = document.querySelector('#confirmOverlay .btnOkNotif');
+  if (btnBatal) btnBatal.innerText = customNoText;
+  if (btnOk) btnOk.innerText = customYesText;
+
   const modal = document.getElementById('confirmOverlay');
   if (modal) {
     modal.style.setProperty('z-index', '2000000000', 'important');
@@ -12944,13 +13149,20 @@ function showConfirm(msg, callback) {
 function closeConfirm() {
   const modal = document.getElementById('confirmOverlay');
   if (modal) modal.style.display = 'none';
+  const ccb = confirmCancelCallback;
   confirmCallback = null;
+  confirmCancelCallback = null;
+  if (typeof ccb === 'function') {
+    ccb();
+  }
 }
 
 function confirmYes() {
   const cb = confirmCallback;
   confirmCallback = null;
-  closeConfirm();
+  confirmCancelCallback = null;
+  const modal = document.getElementById('confirmOverlay');
+  if (modal) modal.style.display = 'none';
   if (typeof cb === 'function') {
     cb();
   }
@@ -13445,6 +13657,17 @@ function initAllDraggableButtons() {
 })();
 
 function hapusSemuaDataLokal() {
+  const isAdminUser = (typeof checkIsAdminUser === 'function' && checkIsAdminUser()) || 
+                      (currentUser && (currentUser.role === 'ADMIN' || currentUser.category === 'ADMIN' || (currentUser.username && currentUser.username.toUpperCase() === 'ADMIN')));
+  if (!isAdminUser) {
+    if (typeof showNotif === 'function') {
+      showNotif('AKSES DITOLAK!\n\nFitur Hapus Penyimpanan Lokal / Cache hanya dapat diakses oleh Admin.', 'warning');
+    } else {
+      alert('AKSES DITOLAK!\n\nFitur Hapus Penyimpanan Lokal / Cache hanya dapat diakses oleh Admin.');
+    }
+    return;
+  }
+
   showConfirm('YAKIN INGIN MENGHAPUS SEMUA DATA PERANGKAT? (Aplikasi akan keluar dan dimuat ulang)', () => {
     showLoading('');
     

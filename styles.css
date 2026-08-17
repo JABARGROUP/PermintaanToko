@@ -204,6 +204,60 @@ button .material-symbols-rounded,
   -webkit-font-smoothing: antialiased;
 }
 
+#popupTambahToko .popupBody {
+  padding: 10px 2mm 2mm 2mm !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#popupTambahToko .popupHeader {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  border-radius: 5px 5px 0 0 !important;
+}
+
+#popupTambahToko table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+#popupTambahToko table thead {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  background: var(--primary) !important;
+  border-radius: 5px 5px 0 0 !important;
+}
+
+#popupTambahToko table th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  padding: 10px 8px !important;
+  white-space: nowrap !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 0 !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+}
+
+#popupTambahToko table th:first-child {
+  border-top-left-radius: 5px !important;
+}
+
+#popupTambahToko table th:last-child {
+  border-top-right-radius: 5px !important;
+}
+
 html, body {
   overflow-x: hidden !important;
   overflow-y: auto !important;
@@ -398,8 +452,7 @@ body.light-mode .aesthetic-orb-3 {
   padding-bottom: 95px !important;
 }
 
-#userManagementPage.active,
-#inputPage.active {
+#userManagementPage.active {
   display: block !important;
   height: calc(100vh - 60px) !important;
   max-height: calc(100vh - 60px) !important;
@@ -408,6 +461,16 @@ body.light-mode .aesthetic-orb-3 {
   touch-action: pan-y !important;
   box-sizing: border-box !important;
   padding-bottom: 95px !important;
+}
+
+#inputPage.active {
+  display: block !important;
+  height: calc(100vh - 60px) !important;
+  max-height: calc(100vh - 60px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  box-sizing: border-box !important;
 }
 
 section#riwayatPage.page.active,
@@ -1191,16 +1254,31 @@ input:focus, select:focus, textarea:focus {
   font-weight: 800 !important;
   letter-spacing: 0.5px !important;
   text-align: left !important;
-  color: var(--text-main);
+  color: var(--adaptive-header-color, var(--text-main)) !important;
   margin: 0 !important;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+#riwayatPageTitle,
+#riwayatPage .riwayatContent > h3,
+#dashboardRecentTitle {
+  color: var(--adaptive-header-color, var(--text-main)) !important;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
 }
 
 .header small, #areaUser {
   font-size: 13px !important;
-  color: var(--text-muted);
+  font-weight: 700 !important;
+  color: var(--adaptive-header-color, #000000) !important;
   text-align: left !important;
   display: block !important;
   margin-top: 2px !important;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+#judulDetailPermintaan {
+  color: var(--adaptive-header-color, var(--text-main)) !important;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
 }
 
 /* MODERN ULTRA-PREMIUM 3D DASHBOARD METRIC CARDS (2 COLUMNS x 2 ROWS FIXED FOR COMPACT / F12 / MOBILE SCREENS) */
@@ -1742,28 +1820,56 @@ html body #inputPage {
   border-radius: 5px !important;
 }
 
-/* PC / DESKTOP (min-width: 769px) - FITS SCREEN PROPERLY WITHOUT JUMPING OR HUGE EMPTY GAP */
+/* PC / DESKTOP (min-width: 769px) - WINDOW FIXED (NO SCREEN SCROLL), INTERNAL CONTAINER SCROLLS WITH 5MM BOTTOM GAP */
 @media (min-width: 769px) {
-  #inputPage,
-  .page#inputPage,
-  html body #inputPage {
-    padding-bottom: 24px !important;
-    margin-bottom: 24px !important;
+  html, body {
+    overflow: hidden !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    width: 100vw !important;
   }
 
-  #inputPage .box {
-    padding-bottom: 24px !important;
-    margin-bottom: 16px !important;
+  #inputPage,
+  #inputPage.active,
+  .page#inputPage,
+  html body #inputPage,
+  html body #inputPage.active {
+    width: calc(100vw - 1mm) !important;
+    max-width: calc(100vw - 1mm) !important;
+    height: calc(100vh - 58px) !important;
+    max-height: calc(100vh - 58px) !important;
+    overflow-y: auto !important;
+    padding-bottom: 5mm !important;
+    margin-bottom: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  #inputPage .box,
+  html body #inputPage .box {
+    width: calc(100vw - 1mm) !important;
+    max-width: calc(100vw - 1mm) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-bottom: 16px !important;
+    margin-bottom: 0 !important;
+    border-radius: 5px !important;
+    box-sizing: border-box !important;
   }
 
   #inputPage #btnSimpan,
   #btnSimpan,
-  .btn-primary#btnSimpan {
-    margin-top: 16px !important;
-    margin-bottom: 16px !important;
+  html body #inputPage #btnSimpan,
+  html body #btnSimpan,
+  html body .btn-primary#btnSimpan {
+    margin-top: 14px !important;
+    margin-bottom: 0 !important;
     position: relative !important;
     z-index: 10 !important;
-    height: 48px !important;
+    height: 46px !important;
   }
 }
 
@@ -6273,24 +6379,38 @@ html body .dashboardTable thead tr {
 /* UNIVERSAL RESPONSIVE SPACING SPECIFICITY OVERRIDE FOR INPUT PAGE & BTN SIMPAN */
 @media (min-width: 769px) {
   html body #inputPage,
+  html body #inputPage.active,
   html body .page#inputPage {
-    padding-bottom: 24px !important;
-    margin-bottom: 24px !important;
-    max-width: 1050px !important;
+    width: calc(100vw - 1mm) !important;
+    max-width: calc(100vw - 1mm) !important;
+    height: calc(100vh - 58px) !important;
+    max-height: calc(100vh - 58px) !important;
+    overflow-y: auto !important;
+    padding-bottom: 5mm !important;
+    margin-bottom: 0 !important;
     margin-left: auto !important;
     margin-right: auto !important;
+    box-sizing: border-box !important;
   }
 
   html body #inputPage .box {
-    padding-bottom: 20px !important;
-    margin-bottom: 16px !important;
+    width: calc(100vw - 1mm) !important;
+    max-width: calc(100vw - 1mm) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-bottom: 16px !important;
+    margin-bottom: 0 !important;
+    border-radius: 5px !important;
+    box-sizing: border-box !important;
   }
 
   html body #inputPage #btnSimpan,
   html body #btnSimpan,
   html body .btn-primary#btnSimpan {
-    margin-top: 16px !important;
-    margin-bottom: 16px !important;
+    margin-top: 14px !important;
+    margin-bottom: 0 !important;
     position: relative !important;
     z-index: 10 !important;
     height: 46px !important;
@@ -7487,10 +7607,8 @@ button.btnBatal:active {
   }
 
   #popupTambahToko .popupBody {
-    padding: 12px 1mm 1mm 1mm !important;
-    padding-left: 1mm !important;
-    padding-right: 1mm !important;
-    padding-bottom: 1mm !important;
+    padding: 12px 2mm 2mm 2mm !important;
+    padding-left: 2mm !important; padding-right: 2mm !important; padding-bottom: 2mm !important;
   }
 
   #popupTambahToko .popupBody > div:last-child {
@@ -7720,8 +7838,203 @@ html body #popupTambahToko .popupBody > div:last-child,
 html body #popupTambahToko .popupBody,
 #popupTambahToko .popupBody {
   padding-top: 10px !important;
-  padding-left: 3mm !important;
-  padding-right: 3mm !important;
+  padding-left: 2mm !important;
+  padding-right: 2mm !important;
+  padding-bottom: 2mm !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html body #popupTambahToko .popupBody > div:last-child,
+#popupTambahToko .popupBody > div:last-child {
+  flex: 1 !important;
+  height: 100% !important;
+  max-height: none !important;
+  margin-bottom: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* REJECT POPUP TOP RIGHT CLOSE BUTTON FOR MOBILE & DESKTOP */
+html body .rejectHeaderPopup,
+html body #rejectOverlay .rejectHeaderPopup,
+.rejectHeaderPopup {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+html body .rejectHeaderPopup .popupClose,
+html body #rejectOverlay .rejectHeaderPopup .popupClose,
+.rejectHeaderPopup .popupClose {
+  margin-left: auto !important;
+  cursor: pointer !important;
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  padding: 0 4px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+}
+
+/* =============================================================================
+   MODAL POPUP GEMINI API KEY - RESPONSIVE HP DENGAN JARAK 2MM KE LAYAR
+   ============================================================================= */
+#modalGeminiApiKey {
+  padding: 2mm !important;
+  box-sizing: border-box !important;
+}
+
+#modalGeminiApiKey .modalKeyBox {
+  width: calc(100vw - 4mm) !important;
+  max-width: 460px !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 768px) {
+  #modalGeminiApiKey {
+    padding: 2mm !important;
+  }
+  #modalGeminiApiKey .modalKeyBox {
+    width: calc(100vw - 4mm) !important;
+    max-width: calc(100vw - 4mm) !important;
+    border-radius: 12px !important;
+  }
+  #modalGeminiApiKey .modalKeyHeader {
+    padding: 10px 12px !important;
+  }
+  #modalGeminiApiKey .modalKeyHeader span {
+    font-size: 12px !important;
+  }
+  #modalGeminiApiKey .modalKeyBody {
+    padding: 12px 10px !important;
+    gap: 10px !important;
+  }
+  #modalGeminiApiKey .modalKeyActions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    justify-content: space-between !important;
+  }
+  #modalGeminiApiKey .btnKosongkanKey {
+    padding: 8px 10px !important;
+    font-size: 11px !important;
+    flex: 1 1 auto !important;
+    text-align: center !important;
+  }
+  #modalGeminiApiKey .modalKeyBtnRight {
+    display: flex !important;
+    gap: 6px !important;
+    flex: 1 1 auto !important;
+    justify-content: flex-end !important;
+  }
+  #modalGeminiApiKey .modalKeyBtnRight button {
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* POPUP DETAIL PERMINTAAN (#popupDetail & #popupDetailBarangV2) - ENFORCE 90 DEGREE NORMAL CORNERS (FLAT/SHARP 0 RADIUS FOR HEADERS & TABLE HEADERS) */
+html body #popupDetail .popupHeader,
+html body #popupDetailBarangV2 .popupHeaderV2,
+html body #popupDetail .popupBoxDetail,
+html body #popupDetailBarangV2 .popupBoxDetailV2,
+html body #popupDetail table th,
+html body #popupDetailBarangV2 table th,
+html body #popupDetail .detailTable2 th,
+html body #popupDetailBarangV2 .detailTableV2 th,
+html body #popupDetail table thead,
+html body #popupDetailBarangV2 table thead,
+html body #popupDetail table thead tr,
+html body #popupDetailBarangV2 table thead tr,
+html body #popupDetail table th:first-child,
+html body #popupDetailBarangV2 table th:first-child,
+html body #popupDetail table th:last-child,
+html body #popupDetailBarangV2 table th:last-child,
+html body .detailTable2 th:first-child,
+html body .detailTableV2 th:first-child,
+html body .detailTable2 th:last-child,
+html body .detailTableV2 th:last-child,
+#popupDetail .popupHeader,
+#popupDetailBarangV2 .popupHeaderV2,
+.popupHeader,
+.popupHeaderV2,
+.detailHeaderV2,
+.detailTableV2 th,
+.detailTable2 th {
+  border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+}
+
+/* MASTER ENFORCED 1CM TOP & BOTTOM GAP FOR ALL DETAIL, TAMBAH TOKO, PDF, CHAT, NOTIFIKASI & AKUN POPUPS */
+html body #popupDetailBarangV2.popupOverlay,
+html body #popupDetail.popupOverlay,
+html body #popupTambahToko.popupOverlay,
+html body #pdfModal.popupOverlay,
+html body #popupPdfModelsModal.popupOverlay,
+html body #popupBantuan.popupOverlay,
+html body #popupBantuan.popupBantuan,
+html body .popupBantuan,
+html body #popupNotifList.popupOverlay,
+html body #popupAkun.popupAkun,
+html body #popupAkun.popupOverlay,
+html body .popupAkun {
+  padding-top: 1cm !important;
+  padding-bottom: 1cm !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+html body #popupDetailBarangV2 .popupBoxDetailV2,
+html body #popupDetail .popupBoxDetail,
+html body .popupBoxDetailV2,
+html body .popupBoxDetail,
+html body #popupTambahToko .popupBox,
+html body #pdfModal .popupBox,
+html body #popupPdfModelsModal .popupBox,
+html body #popupBantuan .chatBox,
+html body .popupBantuan .chatBox,
+html body .chatBox,
+html body #popupNotifList .popupNotifCard,
+html body #popupAkun .akunBox,
+html body .popupAkun .akunBox,
+html body .akunBox {
+  height: calc(100vh - 2cm) !important;
+  height: calc(100dvh - 2cm) !important;
+  max-height: calc(100vh - 2cm) !important;
+  max-height: calc(100dvh - 2cm) !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+html body #popupTambahToko .popupBody > div:last-child,
+#popupTambahToko .popupBody > div:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* EXACT 2MM BOTTOM GAP FROM TABLE BOUNDARY TO POPUP BOTTOM WALL (#popupTambahToko) */
+html body #popupTambahToko .popupBody,
+#popupTambahToko .popupBody {
+  padding-top: 10px !important;
+  padding-left: 2mm !important;
+  padding-right: 2mm !important;
   padding-bottom: 2mm !important;
   overflow: hidden !important;
   flex: 1 !important;
@@ -7915,8 +8228,8 @@ margin-bottom: 0 !important;
 html body #popupTambahToko .popupBody,
 #popupTambahToko .popupBody {
   padding-top: 10px !important;
-  padding-left: 3mm !important;
-  padding-right: 3mm !important;
+  padding-left: 2mm !important;
+  padding-right: 2mm !important;
   padding-bottom: 2mm !important;
   overflow: hidden !important;
   flex: 1 !important;
@@ -8584,4 +8897,96 @@ html body .popupDetailActionsV2 {
   flex-shrink: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
+}
+
+/* ==========================================================================
+   POPUP TAMBAH TOKO - TABLE & EMPTY ROWS THEME BACKGROUND
+   ========================================================================== */
+#popupTambahToko .popupBody > div:last-child {
+  background: var(--bg-box) !important;
+}
+
+#popupTambahToko table {
+  background: var(--bg-box) !important;
+  border-collapse: collapse !important;
+}
+
+#daftarTokoTableBody {
+  background: var(--bg-box) !important;
+}
+
+#daftarTokoTableBody tr {
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
+}
+
+#daftarTokoTableBody tr td {
+  background: var(--bg-box) !important;
+  color: var(--text-main) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+#daftarTokoTableBody tr.empty-toko-row,
+#daftarTokoTableBody tr.empty-grid-row {
+  display: table-row !important;
+  background: var(--bg-box) !important;
+}
+
+#daftarTokoTableBody tr.empty-toko-row td,
+#daftarTokoTableBody tr.empty-grid-row td {
+  display: table-cell !important;
+  background: var(--bg-box) !important;
+  border: none !important;
+  border-bottom: none !important;
+}
+
+/* POPUP DETAIL PERMINTAAN: VERTICAL COLUMN DIVIDERS ON TABLE HEADER (HEADERNYS SAJA) & CLOSING BOTTOM BORDER ON LAST DATA ROW */
+html body #popupDetailBarangV2 .detailTableV2 th,
+html body #popupDetail .detailTable2 th,
+html body .detailTableV2 th {
+  text-align: center !important;
+}
+
+html body #popupDetailBarangV2 .detailTableV2 th:not(:last-child),
+html body #popupDetail .detailTable2 th:not(:last-child),
+html body .detailTableV2 th:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+html body #popupDetailBarangV2 .detailTableV2 th:last-child,
+html body .detailTableV2 th:last-child {
+  border-right: none !important;
+}
+
+html body #popupDetailBarangV2 .detailTableV2 tbody tr:not(.empty-grid-row) td,
+html body #popupDetail .detailTable2 tbody tr:not(.empty-grid-row) td,
+html body .detailTableV2 tbody tr:not(.empty-grid-row) td {
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+
+/* =============================================================================
+   JUDUL DETAIL PERMINTAAN TEMA & HEADER VIEW PDF SIKU 90 DERAJAT
+   ============================================================================= */
+#judulDetailPermintaan,
+html body #inputPage #judulDetailPermintaan,
+#inputPage h3#judulDetailPermintaan {
+  color: var(--primary) !important;
+}
+
+#pdfModal .popupBox,
+#pdfModal .popupHeader,
+#popupPdfModelsModal .popupBox,
+#popupPdfModelsModal .popupHeader,
+.popupBox:has(#pdfDocumentContent),
+.popupHeader:has(.btnPrintHeader) {
+  border-radius: 0px !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+}
+
+#pdfModal .btnPrintHeader,
+#popupPdfModelsModal .btnBatal,
+#popupPdfModelsModal .pdf-model-simple-nav button {
+  border-radius: 0px !important;
 }

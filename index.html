@@ -21,8 +21,8 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <!-- Master Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260817_v2160">
-  <script src="app.js?v=20260817_v2160"></script>
+  <link rel="stylesheet" href="styles.css?v=20260817_v2343">
+  <script src="app.js?v=20260817_v2343"></script>
 
   <!-- Global Failsafe Gemini AI Key Handler -->
   <script>
@@ -190,7 +190,7 @@
   <!-- TOP-RIGHT HEADER ACTIONS CONTAINER (ALIGNED FLUSH TO RIGHT CARD BOUNDARY) -->
   <div id="topHeaderActions" class="top-header-actions">
     <!-- BULAT KECIL INDIKATOR STATUS ONLINE (KONEK / DISKONEK) - RATA ATAS -->
-    <div id="firebaseOnlineDot" title="STATUS SERVER ONLINE: TERHUBUNG (KLIK UNTUK LIHAT KUOTA & PENGGUNAAN)" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; cursor: pointer; transition: all 0.3s; align-self: flex-start !important; margin-top: 2px !important; transform: none !important; pointer-events: auto !important;" onclick="bukaModalCloudUsage()"></div>
+    <div id="firebaseOnlineDot" title="STATUS KONEKSI: TERHUBUNG KE SUPABASE (KLIK UNTUK LIHAT STATUS)" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; cursor: pointer; transition: all 0.3s; align-self: flex-start !important; margin-top: 2px !important; transform: none !important; pointer-events: auto !important;" onclick="klikStatusKoneksiServer()"></div>
 
     <button id="helpButton" class="helpButton" onclick="bukaBantuan()" title="PUSAT BANTUAN & CHAT" style="display: none;">
       <span class="material-symbols-rounded">support_agent</span>
@@ -433,29 +433,24 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap; gap: 8px;">
           <h3 style="margin: 0;">FORM PERMINTAAN TOKO</h3>
           <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-            <button type="button" onclick="triggerUploadPdfAutoFill()" title="INPUT PDF AUTO-FILL" style="background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; border: none; border-radius: 6px; padding: 7px 10px; font-weight: 700; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); transition: transform 0.15s ease;">
-              <span class="material-symbols-rounded" style="font-size: 20px;">picture_as_pdf</span>
+            <button type="button" onclick="triggerUploadPdfAutoFill()" title="INPUT PDF AUTO-FILL" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; border: 1.5px solid #047857; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(16, 185, 129, 0.25); transition: transform 0.15s ease;">
+              <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;">picture_as_pdf</span>
             </button>
-            <button type="button" onclick="triggerUploadGambarAutoFill()" title="INPUT GAMBAR AUTO-FILL" style="background: linear-gradient(135deg, #7c3aed, #9333ea); color: #ffffff; border: none; border-radius: 6px; padding: 7px 10px; font-weight: 700; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(147, 51, 234, 0.25); transition: transform 0.15s ease;">
-              <span class="material-symbols-rounded" style="font-size: 20px;">image</span>
+            <button type="button" onclick="triggerUploadGambarAutoFill()" title="INPUT GAMBAR AUTO-FILL" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; background: linear-gradient(135deg, #7c3aed, #9333ea); color: #ffffff; border: 1.5px solid #6d28d9; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(147, 51, 234, 0.25); transition: transform 0.15s ease;">
+              <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;">image</span>
             </button>
-            <button type="button" onclick="triggerUploadExcelAutoFill()" title="INPUT EXCEL AUTO-FILL" style="background: linear-gradient(135deg, #107c41, #0f7b40); color: #ffffff; border: none; border-radius: 6px; padding: 7px 10px; font-weight: 700; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(16, 124, 65, 0.35); transition: transform 0.15s ease;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
-                <path d="M14.5 3H20C20.5523 3 21 3.44772 21 4V20C21 20.5523 20.5523 21 20 21H14.5V3Z" fill="#107C41"/>
-                <path d="M14.5 7H19V9H14.5V7Z" fill="#FFFFFF" opacity="0.85"/>
-                <path d="M14.5 11H19V13H14.5V11Z" fill="#FFFFFF" opacity="0.85"/>
-                <path d="M14.5 15H19V17H14.5V15Z" fill="#FFFFFF" opacity="0.85"/>
-                <path d="M4 4C4 3.44772 4.44772 3 5 3H14.5V21H5C4.44772 21 4 20.5523 4 20V4Z" fill="#185C37"/>
-                <rect x="2" y="5" width="12" height="14" rx="2" fill="#107C41" stroke="#21A366" stroke-width="0.75"/>
-                <path d="M5.5 7.5L7.6 12L5.5 16.5H7.3L8.5 13.7L9.7 16.5H11.5L9.4 12L11.5 7.5H9.7L8.5 10.3L7.3 7.5H5.5Z" fill="#FFFFFF"/>
+            <button type="button" onclick="triggerUploadExcelAutoFill()" title="INPUT EXCEL AUTO-FILL" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; background: linear-gradient(135deg, #107c41, #0f7b40); color: #ffffff; border: 1.5px solid #0b592e; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(16, 124, 65, 0.3); transition: transform 0.15s ease;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+                <path d="M14 2H20C21.1 2 22 2.9 22 4V20C22 21.1 21.1 22 20 22H14V2Z" fill="#185C37"/>
+                <path d="M15 6H20V8.5H15V6Z" fill="#33C481"/>
+                <path d="M15 10.75H20V13.25H15V10.75Z" fill="#33C481"/>
+                <path d="M15 15.5H20V18H15V15.5Z" fill="#33C481"/>
+                <path d="M2 3.5C2 2.67 2.67 2 3.5 2H14V22H3.5C2.67 22 2 21.33 2 20.5V3.5Z" fill="#107C41"/>
+                <path d="M5 6.5L7.5 12L5 17.5H7.2L8.6 14.1L10 17.5H12.2L9.7 12L12.2 6.5H10L8.6 9.9L7.2 6.5H5Z" fill="#FFFFFF"/>
               </svg>
             </button>
-            <button type="button" onclick="downloadTemplateExcelPermintaan()" title="Download Format Template Excel" style="background: rgba(16, 124, 65, 0.14); color: #107c41; border: 1px solid rgba(16, 124, 65, 0.35); border-radius: 6px; padding: 6px 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-              <span class="material-symbols-rounded" style="font-size: 18px; color: #107c41;">download_for_offline</span>
-            </button>
-            <button type="button" id="btnGeminiApiKey" onclick="aturGeminiApiKey()" title="Masukkan Google Gemini AI API Key (Hanya Diisi Sekali Saja)" style="background: linear-gradient(135deg, #f59e0b, #d97706) !important; color: #ffffff !important; border: none !important; border-radius: 6px !important; padding: 7px 14px !important; font-weight: 800 !important; font-size: 11.5px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35) !important; transition: all 0.2s ease !important;">
-              <span class="material-symbols-rounded" style="font-size: 18px; color: #ffffff !important;">key</span>
-              <span id="labelGeminiApiKey">KEY AI</span>
+            <button type="button" onclick="downloadTemplateExcelPermintaan()" title="Download Format Template Excel" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; background: rgba(16, 124, 65, 0.14); color: #107c41; border: 1.5px solid #107c41; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(16, 124, 65, 0.15); transition: transform 0.15s ease;">
+              <span class="material-symbols-rounded" style="font-size: 19px; line-height: 1; color: #107c41;">download_for_offline</span>
             </button>
           </div>
           <input type="file" id="inputPdfAutoFill" accept="application/pdf,.pdf" style="display: none;" onchange="prosesPdfAutoFillGemini(event)">
@@ -494,7 +489,7 @@
           <option value="DUS">DUS</option>
         </select>
 
-        <h3 style="margin-top: 25px; margin-bottom: 12px; text-align: left !important;">DETAIL PERMINTAAN</h3>
+        <h3 id="judulDetailPermintaan" style="margin-top: 25px; margin-bottom: 12px; text-align: left !important; color: var(--primary) !important;">DETAIL PERMINTAAN</h3>
         <div id="infoSerial" style="text-align: left !important;"></div>
 
         <!-- Dynamic Container Rows (No Header) -->
@@ -530,7 +525,7 @@
          ========================================================================== -->
     <section id="riwayatPage" class="page">
       <div class="riwayatContent">
-        <h3 style="text-align: center !important;">DETAIL DATA PERMINTAAN</h3>
+        <h3 id="riwayatPageTitle" style="text-align: center !important;">DETAIL DATA PERMINTAAN</h3>
 
         <div class="searchToolbar">
           <input type="text" id="searchRiwayat" placeholder="CARI NO SURAT, TOKO, TYPE..." onkeyup="filterRiwayat()">
@@ -645,40 +640,6 @@
           </div>
           <button type="button" class="btnDownload" style="background: #dc2626; color: #ffffff; padding: 10px 16px; font-weight: 700;" onclick="hapusSemuaFotoBiasa()">
             <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 4px;">delete_forever</span> HAPUS SEMUA FOTO
-          </button>
-        </div>
-      </div>
-
-      <!-- ADMIN CONTROL: BERSIHKAN PENYIMPANAN LOKAL BROWSER -->
-      <div class="box" style="border-left: 4px solid #0284c7; margin-bottom: 20px; background: var(--bg-card);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h3 style="color: #0284c7; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span class="material-symbols-rounded">refresh</span> MUAT ULANG & PERBARUI SEMUA DATA
-            </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
-              MEMPERBARUI SELURUH DATA SISTEM DENGAN DATA TERBARU (TETAP MENJAGA TEMA & TANDA TANGAN).
-            </p>
-          </div>
-          <button type="button" class="btnDownload" style="background: #0284c7; color: #ffffff; padding: 10px 16px; font-weight: 700;" onclick="eksekusiHapusPenyimpananLokal()">
-            <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 4px;">refresh</span> PERBARUI DATA
-          </button>
-        </div>
-      </div>
-
-      <!-- ADMIN CONTROL: HAPUS TOTAL PENYIMPANAN LOKAL APLIKASI -->
-      <div class="box" style="border-left: 4px solid #d97706; margin-bottom: 20px; background: var(--bg-card);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h3 style="color: #d97706; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span class="material-symbols-rounded">cleaning_services</span> HAPUS SEMUA PENYIMPANAN LOKAL APLIKASI
-            </h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
-              MENGHAPUS TOTAL SELURUH DATA CACHE BROWSER, CHAT LOKAL, SESI LOGIN & LOCAL STORAGE APLIKASI DI PERANGKAT INI.
-            </p>
-          </div>
-          <button type="button" class="btnDownload" style="background: #d97706; color: #ffffff; padding: 10px 16px; font-weight: 700;" onclick="hapusSemuaPenyimpananLokalApk()">
-            <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 4px;">cleaning_services</span> HAPUS LOKAL STORAGE APK
           </button>
         </div>
       </div>
@@ -877,22 +838,27 @@
 
         <div style="grid-column: span 2;">
           <label style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 1px; display: block;">PASSWORD BARU (KOSONGKAN JIKA TIDAK DIUBAH)</label>
-          <input type="password" id="akunPassword" placeholder="MASUKKAN PASSWORD BARU" style="width: 100%; padding: 4px 6px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); box-sizing: border-box;">
+          <div style="display: flex; gap: 5px; width: 100%; align-items: center;">
+            <input type="password" id="akunPassword" placeholder="MASUKKAN PASSWORD BARU" style="flex: 1; min-width: 0; padding: 4px 6px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); height: 28px; box-sizing: border-box;">
+            <button type="button" class="btnSimpan" onclick="simpanAkun()" style="flex-shrink: 0; height: 28px; padding: 0 16px; border-radius: 4px; font-size: 10.5px; font-weight: 700; background: linear-gradient(135deg, #16a34a, #15803d); color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+              <span class="material-symbols-rounded" style="font-size: 15px;">save</span> SIMPAN
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- KELOLA TOKO -->
-      <div id="menuKelolaTokoAkun" style="margin-top: 3px;">
-        <button type="button" class="btnTambahBarang" style="background: linear-gradient(135deg, #0284c7, #0369a1); width: 100%; justify-content: center; height: 28px; border-radius: 4px; font-size: 10.5px; font-weight: 700; color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25); cursor: pointer;" onclick="tutupAkun(); bukaModalTambahToko(this);">
-          <span class="material-symbols-rounded" style="font-size: 15px;">store</span> KELOLA / TAMBAH TOKO BARU
-        </button>
-      </div>
-
-      <!-- KELOLA TTD -->
-      <div id="menuTTD" style="margin-top: 3px; text-align: center; display: none;">
-        <button type="button" class="btnTambahBarang" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); width: 100%; justify-content: center; height: 28px; border-radius: 4px; font-size: 10.5px; font-weight: 700; color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.25); cursor: pointer;" onclick="tutupAkun(); bukaTTD();">
-          <span class="material-symbols-rounded" style="font-size: 15px;">draw</span> KELOLA TANDA TANGAN DIGITAL (TTD)
-        </button>
+      <!-- KELOLA TOKO & KELOLA TTD (SEJAJAR 1 BARIS BAGI 2) -->
+      <div id="containerKelolaTokoTTD" style="margin-top: 3px; margin-bottom: 3px; display: flex; gap: 5px; width: 100%;">
+        <div id="menuKelolaTokoAkun" style="flex: 1; min-width: 0;">
+          <button type="button" class="btnTambahBarang" style="background: linear-gradient(135deg, #0284c7, #0369a1); width: 100%; justify-content: center; height: 28px; border-radius: 4px; font-size: 10.5px; font-weight: 700; color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25); cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0 4px; white-space: nowrap;" onclick="bukaModalTambahToko()">
+            <span class="material-symbols-rounded" style="font-size: 15px;">store</span> KELOLA TOKO
+          </button>
+        </div>
+        <div id="menuTTD" style="flex: 1; min-width: 0; display: none;">
+          <button type="button" class="btnTambahBarang" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); width: 100%; justify-content: center; height: 28px; border-radius: 4px; font-size: 10.5px; font-weight: 700; color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.25); cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0 4px; white-space: nowrap;" onclick="bukaTTD()">
+            <span class="material-symbols-rounded" style="font-size: 15px;">draw</span> KELOLA TTD
+          </button>
+        </div>
       </div>
 
       <!-- 2 EQUAL BUTTONS: GANTI BG & GANTI TEMA -->
@@ -924,15 +890,10 @@
       </div>
 
       <!-- TOMBOL HAPUS SEMUA LOKAL PENYIMPANAN -->
-      <div style="margin-top: 3px; margin-bottom: 3px;">
+      <div id="containerHapusPenyimpananLokalAkun" style="margin-top: 3px; margin-bottom: 3px;">
         <button type="button" class="btnTambahBarang" style="background: linear-gradient(135deg, #ef4444, #b91c1c); width: 100%; justify-content: center; height: 28px; border-radius: 4px; font-size: 10.5px; font-weight: 700; color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25); cursor: pointer;" onclick="hapusSemuaDataLokal()">
           <span class="material-symbols-rounded" style="font-size: 15px;">delete_forever</span> HAPUS LOKAL PENYIMPANAN / CACHE
         </button>
-      </div>
-
-      <div class="akunButton" style="display:flex; align-items:center; gap:5px; margin-top: 3px;">
-        <button type="button" class="btnBatal" onclick="tutupAkun()" style="flex: 1; height: 28px; border-radius: 4px; font-size: 10.5px; font-weight: 700; background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25); cursor: pointer;">BATAL</button>
-        <button type="button" class="btnSimpan" onclick="simpanAkun()" style="flex: 1; height: 28px; border-radius: 4px; font-size: 10.5px; font-weight: 700; background: linear-gradient(135deg, #16a34a, #15803d); color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25); cursor: pointer;">SIMPAN</button>
       </div>
 
       <button type="button" class="btnLogout" onclick="logout()" style="width: 100%; height: 28px; margin-top: 3px; border-radius: 4px; font-size: 10.5px; font-weight: 700; background: linear-gradient(135deg, #dc2626, #991b1b); color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25); cursor: pointer;">LOGOUT KELUAR</button>
@@ -950,7 +911,7 @@
       </div>
 
       <!-- POPUP BODY (CONTAINER TANPA SCROLL, FORM TERKUNCI DIAM) -->
-      <div class="popupBody" style="padding: 12px 14px 2mm 14px; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
+      <div class="popupBody" style="padding: 12px 2mm 2mm 2mm !important; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
         
         <!-- ELEMENT ATAS TERKUNCI (DIAM) -->
         <div style="flex-shrink: 0;">
@@ -984,14 +945,14 @@
           </div>
         </div>
 
-        <div style="flex: 1; min-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-card); -webkit-overflow-scrolling: touch; margin-bottom: 0; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
-          <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; position: relative;">
+        <div style="flex: 1; min-height: 120px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-box) !important; -webkit-overflow-scrolling: touch; margin-bottom: 0; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
+          <table id="tabelDaftarTokoModal" style="width: 100%; border-collapse: collapse; border-spacing: 0; font-size: 12px; position: relative; background: var(--bg-box) !important;">
             <thead style="position: sticky; top: 0; z-index: 50; background: var(--primary); border-radius: 5px 5px 0 0;">
               <tr style="background: var(--primary); color: #ffffff;">
-                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: left; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.15); border-top-left-radius: 5px !important; border-radius: 5px 0 0 0 !important;">NAMA TOKO</th>
-                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: center; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.15); border-radius: 0 !important;">AREA</th>
-                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: center; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.15); border-radius: 0 !important;">KODE TOKO</th>
-                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: center; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.15); border-top-right-radius: 5px !important; border-radius: 0 5px 0 0 !important;">AKSI</th>
+                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: left; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.2) !important; border-top-left-radius: 5px !important; border-radius: 5px 0 0 0 !important;">NAMA TOKO</th>
+                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: center; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.2) !important; border-radius: 0 !important;">AREA</th>
+                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: center; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.2) !important; border-radius: 0 !important;">KODE TOKO</th>
+                <th style="position: sticky; top: 0; z-index: 50; background: var(--primary); color: #ffffff; padding: 10px 8px; text-align: center; font-weight: 700; white-space: nowrap; border-bottom: 2px solid rgba(0,0,0,0.2) !important; border-top-right-radius: 5px !important; border-radius: 0 5px 0 0 !important;">AKSI</th>
               </tr>
             </thead>
             <tbody id="daftarTokoTableBody">
@@ -1201,7 +1162,7 @@
   </div>
 
   <!-- POPUP EDIT NO / STATUS PART (KHUSUS ROLE SERVICE / ADMIN) -->
-  <div id="popupEditStatusPart" class="popupOverlay" style="z-index: 500000; display: none;">
+  <div id="popupEditStatusPart" class="popupOverlay" style="z-index: 500000; display: none;" onclick="if(event.target === this) tutupModalEditStatusPart();">
     <div class="popupBox" style="width: 560px !important; max-width: 94vw !important; margin: auto !important; border-radius: 5px !important; overflow: hidden !important; background: var(--bg-box) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;">
       <div class="popupHeader" style="background: var(--primary) !important; background-color: var(--primary) !important; background-image: none !important; color: #ffffff !important; padding: 14px 18px !important; display: flex !important; align-items: center !important; justify-content: space-between !important;">
         <span style="display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 800; color: #ffffff;">
@@ -1227,7 +1188,7 @@
   </div>
 
   <!-- POPUP EDIT KETERANGAN PART PER BARIS (FREE TEXT KHUSUS SERVICE / ADMIN) -->
-  <div id="popupEditKeteranganPartSingle" class="popupOverlay" style="z-index: 500000; display: none;">
+  <div id="popupEditKeteranganPartSingle" class="popupOverlay" style="z-index: 500000; display: none;" onclick="if(event.target === this) tutupModalEditKetPartSingle();">
     <div class="popupBox" style="width: 480px !important; max-width: 94vw !important; margin: auto !important; border-radius: 5px !important; overflow: hidden !important; background: var(--bg-box) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.45) !important;">
       <div class="popupHeader" style="background: var(--primary) !important; background-color: var(--primary) !important; background-image: none !important; color: #ffffff !important; padding: 14px 18px !important; display: flex !important; align-items: center !important; justify-content: space-between !important;">
         <span style="display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 800; color: #ffffff;">
@@ -1451,124 +1412,10 @@
     </div>
   </div>
 
-  <!-- 12. POPUP MODAL KAPASITAS & KUOTA DATABASE CLOUD (SUPABASE USAGE) -->
-  <div id="popupCloudUsageModal" class="popupOverlay" style="display: none; z-index: 9999999; align-items: center; justify-content: center; padding: 10px !important; box-sizing: border-box !important;" onclick="if(event.target === this) tutupModalCloudUsage();">
-    <div class="popupBox" style="width: 440px; max-width: 94vw; max-height: 90vh; overflow-y: auto; padding: 0; border-radius: 5px; background: var(--bg-box, #ffffff); border: 1px solid var(--border-color); box-shadow: 0 16px 40px rgba(0,0,0,0.35); text-align: left; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
-      <!-- Header -->
-      <div style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; color: #ffffff;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="material-symbols-rounded" style="font-size: 22px; color: #a7f3d0;">cloud_done</span>
-          <div>
-            <div style="font-weight: 800; font-size: 13.5px; letter-spacing: 0.3px; color: #ffffff;">STATUS & KUOTA SUPABASE CLOUD</div>
-            <div style="font-size: 10.5px; color: #ccfbf1; font-weight: 500;">KAPASITAS REALTIME DATABASE & SERVER</div>
-          </div>
-        </div>
-        <button type="button" onclick="tutupModalCloudUsage()" style="background: none; border: none; color: #ffffff !important; font-size: 24px; font-weight: 900; cursor: pointer; line-height: 1; padding: 0 4px;" title="TUTUP">&times;</button>
-      </div>
-
-      <!-- Content Box -->
-      <div style="padding: 12px 14px;">
-        <!-- Status Server Live Banner -->
-        <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 4px; padding: 6px 10px; margin-bottom: 10px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; display: inline-block;"></span>
-            <span id="usageStatusTitle" style="font-size: 11.5px; font-weight: 700; color: #10b981;">STATUS: ONLINE (REALTIME TERHUBUNG)</span>
-          </div>
-          <span id="usageLatencyBadge" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); background: var(--bg-body, rgba(0,0,0,0.05)); padding: 2px 6px; border-radius: 4px;">~28ms</span>
-        </div>
-
-        <!-- Metrics Container -->
-        <div style="background: var(--bg-card, rgba(0,0,0,0.02)); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 12px; margin-bottom: 10px;">
-          
-          <!-- Row 1: EGRESS -->
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-color);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="usageEgressRing" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(160, 174, 192, 0.25)" stroke-width="4" />
-                  <path id="svgEgressArc" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="100, 100" stroke-dashoffset="92" stroke-linecap="round" />
-                </svg>
-              </div>
-              <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">EGRESS (TRANSFER DATA)</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-main);">
-              <span id="usageEgressText">39.2 MB</span>
-              <span style="color: var(--text-muted); font-weight: 500;">/</span>
-              <span style="color: var(--text-muted);">5 GB</span>
-            </div>
-          </div>
-
-          <!-- Row 2: DATABASE SIZE -->
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-color);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="usageDbRing" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(160, 174, 192, 0.25)" stroke-width="4" />
-                  <path id="svgDbArc" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="100, 100" stroke-dashoffset="94.6" stroke-linecap="round" />
-                </svg>
-              </div>
-              <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">DATABASE SIZE</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-main);">
-              <span id="usageDbText">28.4 MB</span>
-              <span style="color: var(--text-muted); font-weight: 500;">/</span>
-              <span style="color: var(--text-muted);">500 MB</span>
-            </div>
-          </div>
-
-          <!-- Row 3: MONTHLY ACTIVE USERS -->
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-color);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="usageMauRing" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(160, 174, 192, 0.25)" stroke-width="4" />
-                  <path id="svgMauArc" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="100, 100" stroke-dashoffset="99.5" stroke-linecap="round" />
-                </svg>
-              </div>
-              <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">ACTIVE USERS (MAU)</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-main);">
-              <span id="usageMauText">0</span>
-              <span style="color: var(--text-muted); font-weight: 500;">/</span>
-              <span style="color: var(--text-muted);">50.000</span>
-            </div>
-          </div>
-
-          <!-- Row 4: FILE STORAGE -->
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="usageStorageRing" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(160, 174, 192, 0.25)" stroke-width="4" />
-                  <path id="svgStorageArc" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" />
-                </svg>
-              </div>
-              <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">FILE STORAGE</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-main);">
-              <span id="usageStorageText">0 MB</span>
-              <span style="color: var(--text-muted); font-weight: 500;">/</span>
-              <span style="color: var(--text-muted);">1 GB</span>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- TOMBOL UTAMA SINKRONISASI REALTIME SUPABASE -->
-        <button type="button" onclick="sinkronkanSemuaDataDenganSupabase()" style="width: 100%; height: 34px; margin-top: 8px; margin-bottom: 8px; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; border-radius: 4px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);" title="TARIK DATA TERBARU DARI SUPABASE CLOUD & PERBARUI DASHBOARD">
-          <span class="material-symbols-rounded" style="font-size: 16px;">sync</span> SINKRONKAN SEMUA DATA DARI SUPABASE
-        </button>
-
-        <!-- Detail Information Footer -->
-        <button type="button" class="btnHapus" style="background: var(--primary); border-radius: 5px; height: 35px; flex: 1; font-size: 12px; font-weight: 800;" onclick="simpanUserData(this)">SIMPAN USER</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 9. POPUP MODAL PILIHAN 5 MODEL TEMPLATE PDF (SIMPLE COMPACT 1-5 BUTTONS WITH FULL HEIGHT PREVIEW) -->
   <div id="popupPdfModelsModal" class="popupOverlay" onclick="if(event.target === this) tutupModalPdfModels();" style="z-index: 1000000; align-items: center !important; justify-content: center !important; padding: 1cm 4px !important; box-sizing: border-box !important;">
-    <div class="popupBox" style="width: 780px !important; max-width: calc(100vw - 8px) !important; height: calc(100vh - 2cm) !important; max-height: calc(100vh - 2cm) !important; display: flex !important; flex-direction: column !important; padding: 0 !important; border-radius: 5px !important; overflow: hidden !important; position: relative !important; box-shadow: 0 20px 50px rgba(0,0,0,0.35) !important; margin: auto !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
-      <div class="popupHeader" style="background: var(--primary) !important; background-color: var(--primary) !important; background-image: none !important; padding: 12px 18px; position: relative; justify-content: center !important;">
+    <div class="popupBox" style="width: 780px !important; max-width: calc(100vw - 8px) !important; height: calc(100vh - 2cm) !important; max-height: calc(100vh - 2cm) !important; display: flex !important; flex-direction: column !important; padding: 0 !important; border-radius: 0px !important; overflow: hidden !important; position: relative !important; box-shadow: 0 20px 50px rgba(0,0,0,0.35) !important; margin: auto !important; -webkit-clip-path: none !important; clip-path: none !important;">
+      <div class="popupHeader" style="background: var(--primary) !important; background-color: var(--primary) !important; background-image: none !important; padding: 12px 18px; position: relative; justify-content: center !important; border-radius: 0px !important;">
         <span style="font-size: 15px; font-weight: 900; color: #fff; text-align: center; letter-spacing: 0.5px;">
           <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px; font-size: 20px;">picture_as_pdf</span> PILIH MODEL TEMPLATE SURAT PDF (1 - 5)
         </span>
@@ -1585,20 +1432,17 @@
         <!-- Injected Dynamically by JS -->
       </div>
 
-      <!-- BOTTOM MODEL SELECTOR BAR (SIMPLE BUTTONS 1 TO 5 & SIMPAN BUTTON) -->
+      <!-- BOTTOM MODEL SELECTOR BAR (SIMPLE BUTTONS 1 TO 5 & TUTUP BUTTON) -->
       <div class="popupFooter" style="padding: 12px 18px; background: var(--bg-box); border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <span style="font-size: 11.5px; font-weight: 900; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">MODE:</span>
+          <span style="font-size: 11.5px; font-weight: 900; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">PILIH MODE:</span>
           <div id="pdfModelSelectorNav" class="pdf-model-simple-nav" style="display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <!-- Injected Dynamically by JS -->
           </div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 10px;">
-          <button type="button" class="btnBatal" style="padding: 8px 18px; border-radius: 6px; font-size: 12px; font-weight: 800; background: #ef4444 !important; color: #ffffff !important; border: none !important; height: 38px;" onclick="tutupModalPdfModels()">BATAL</button>
-          <button type="button" class="btnTambahBarang" style="background: linear-gradient(135deg, #10b981, #059669); height: 38px; padding: 0 20px; font-size: 12px; font-weight: 900; border-radius: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);" onclick="konfirmasiGunakanModelPdf()">
-            <span class="material-symbols-rounded" style="font-size: 18px;">check_circle</span> SIMPAN MODEL INI
-          </button>
+          <button type="button" class="btnBatal" style="padding: 8px 22px; border-radius: 0px !important; font-size: 12px; font-weight: 800; background: #ef4444 !important; color: #ffffff !important; border: none !important; height: 38px; cursor: pointer;" onclick="tutupModalPdfModels()">TUTUP</button>
         </div>
       </div>
     </div>
@@ -1606,9 +1450,9 @@
 
   <!-- 10. POPUP PDF DOCUMENT PREVIEW MODAL -->
   <div id="pdfModal" class="popupOverlay" onclick="if(event.target === this) tutupPdfModal();" style="align-items: center !important; justify-content: center !important; padding: 1cm 4px !important; box-sizing: border-box !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important;">
-    <div class="popupBox" style="position: relative !important; width: 780px !important; max-width: calc(100vw - 8px) !important; height: calc(100vh - 2cm) !important; height: calc(100dvh - 2cm) !important; max-height: calc(100vh - 2cm) !important; max-height: calc(100dvh - 2cm) !important; border-radius: 5px !important; display: flex !important; flex-direction: column !important; margin: auto !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
-      <div class="popupHeader" style="background: var(--primary) !important; background-color: var(--primary) !important; background-image: none !important; color: #ffffff !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 12px 20px !important; min-height: 56px !important; flex-shrink: 0 !important; border-radius: 8px 8px 0 0 !important; width: 100% !important; box-sizing: border-box !important;">
-        <button type="button" class="btnPrintHeader" onclick="cetakDokumenPdf()" title="CETAK PDF / PRINT" style="display: inline-flex !important; align-items: center !important; gap: 8px !important; padding: 8px 18px !important; height: 40px !important; background: #ffffff !important; color: var(--primary) !important; border: 2px solid #ffffff !important; border-radius: 8px !important; font-weight: 800 !important; font-size: 14px !important; cursor: pointer !important;"><span class="material-symbols-rounded" style="font-size: 26px !important; font-weight: 900 !important;">print</span> PRINT</button>
+    <div class="popupBox" style="position: relative !important; width: 780px !important; max-width: calc(100vw - 8px) !important; height: calc(100vh - 2cm) !important; height: calc(100dvh - 2cm) !important; max-height: calc(100vh - 2cm) !important; max-height: calc(100dvh - 2cm) !important; border-radius: 0px !important; display: flex !important; flex-direction: column !important; margin: auto !important; touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important; -webkit-clip-path: none !important; clip-path: none !important;">
+      <div class="popupHeader" style="background: var(--primary) !important; background-color: var(--primary) !important; background-image: none !important; color: #ffffff !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 12px 20px !important; min-height: 56px !important; flex-shrink: 0 !important; border-radius: 0px !important; width: 100% !important; box-sizing: border-box !important;">
+        <button type="button" class="btnPrintHeader" onclick="cetakDokumenPdf()" title="CETAK PDF / PRINT" style="display: inline-flex !important; align-items: center !important; gap: 8px !important; padding: 8px 18px !important; height: 40px !important; background: #ffffff !important; color: var(--primary) !important; border: 2px solid #ffffff !important; border-radius: 0px !important; font-weight: 800 !important; font-size: 14px !important; cursor: pointer !important;"><span class="material-symbols-rounded" style="font-size: 26px !important; font-weight: 900 !important;">print</span> PRINT</button>
         <button type="button" class="popupClose" onclick="tutupPdfModal()" style="position: absolute !important; right: 14px !important; top: 10px !important; font-size: 28px !important; font-weight: 900 !important; color: #ffffff !important; background: transparent !important; border: none !important; border-radius: 0 !important; width: auto !important; height: auto !important; padding: 0 4px !important; cursor: pointer !important; z-index: 10 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;" title="TUTUP PDF">&times;</button>
       </div>
       <div class="popupContent" id="pdfDocumentContent" style="flex: 1; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important; background: #f8fafc; padding: 14px;">
@@ -1646,122 +1490,6 @@
     </div>
   </div>
 
-  <!-- 12. POPUP MODAL KAPASITAS & KUOTA DATABASE CLOUD (SUPABASE USAGE) -->
-  <div id="popupCloudUsageModal" class="popupOverlay" style="display: none; z-index: 9999999; align-items: center; justify-content: center; padding: 10px !important; box-sizing: border-box !important;" onclick="if(event.target === this) tutupModalCloudUsage();">
-    <div class="popupBox" style="width: 440px; max-width: 94vw; max-height: 90vh; overflow-y: auto; padding: 0; border-radius: 5px; background: var(--bg-box, #ffffff); border: 1px solid var(--border-color); box-shadow: 0 16px 40px rgba(0,0,0,0.35); text-align: left; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
-      <!-- Header -->
-      <div style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; color: #ffffff;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="material-symbols-rounded" style="font-size: 22px; color: #a7f3d0;">cloud_done</span>
-          <div>
-            <div style="font-weight: 800; font-size: 13.5px; letter-spacing: 0.3px; color: #ffffff;">STATUS & KUOTA SUPABASE CLOUD</div>
-            <div style="font-size: 10.5px; color: #ccfbf1; font-weight: 500;">KAPASITAS REALTIME DATABASE & SERVER</div>
-          </div>
-        </div>
-        <button type="button" onclick="tutupModalCloudUsage()" style="background: none; border: none; color: #ffffff !important; font-size: 24px; font-weight: 900; cursor: pointer; line-height: 1; padding: 0 4px;" title="TUTUP">&times;</button>
-      </div>
-
-      <!-- Content Box -->
-      <div style="padding: 12px 14px;">
-        <!-- Status Server Live Banner -->
-        <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 4px; padding: 6px 10px; margin-bottom: 10px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; display: inline-block;"></span>
-            <span id="usageStatusTitle" style="font-size: 11.5px; font-weight: 700; color: #10b981;">STATUS: ONLINE (REALTIME TERHUBUNG)</span>
-          </div>
-          <span id="usageLatencyBadge" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); background: var(--bg-body, rgba(0,0,0,0.05)); padding: 2px 6px; border-radius: 4px;">~28ms</span>
-        </div>
-
-        <!-- Metrics Container -->
-        <div style="background: var(--bg-card, rgba(0,0,0,0.02)); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 12px; margin-bottom: 10px;">
-          
-          <!-- Row 1: EGRESS -->
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-color);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="usageEgressRing" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(160, 174, 192, 0.25)" stroke-width="4" />
-                  <path id="svgEgressArc" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="100, 100" stroke-dashoffset="92" stroke-linecap="round" />
-                </svg>
-              </div>
-              <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">EGRESS (TRANSFER DATA)</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-main);">
-              <span id="usageEgressText">39.2 MB</span>
-              <span style="color: var(--text-muted); font-weight: 500;">/</span>
-              <span style="color: var(--text-muted);">5 GB</span>
-            </div>
-          </div>
-
-          <!-- Row 2: DATABASE SIZE -->
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-color);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="usageDbRing" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(160, 174, 192, 0.25)" stroke-width="4" />
-                  <path id="svgDbArc" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="100, 100" stroke-dashoffset="94.6" stroke-linecap="round" />
-                </svg>
-              </div>
-              <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">DATABASE SIZE</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-main);">
-              <span id="usageDbText">28.4 MB</span>
-              <span style="color: var(--text-muted); font-weight: 500;">/</span>
-              <span style="color: var(--text-muted);">500 MB</span>
-            </div>
-          </div>
-
-          <!-- Row 3: MONTHLY ACTIVE USERS -->
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-color);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="usageMauRing" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(160, 174, 192, 0.25)" stroke-width="4" />
-                  <path id="svgMauArc" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="100, 100" stroke-dashoffset="99.5" stroke-linecap="round" />
-                </svg>
-              </div>
-              <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">ACTIVE USERS (MAU)</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-main);">
-              <span id="usageMauText">0</span>
-              <span style="color: var(--text-muted); font-weight: 500;">/</span>
-              <span style="color: var(--text-muted);">50.000</span>
-            </div>
-          </div>
-
-          <!-- Row 4: FILE STORAGE -->
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="usageStorageRing" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(160, 174, 192, 0.25)" stroke-width="4" />
-                  <path id="svgStorageArc" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" />
-                </svg>
-              </div>
-              <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">FILE STORAGE</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-main);">
-              <span id="usageStorageText">0 MB</span>
-              <span style="color: var(--text-muted); font-weight: 500;">/</span>
-              <span style="color: var(--text-muted);">1 GB</span>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- TOMBOL UTAMA SINKRONISASI REALTIME SUPABASE -->
-        <button type="button" onclick="sinkronkanSemuaDataDenganSupabase()" style="width: 100%; height: 34px; margin-top: 8px; margin-bottom: 8px; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; border-radius: 4px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);" title="TARIK DATA TERBARU DARI SUPABASE CLOUD & PERBARUI DASHBOARD">
-          <span class="material-symbols-rounded" style="font-size: 16px;">sync</span> SINKRONKAN SEMUA DATA DARI SUPABASE
-        </button>
-
-        <!-- Detail Information Footer -->
-        <div style="margin-top: 6px; font-size: 10.5px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
-          <span>Host: <strong style="color: var(--primary);">vnlylgbkjmztnvjjgpjw</strong></span>
-          <span id="usageLastUpdated">Update: Realtime</span>
-        </div>
-
-        <!-- Buttons -->
-        <div style="display: flex; gap: 8px; margin-top: 10px;">
           <button type="button" id="btnRefreshCloudUsage" onclick="muatMetrikKapasitasDatabase(true)" style="flex: 1; height: 32px; border-radius: 4px; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; border: 1.5px solid var(--primary); color: var(--primary); background: transparent; transition: all 0.2s ease;">
             <span class="material-symbols-rounded" style="font-size: 16px; color: var(--primary);">refresh</span> REFRESH METRIK
           </button>
