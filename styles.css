@@ -18,6 +18,7 @@
 :root, body {
   --bg-body: #0f172a;
   --bg-box: #1e293b;
+  --bg-card: #1e293b;
   --bg-header: #0f172a;
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
@@ -239,7 +240,7 @@ body {
   transition: opacity 0.5s ease;
 }
 
-/* 1. Scenic Landscape Image (Pemandangan Bulan, Gunung & Danau Buat Agak Tidak Jelas Sedikit & Soft) */
+/* 1. Scenic Landscape Image (Pemandangan Bulan, Gunung & Danau) */
 .aesthetic-bg-image {
   position: absolute;
   inset: 0;
@@ -249,9 +250,9 @@ body {
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
-  opacity: 0.48 !important;
+  opacity: var(--bg-opacity-val, 0.48) !important;
   filter: saturate(1.15) contrast(1.05) blur(1px);
-  transition: opacity 0.5s ease, background-image 0.3s ease, filter 0.5s ease;
+  transition: opacity 0.3s ease, background-image 0.3s ease, filter 0.3s ease;
   will-change: opacity, background-image;
 }
 
@@ -259,7 +260,7 @@ body.light-mode .aesthetic-bg-image,
 body.classic-mode .aesthetic-bg-image,
 body.forest-mode .aesthetic-bg-image,
 body.sunset-mode .aesthetic-bg-image {
-  opacity: 0.38 !important;
+  opacity: var(--bg-opacity-val, 0.38) !important;
   filter: saturate(1.1) contrast(1.0) blur(1px);
 }
 
@@ -726,6 +727,17 @@ section#masterDbPage.page.active,
     clip-path: inset(0 round 5px) !important;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
     box-sizing: border-box !important;
+  }
+
+  #popupDetailBarangV2 .tableCardV2 {
+    flex: 1 1 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+    margin-top: 1mm !important;
+    margin-bottom: 2mm !important;
+    border-radius: 5px !important;
+    -webkit-clip-path: inset(0 round 5px) !important;
+    clip-path: inset(0 round 5px) !important;
   }
 }
 
@@ -2143,19 +2155,63 @@ section#masterDbPage.page.active {
   text-align: center !important;
 }
 
-/* SEARCH & HISTORY TABLE */
+/* SEARCH & HISTORY TABLE TOOLBAR (1 BARIS ELASTIS DI HP & DESKTOP) */
 .searchToolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 10px !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+  box-sizing: border-box !important;
 }
 
-.searchToolbar input {
-  flex: 1;
-  min-width: 240px;
-  padding: 10px 14px;
+#riwayatPage .searchToolbar {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 8px !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+#riwayatPage #searchRiwayat {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 38px !important;
+  padding: 0 10px !important;
+  font-size: 11.5px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+#riwayatPage #filterStatusDropdown {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 105px !important;
+  max-width: 135px !important;
+  height: 38px !important;
+  padding: 0 6px !important;
+  font-size: 11px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+#riwayatPage .btnDownload {
+  flex: 0 0 38px !important;
+  width: 38px !important;
+  min-width: 38px !important;
+  height: 38px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
 #riwayatPage h3 {
@@ -2462,16 +2518,17 @@ div[id*="Modal"] {
 .confirmBox,
 .confirmBoxCard,
 #confirmBoxCard {
-  z-index: 999999999 !important;
+  z-index: 2000000000 !important;
 }
 
 #popupNotif,
 #popupNotifCard {
-  z-index: 9999999999 !important;
+  z-index: 2147483646 !important;
 }
 
-#loadingOverlay {
-  z-index: 99999999999 !important;
+#loadingOverlay,
+.loadingOverlay {
+  z-index: 2147483647 !important;
 }
 
 .popupOverlay.show, .popupAkun.show, .popupTTD.show, .popupBantuan.show, #popupBantuan.show {
@@ -2503,7 +2560,7 @@ div[id*="Modal"] {
   animation: fade .25s ease-out;
 }
 
-/* PERFECTLY BALANCED DEAD-CENTER POPUP AKUN */
+/* PERFECTLY BALANCED DEAD-CENTER POPUP AKUN (1CM SCREEN GAP TOP & BOTTOM) */
 .popupAkun,
 #popupAkun {
   position: fixed !important;
@@ -2513,10 +2570,22 @@ div[id*="Modal"] {
   bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
+  display: none;
   justify-content: center !important;
   align-items: center !important;
-  padding: 16px !important;
+  padding-top: 1cm !important;
+  padding-bottom: 1cm !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
   box-sizing: border-box !important;
+  z-index: 99999 !important;
+}
+
+.popupAkun.show,
+#popupAkun.show,
+#popupAkun[style*="display: flex"],
+#popupAkun[style*="display: block"] {
+  display: flex !important;
 }
 
 #popupAkun .akunBox,
@@ -2525,36 +2594,49 @@ div[id*="Modal"] {
   width: 450px !important;
   max-width: 94vw !important;
   min-width: 0 !important;
-  max-height: 90vh !important;
+  height: calc(100vh - 2cm) !important;
+  height: calc(100dvh - 2cm) !important;
+  max-height: calc(100vh - 2cm) !important;
+  max-height: calc(100dvh - 2cm) !important;
   overflow-y: auto !important;
-  margin: auto !important;
-  transform: translateY(-20px) !important;
-  padding: 4mm !important;
+  -webkit-overflow-scrolling: touch !important;
+  margin: 0 auto !important;
+  transform: none !important;
+  -webkit-transform: none !important;
+  padding: 14px !important;
   border-radius: 5px !important;
   box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
   box-sizing: border-box !important;
 }
 
-/* KHUSUS TAMPILAN HP / MOBILE: PADDING ISI DENGAN LEBAR POPUP AKUN 4MM */
+/* KHUSUS TAMPILAN HP / MOBILE: PADDING ISI DENGAN LEBAR POPUP AKUN (1CM SCREEN GAP TOP & BOTTOM) */
 @media (max-width: 768px) {
   .popupAkun,
   #popupAkun {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
+    padding-top: 1cm !important;
+    padding-bottom: 1cm !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
     box-sizing: border-box !important;
   }
 
   #popupAkun .akunBox,
   .popupAkun .akunBox,
   .akunBox {
-    width: calc(100vw - 4mm) !important;
-    max-width: calc(100vw - 4mm) !important;
-    min-width: calc(100vw - 4mm) !important;
-    margin-left: 2mm !important;
-    margin-right: 2mm !important;
-    padding: 4mm !important;
+    width: calc(100vw - 8px) !important;
+    max-width: calc(100vw - 8px) !important;
+    min-width: calc(100vw - 8px) !important;
+    height: calc(100vh - 2cm) !important;
+    height: calc(100dvh - 2cm) !important;
+    max-height: calc(100vh - 2cm) !important;
+    max-height: calc(100dvh - 2cm) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    padding: 12px !important;
     box-sizing: border-box !important;
   }
 }
@@ -3095,16 +3177,35 @@ table th,
 
 .btnHapus { background: #dc2626 !important; color: #fff !important; }
 
-/* POPUP TAMBAH USER BARU: ELEVATED POSITION & BOLD THEME-COLORED CLOSE X */
+/* POPUP TAMBAH USER BARU / EDIT USER (1CM GAP ATAS-BAWAH & 2MM KANAN-KIRI) */
 #popupUserForm.popupOverlay,
-#popupUserForm {
-  align-items: flex-start !important;
-  padding-top: 35px !important;
+#popupUserForm,
+html body #popupUserForm,
+html body #popupUserForm.popupOverlay {
+  z-index: 10000005 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding-top: 1cm !important;
+  padding-bottom: 1cm !important;
+  padding-left: 2mm !important;
+  padding-right: 2mm !important;
+  box-sizing: border-box !important;
 }
 
-#popupUserForm .popupBox {
-  margin-top: 15px !important;
-  transform: translateY(-20px) !important;
+#popupUserForm .popupBox,
+html body #popupUserForm .popupBox {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  transform: none !important;
+  max-height: calc(100vh - 2cm) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  background: var(--bg-box) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45) !important;
+  border-radius: 5px !important;
 }
 
 #popupUserForm .popupClose {
@@ -3478,16 +3579,19 @@ table th,
 #loadingOverlay,
 .loadingOverlay {
   position: fixed !important;
-  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(10, 15, 30, 0.75) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
+  background: rgba(10, 15, 30, 0.45) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   display: none;
   justify-content: center !important;
   align-items: center !important;
-  z-index: 99999999999 !important;
+  z-index: 2147483647 !important;
   pointer-events: auto !important;
   touch-action: none !important;
   box-sizing: border-box !important;
@@ -3514,7 +3618,7 @@ table th,
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
   animation: spinnerPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  z-index: 99999999999 !important;
+  z-index: 2147483647 !important;
 }
 
 .spinner {
@@ -3529,45 +3633,6 @@ table th,
   filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.8)) !important;
   box-sizing: border-box !important;
 }
-
-.spinner::after {
-  content: '' !important;
-  position: absolute !important;
-  inset: 6px !important;
-  border-radius: 50% !important;
-  border: 3px solid transparent !important;
-  border-top: 3px solid #34d399 !important;
-  border-left: 3px solid #38bdf8 !important;
-  animation: spinReverse 1.1s linear infinite !important;
-  box-sizing: border-box !important;
-}
-
-.loadingText,
-#loadingText {
-  color: #ffffff !important;
-  font-size: 13.5px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.8px !important;
-  text-transform: uppercase !important;
-  text-align: center !important;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6) !important;
-  max-width: 280px !important;
-  line-height: 1.4 !important;
-}
-
-@keyframes spinSmooth {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes spinReverse {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(-360deg); }
-}
-
-@keyframes spinnerPop {
-  0% { transform: scale(0.85); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
 }
 
 /* INLINE BUTTON ROTATING SPINNER ANIMATION */
@@ -3607,18 +3672,23 @@ table th,
 #miniCenterLoading,
 .miniCenterLoading {
   position: fixed !important;
-  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(10, 15, 30, 0.55) !important;
-  backdrop-filter: blur(6px) !important;
-  -webkit-backdrop-filter: blur(6px) !important;
+  background: rgba(10, 15, 30, 0.45) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   display: none;
   justify-content: center !important;
   align-items: center !important;
   z-index: 2147483647 !important;
   pointer-events: auto !important;
   box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 #miniCenterLoading.show,
@@ -4677,9 +4747,9 @@ button.btnKembali {
   .popupBoxDetailV2 {
     width: 100vw !important;
     max-width: 100vw !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    margin: 0 !important;
+    height: calc(100vh - 2cm) !important;
+    max-height: calc(100vh - 2cm) !important;
+    margin: auto !important;
     padding: 0 !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
@@ -5183,9 +5253,13 @@ div.rowHighlightOrange {
 .rejectBoxPopup,
 .akunBox,
 #notifContainer,
-#confirmModal,
-#loadingOverlay {
+#confirmModal {
   z-index: 9999999 !important;
+}
+
+#loadingOverlay,
+.loadingOverlay {
+  z-index: 2147483647 !important;
 }
 
 /* STRICT HIDE FOR BOTTOM MENU ON LOGIN PAGE ONLY */
@@ -5220,8 +5294,8 @@ div.rowHighlightOrange {
   width: calc(100vw - 2mm) !important;
   min-width: calc(100vw - 2mm) !important;
   max-width: calc(100vw - 2mm) !important;
-  height: auto !important;
-  max-height: 96vh !important;
+  height: calc(100vh - 2cm) !important;
+  max-height: calc(100vh - 2cm) !important;
   margin: auto 1mm !important;
   padding: 0 !important;
   border-radius: 5px !important;
@@ -5295,12 +5369,10 @@ div.rowHighlightOrange {
   border: none !important;
   display: flex !important;
   flex-direction: column !important;
-  overflow-y: auto !important;
-  overflow-x: auto !important;
-  flex: 0 1 auto !important;
+  overflow: hidden !important;
+  flex: 1 1 0px !important;
   height: auto !important;
   min-height: 0 !important;
-  max-height: calc(92vh - 50px) !important;
 }
 
 .detailHeaderInfoV2 {
@@ -5531,7 +5603,9 @@ div.rowHighlightOrange {
   .tableCardV2,
   #popupDetailBarangV2 .tableWrap,
   #popupDetail .tableWrap {
-    max-height: 55vh !important;
+    flex: 1 1 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
     overflow-x: auto !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
@@ -6360,7 +6434,8 @@ body:has(#masterDbPage.active) {
 #popupDetail .popupBoxDetail,
 .popupBoxDetail,
 .popupBoxDetailV2 {
-  max-height: calc(100vh - 20px) !important;
+  height: calc(100vh - 2cm) !important;
+  max-height: calc(100vh - 2cm) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
@@ -6383,8 +6458,9 @@ body:has(#masterDbPage.active) {
 #popupDetailBarangV2 .tableCardV2.tableWrap,
 #popupDetail .tableWrap,
 .tableCardV2.tableWrap {
-  flex: 1 !important;
-  max-height: calc(100vh - 160px) !important;
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  max-height: none !important;
   overflow-y: auto !important;
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch !important;
@@ -6553,11 +6629,17 @@ body:has(#masterDbPage.active) {
 #popupDetailBarangV2 .popupBoxDetailV2,
 #rejectOverlay .rejectBoxPopup,
 #popupUserForm .popupBox,
-#popupAkun .akunBox,
 #popupTTD .ttdBox {
   margin: auto !important;
   transform: translateY(-25px) !important;
   transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+#popupAkun .akunBox {
+  margin: auto !important;
+  transform: none !important;
+  -webkit-transform: none !important;
+  transition: opacity 0.2s ease;
 }
 
 /* ==========================================================================
@@ -6647,8 +6729,9 @@ html body #masterDbData {
 #popupDetailBarangV2 .tableWrap,
 #popupDetail .tableWrap,
 .tableCardV2.tableWrap {
-  max-height: 55vh !important;
-  min-height: 140px !important;
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
 }
 
 /* 3. Table Min-Widths & Cell White-Space for Horizontal Scrolling (Kanan - Kiri) */
@@ -7343,7 +7426,7 @@ button.btnBatal:active {
   z-index: 100 !important;
   flex-shrink: 0 !important;
   margin: 0 !important;
-  border-radius: 4px 4px 0 0 !important;
+  border-radius: 5px 5px 0 0 !important;
 }
 
 #popupTambahToko table {
@@ -7357,6 +7440,7 @@ button.btnBatal:active {
   top: 0 !important;
   z-index: 50 !important;
   background: var(--primary) !important;
+  border-radius: 5px 5px 0 0 !important;
 }
 
 #popupTambahToko table th {
@@ -7369,6 +7453,17 @@ button.btnBatal:active {
   padding: 10px 8px !important;
   white-space: nowrap !important;
   border-bottom: 2px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 0 !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+}
+
+#popupTambahToko table th:first-child {
+  border-top-left-radius: 5px !important;
+}
+
+#popupTambahToko table th:last-child {
+  border-top-right-radius: 5px !important;
 }
 
 /* ==========================================================================
@@ -7453,12 +7548,16 @@ button.btnBatal:active {
   html body #popupDetail .popupBoxDetail,
   html body .popupBoxDetailV2,
   html body .popupBoxDetail {
-    max-height: calc(80vh - 20px) !important;
+    height: calc(100vh - 2cm) !important;
+    max-height: calc(100vh - 2cm) !important;
   }
   html body #popupDetailBarangV2 .tableCardV2.tableWrap,
   html body #popupDetail .tableWrap,
   html body .tableCardV2.tableWrap {
-    max-height: calc(80vh - 110px) !important;
+    flex: 1 1 0px !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
   }
   html body #popupNotifList .popupNotifCard {
     max-height: calc(65vh - 20px) !important;
@@ -7758,4 +7857,731 @@ html body .detailTableV2 th:last-child,
   border-top-right-radius: 0 !important;
   -webkit-clip-path: none !important;
   clip-path: none !important;
+}
+
+/* MASTER ENFORCED 1CM TOP & BOTTOM GAP FOR ALL DETAIL, TAMBAH TOKO, PDF, CHAT, NOTIFIKASI & AKUN POPUPS */
+html body #popupDetailBarangV2.popupOverlay,
+html body #popupDetail.popupOverlay,
+html body #popupTambahToko.popupOverlay,
+html body #pdfModal.popupOverlay,
+html body #popupPdfModelsModal.popupOverlay,
+html body #popupBantuan.popupOverlay,
+html body #popupBantuan.popupBantuan,
+html body .popupBantuan,
+html body #popupNotifList.popupOverlay,
+html body #popupAkun.popupAkun,
+html body #popupAkun.popupOverlay,
+html body .popupAkun {
+  padding-top: 1cm !important;
+  padding-bottom: 1cm !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+html body #popupDetailBarangV2 .popupBoxDetailV2,
+html body #popupDetail .popupBoxDetail,
+html body .popupBoxDetailV2,
+html body .popupBoxDetail,
+html body #popupTambahToko .popupBox,
+html body #pdfModal .popupBox,
+html body #popupPdfModelsModal .popupBox,
+html body #popupBantuan .chatBox,
+html body .popupBantuan .chatBox,
+html body .chatBox,
+html body #popupNotifList .popupNotifCard,
+html body #popupAkun .akunBox,
+html body .popupAkun .akunBox,
+html body .akunBox {
+  height: calc(100vh - 2cm) !important;
+  height: calc(100dvh - 2cm) !important;
+  max-height: calc(100vh - 2cm) !important;
+  max-height: calc(100dvh - 2cm) !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border-radius: 5px !important;
+margin-bottom: 0 !important;
+}
+
+/* EXACT 2MM BOTTOM GAP FROM TABLE BOUNDARY TO POPUP BOTTOM WALL (#popupTambahToko) */
+html body #popupTambahToko .popupBody,
+#popupTambahToko .popupBody {
+  padding-top: 10px !important;
+  padding-left: 3mm !important;
+  padding-right: 3mm !important;
+  padding-bottom: 2mm !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html body #popupTambahToko .popupBody > div:last-child,
+#popupTambahToko .popupBody > div:last-child {
+  flex: 1 !important;
+  height: 100% !important;
+  max-height: none !important;
+  margin-bottom: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* REJECT POPUP TOP RIGHT CLOSE BUTTON FOR MOBILE & DESKTOP */
+html body .rejectHeaderPopup,
+html body #rejectOverlay .rejectHeaderPopup,
+.rejectHeaderPopup {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+html body .rejectHeaderPopup .popupClose,
+html body #rejectOverlay .rejectHeaderPopup .popupClose,
+.rejectHeaderPopup .popupClose {
+  margin-left: auto !important;
+  cursor: pointer !important;
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  padding: 0 4px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+}
+
+/* =============================================================================
+   MODAL POPUP GEMINI API KEY - RESPONSIVE HP DENGAN JARAK 2MM KE LAYAR
+   ============================================================================= */
+#modalGeminiApiKey {
+  z-index: 100000000 !important;
+  padding: 2mm !important;
+  box-sizing: border-box !important;
+}
+
+#modalGeminiApiKey .modalKeyBox {
+  width: calc(100vw - 4mm) !important;
+  max-width: 460px !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 768px) {
+  #modalGeminiApiKey {
+    padding: 2mm !important;
+  }
+  #modalGeminiApiKey .modalKeyBox {
+    width: calc(100vw - 4mm) !important;
+    max-width: calc(100vw - 4mm) !important;
+    border-radius: 12px !important;
+  }
+  #modalGeminiApiKey .modalKeyHeader {
+    padding: 10px 12px !important;
+  }
+  #modalGeminiApiKey .modalKeyHeader span {
+    font-size: 12px !important;
+  }
+  #modalGeminiApiKey .modalKeyBody {
+    padding: 12px 10px !important;
+    gap: 10px !important;
+  }
+  #modalGeminiApiKey .modalKeyActions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    justify-content: space-between !important;
+  }
+  #modalGeminiApiKey .btnKosongkanKey {
+    padding: 8px 10px !important;
+    font-size: 11px !important;
+    flex: 1 1 auto !important;
+    text-align: center !important;
+  }
+  #modalGeminiApiKey .modalKeyBtnRight {
+    display: flex !important;
+    gap: 6px !important;
+    flex: 1 1 auto !important;
+    justify-content: flex-end !important;
+  }
+  #modalGeminiApiKey .modalKeyBtnRight button {
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* POPUP DETAIL PERMINTAAN (#popupDetail & #popupDetailBarangV2) - ENFORCE 90 DEGREE NORMAL CORNERS (FLAT/SHARP 0 RADIUS FOR HEADERS & TABLE HEADERS) */
+html body #popupDetail .popupHeader,
+html body #popupDetailBarangV2 .popupHeaderV2,
+html body #popupDetail .popupBoxDetail,
+html body #popupDetailBarangV2 .popupBoxDetailV2,
+html body #popupDetail table th,
+html body #popupDetailBarangV2 table th,
+html body #popupDetail .detailTable2 th,
+html body #popupDetailBarangV2 .detailTableV2 th,
+html body #popupDetail table thead,
+html body #popupDetailBarangV2 table thead,
+html body #popupDetail table thead tr,
+html body #popupDetailBarangV2 table thead tr,
+html body #popupDetail table th:first-child,
+html body #popupDetailBarangV2 table th:first-child,
+html body #popupDetail table th:last-child,
+html body #popupDetailBarangV2 table th:last-child,
+html body .detailTable2 th:first-child,
+html body .detailTableV2 th:first-child,
+html body .detailTable2 th:last-child,
+html body .detailTableV2 th:last-child,
+#popupDetail .popupHeader,
+#popupDetailBarangV2 .popupHeaderV2,
+.popupHeader,
+.popupHeaderV2,
+.detailHeaderV2,
+.detailTableV2 th,
+.detailTable2 th {
+  border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+}
+
+/* MASTER ENFORCED 1CM TOP & BOTTOM GAP FOR ALL DETAIL, TAMBAH TOKO, PDF, CHAT, NOTIFIKASI & AKUN POPUPS */
+html body #popupDetailBarangV2.popupOverlay,
+html body #popupDetail.popupOverlay,
+html body #popupTambahToko.popupOverlay,
+html body #pdfModal.popupOverlay,
+html body #popupPdfModelsModal.popupOverlay,
+html body #popupBantuan.popupOverlay,
+html body #popupBantuan.popupBantuan,
+html body .popupBantuan,
+html body #popupNotifList.popupOverlay,
+html body #popupAkun.popupAkun,
+html body #popupAkun.popupOverlay,
+html body .popupAkun {
+  padding-top: 1cm !important;
+  padding-bottom: 1cm !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+html body #popupDetailBarangV2 .popupBoxDetailV2,
+html body #popupDetail .popupBoxDetail,
+html body .popupBoxDetailV2,
+html body .popupBoxDetail,
+html body #popupTambahToko .popupBox,
+html body #pdfModal .popupBox,
+html body #popupPdfModelsModal .popupBox,
+html body #popupBantuan .chatBox,
+html body .popupBantuan .chatBox,
+html body .chatBox,
+html body #popupNotifList .popupNotifCard,
+html body #popupAkun .akunBox,
+html body .popupAkun .akunBox,
+html body .akunBox {
+  height: calc(100vh - 2cm) !important;
+  height: calc(100dvh - 2cm) !important;
+  max-height: calc(100vh - 2cm) !important;
+  max-height: calc(100dvh - 2cm) !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: inset(0 round 5px) !important;
+  clip-path: inset(0 round 5px) !important;
+}
+
+html body #popupAkun .akunBox,
+html body .popupAkun .akunBox,
+html body .akunBox {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+html body #popupDetailBarangV2 #popupBodyV2,
+html body #popupDetail #popupBody {
+  flex: 1 1 0px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+html body .popupCardBodyContainerV2 {
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+  padding: 4px 0 0 0 !important;
+  margin: 0 !important;
+  justify-content: space-between !important;
+}
+
+html body #popupDetailBarangV2 .tableCardV2.tableWrap,
+html body #popupDetailBarangV2 .tableWrap,
+html body #popupDetail .tableWrap,
+html body .tableCardV2.tableWrap,
+html body .tableCardV2 {
+  flex: 1 1 0px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  margin-bottom: 2mm !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+html body #popupDetailBarangV2 .popupDetailActionsV2,
+html body #popupDetail .popupDetailActions,
+html body .popupDetailActionsV2 {
+  margin-top: auto !important;
+  margin-bottom: 2mm !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ==========================================================================
+   POPUP USER MANAGEMENT MODAL (1CM ATAS-BAWAH, 2MM KANAN-KIRI FULL, SCROLL 4 ARAH)
+   ========================================================================== */
+#popupUserManagementModal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(3px) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
+  z-index: 999999 !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1cm 2mm !important; /* DIBATASI 1CM ATAS-BAWAH & 2MM KANAN-KIRI */
+  box-sizing: border-box !important;
+}
+
+#popupUserManagementModal.show {
+  display: flex !important;
+}
+
+/* SOLID THEME-MATCHED BACKGROUND UNTUK SELURUH CARD PENGATURAN ADMIN (TIDAK TRANSPARAN) */
+#userManagementPage .box,
+#userManagementPage .boxCard,
+#userManagementPage div.box,
+html body #userManagementPage .box {
+  background: var(--bg-box) !important;
+  background-color: var(--bg-box) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+div[id*="Modal"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.80) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.userManagementBoxPopup {
+  width: calc(100vw - 4mm) !important;
+  max-width: calc(100vw - 4mm) !important;
+  height: calc(100vh - 2cm) !important;
+  max-height: calc(100vh - 2cm) !important;
+  background: var(--bg-box) !important;
+  background-color: var(--bg-box) !important;
+  color: var(--text-main) !important;
+  border-radius: 5px !important;
+  border: 1px solid var(--border-color) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
+
+.userManagementHeader {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 8px 12px !important;
+  background: var(--bg-body) !important;
+  background-color: var(--bg-body) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  flex-shrink: 0 !important;
+  border-radius: 0 !important; /* 90 DERAJAT SIKU */
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+}
+
+.btnTutupUserModal {
+  width: 32px !important;
+  height: 32px !important;
+  background: #0f766e !important; /* TEAL BUTTON */
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 5px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  padding: 0 !important;
+}
+
+.btnTutupUserModal:hover {
+  background: #115e59 !important;
+  transform: scale(1.05) !important;
+}
+
+.userManagementToolbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  padding: 8px 12px !important;
+  background: var(--bg-box) !important;
+  background-color: var(--bg-box) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  flex-shrink: 0 !important;
+  flex-wrap: wrap !important;
+  border-radius: 0 !important;
+}
+
+.userManagementTableWrap {
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important; /* SCROLL ATAS-BAWAH */
+  overflow-x: auto !important; /* SCROLL KANAN-KIRI */
+  -webkit-overflow-scrolling: touch !important;
+  background: var(--bg-box) !important;
+  background-color: var(--bg-box) !important;
+  box-sizing: border-box !important;
+  border-radius: 0 !important;
+}
+
+.userModalTable {
+  width: 100% !important;
+  min-width: 820px !important; /* MEMASTIKAN BISA DI-SCROLL KANAN-KIRI DI LAYAR HP */
+  border-collapse: collapse !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: var(--bg-box) !important;
+}
+
+.userModalTable thead,
+.userModalTable thead tr {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 99 !important;
+  background-color: var(--primary) !important;
+}
+
+.userModalTable thead th,
+.userModalTable th,
+.userModalTable th:first-child,
+.userModalTable th:last-child {
+  border-radius: 0 !important; /* 90 DERAJAT SIKU */
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+  background-color: var(--primary) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  letter-spacing: normal !important;
+  text-transform: uppercase !important;
+  padding: 10px 12px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+@media (max-width: 768px) {
+  #popupUserManagementModal {
+    padding: 1cm 2mm !important; /* 1CM ATAS-BAWAH & 2MM KANAN-KIRI DI HP */
+  }
+
+  .userManagementBoxPopup {
+    width: calc(100vw - 4mm) !important;
+    max-width: calc(100vw - 4mm) !important;
+    height: calc(100vh - 2cm) !important;
+    max-height: calc(100vh - 2cm) !important;
+    border-radius: 5px !important;
+  }
+}
+
+/* INLINE BUTTON ROTATING SPINNER & INNER POPUP LOADING */
+.btnSpinner {
+  display: inline-block !important;
+  width: 14px !important;
+  height: 14px !important;
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
+  border-top-color: #ffffff !important;
+  border-radius: 50% !important;
+  animation: spinSmooth 0.6s linear infinite !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
+}
+
+.popupInnerLoading {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10000010 !important;
+  border-radius: 5px !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.popupInnerMsg {
+  display: none !important;
+}
+
+.spinnerBox,
+.miniSpinnerBox {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  margin: auto !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: auto !important;
+  min-height: auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  animation: none !important;
+  z-index: 2147483647 !important;
+}
+
+.spinner {
+  width: 58px !important;
+  height: 58px !important;
+  position: relative !important;
+  border-radius: 50% !important;
+  border: 4px solid rgba(255, 255, 255, 0.12) !important;
+  border-top: 4px solid #38bdf8 !important;
+  border-right: 4px solid #818cf8 !important;
+  animation: spinSmooth 0.85s linear infinite !important;
+  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.8)) !important;
+  box-sizing: border-box !important;
+}
+
+.spinner::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 6px !important;
+  left: 6px !important;
+  right: 6px !important;
+  bottom: 6px !important;
+  border-radius: 50% !important;
+  border: 3px solid transparent !important;
+  border-top: 3px solid #34d399 !important;
+  border-left: 3px solid #38bdf8 !important;
+  animation: spinReverse 1.1s linear infinite !important;
+  box-sizing: border-box !important;
+}
+
+.loadingText,
+#loadingText {
+  color: #ffffff !important;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6) !important;
+  max-width: 280px !important;
+  line-height: 1.4 !important;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spinSmooth {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spinReverse {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+@keyframes spinnerPop {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.spinner::after,
+.miniSpinner::after,
+.popupInnerSpinner::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 5px !important;
+  border-radius: 50% !important;
+  border: 3px solid transparent !important;
+  border-top-color: #34d399 !important;
+  border-left-color: #38bdf8 !important;
+  animation: spinReverse 0.95s linear infinite !important;
+  box-sizing: border-box !important;
+}
+
+.loadingText,
+#loadingText,
+.miniLoadingText,
+#miniCenterLoadingText,
+.popupInnerMsg {
+  display: none !important;
+}
+
+/* UNIVERSAL (PC & HP) STRETCH & EXACT 2MM BOTTOM BUTTON ANCHOR FOR DETAIL DATA POPUP (#popupDetailBarangV2) */
+html body #popupDetailBarangV2.popupOverlay,
+html body #popupDetail.popupOverlay {
+  padding: 1cm 4px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+html body #popupDetailBarangV2 .popupBoxDetailV2,
+html body .popupBoxDetailV2 {
+  height: calc(100vh - 2cm) !important;
+  height: calc(100dvh - 2cm) !important;
+  max-height: calc(100vh - 2cm) !important;
+  max-height: calc(100dvh - 2cm) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+  padding: 0 !important;
+}
+
+html body #popupDetailBarangV2 #popupBodyV2,
+html body #popupDetail #popupBody {
+  flex: 1 1 0px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+html body #popupDetailBarangV2 .popupCardBodyContainerV2,
+html body .popupCardBodyContainerV2 {
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 4px 0 0 0 !important;
+  margin: 0 !important;
+}
+
+html body #popupDetailBarangV2 .tableCardV2.tableWrap,
+html body #popupDetailBarangV2 .tableCardV2,
+html body #popupDetailBarangV2 .tableWrap,
+html body .tableCardV2.tableWrap,
+html body .tableCardV2 {
+  flex: 1 1 0px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 2mm !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  background: var(--bg-box) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 5px !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+}
+
+html body #popupDetailBarangV2 .detailTableV2 {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+html body #popupDetailBarangV2 .popupDetailActionsV2,
+html body #popupDetail .popupDetailActions,
+html body .popupDetailActionsV2 {
+  margin-top: 0 !important;
+  margin-bottom: 2mm !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
