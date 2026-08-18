@@ -7982,7 +7982,6 @@ html body .detailTableV2 th:last-child,
 /* MASTER ENFORCED 1CM TOP & BOTTOM GAP FOR ALL DETAIL, TAMBAH TOKO, PDF, CHAT, NOTIFIKASI & AKUN POPUPS */
 html body #popupDetailBarangV2.popupOverlay,
 html body #popupDetail.popupOverlay,
-html body #popupTambahToko.popupOverlay,
 html body #pdfModal.popupOverlay,
 html body #popupPdfModelsModal.popupOverlay,
 html body #popupBantuan.popupOverlay,
@@ -8004,7 +8003,6 @@ html body #popupDetailBarangV2 .popupBoxDetailV2,
 html body #popupDetail .popupBoxDetail,
 html body .popupBoxDetailV2,
 html body .popupBoxDetail,
-html body #popupTambahToko .popupBox,
 html body #pdfModal .popupBox,
 html body #popupPdfModelsModal .popupBox,
 html body #popupBantuan .chatBox,
@@ -8177,7 +8175,6 @@ html body .detailTableV2 th:last-child,
 /* MASTER ENFORCED 1CM TOP & BOTTOM GAP FOR ALL DETAIL, TAMBAH TOKO, PDF, CHAT, NOTIFIKASI & AKUN POPUPS */
 html body #popupDetailBarangV2.popupOverlay,
 html body #popupDetail.popupOverlay,
-html body #popupTambahToko.popupOverlay,
 html body #pdfModal.popupOverlay,
 html body #popupPdfModelsModal.popupOverlay,
 html body #popupBantuan.popupOverlay,
@@ -8199,7 +8196,6 @@ html body #popupDetailBarangV2 .popupBoxDetailV2,
 html body #popupDetail .popupBoxDetail,
 html body .popupBoxDetailV2,
 html body .popupBoxDetail,
-html body #popupTambahToko .popupBox,
 html body #pdfModal .popupBox,
 html body #popupPdfModelsModal .popupBox,
 html body #popupBantuan .chatBox,
@@ -8373,7 +8369,6 @@ html body .detailTableV2 th:last-child,
 /* MASTER ENFORCED 1CM TOP & BOTTOM GAP FOR ALL DETAIL, TAMBAH TOKO, PDF, CHAT, NOTIFIKASI & AKUN POPUPS */
 html body #popupDetailBarangV2.popupOverlay,
 html body #popupDetail.popupOverlay,
-html body #popupTambahToko.popupOverlay,
 html body #pdfModal.popupOverlay,
 html body #popupPdfModelsModal.popupOverlay,
 html body #popupBantuan.popupOverlay,
@@ -8395,7 +8390,6 @@ html body #popupDetailBarangV2 .popupBoxDetailV2,
 html body #popupDetail .popupBoxDetail,
 html body .popupBoxDetailV2,
 html body .popupBoxDetail,
-html body #popupTambahToko .popupBox,
 html body #pdfModal .popupBox,
 html body #popupPdfModelsModal .popupBox,
 html body #popupBantuan .chatBox,
@@ -9100,12 +9094,52 @@ html body #inputPage #judulDetailPermintaan,
   margin-bottom: 2mm !important;
 }
 
-/* POPUP TAMBAH TOKO (#popupTambahToko) */
+/* =============================================================================
+   POPUP TAMBAH TOKO (#popupTambahToko) - DESKTOP FULL SCREEN (1MM JARAK SEMUA SISI)
+   ============================================================================= */
+html body #popupTambahToko.popupOverlay,
+html body #popupTambahToko,
 #popupTambahToko {
-  padding-top: 1mm !important;
-  padding-bottom: 2cm !important;
-  padding-left: 4px !important;
-  padding-right: 4px !important;
+  padding: 1mm !important;
+  box-sizing: border-box !important;
+}
+
+html body #popupTambahToko .popupBox,
+#popupTambahToko .popupBox {
+  width: calc(100vw - 2mm) !important;
+  min-width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
+  height: calc(100vh - 2mm) !important;
+  min-height: calc(100vh - 2mm) !important;
+  max-height: calc(100vh - 2mm) !important;
+  height: calc(100dvh - 2mm) !important;
+  min-height: calc(100dvh - 2mm) !important;
+  max-height: calc(100dvh - 2mm) !important;
+  box-sizing: border-box !important;
+  margin: 0 auto !important;
+}
+
+/* POPUP TAMBAH TOKO - TAMPILAN HP / MOBILE (MAX-WIDTH 768PX) - TIDAK DIRUBAH */
+@media (max-width: 768px) {
+  html body #popupTambahToko.popupOverlay,
+  html body #popupTambahToko,
+  #popupTambahToko {
+    padding-top: 1mm !important;
+    padding-bottom: 2cm !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  html body #popupTambahToko .popupBox,
+  #popupTambahToko .popupBox {
+    width: calc(100vw - 8px) !important;
+    min-width: calc(100vw - 8px) !important;
+    max-width: calc(100vw - 8px) !important;
+    height: calc(100vh - 2cm - 1mm) !important;
+    min-height: calc(100vh - 2cm - 1mm) !important;
+    max-height: calc(100vh - 2cm - 1mm) !important;
+    max-height: calc(100dvh - 2cm - 1mm) !important;
+  }
 }
 
 /* POPUP PDF DOKUMEN (#pdfModal & #popupPdfModelsModal) */
