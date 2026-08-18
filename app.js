@@ -5076,10 +5076,14 @@ function pushPopupHistoryState() {
   } catch (e) {}
 }
 
-function initMobileBackButtonEngine() {
+function seedDashboardHistoryState() {
   try {
-    history.pushState({ page: 'dashboardPage' }, '', location.href);
-  } catch(e) {}
+    history.pushState({ isDashboardGuard: true, page: 'dashboardPage' }, '', location.href);
+  } catch (e) {}
+}
+
+function initMobileBackButtonEngine() {
+  seedDashboardHistoryState();
 
   window.addEventListener('popstate', (e) => {
     const modalGemini = document.getElementById('modalGeminiApiKey');
@@ -5102,12 +5106,11 @@ function initMobileBackButtonEngine() {
     const isAkunOpen = popAkun && (popAkun.classList.contains('show') || popAkun.style.display === 'flex' || popAkun.style.display === 'block');
     if (isAkunOpen) {
       if (typeof isAkunDirty === 'function' && isAkunDirty()) {
-        try { history.pushState({ page: getCurrentActivePageId() }, '', location.href); } catch(err) {}
+        seedDashboardHistoryState();
         if (typeof tutupAkun === 'function') tutupAkun();
         return;
       } else {
         if (typeof tutupAkun === 'function') tutupAkun(true);
-        try { history.pushState({ page: getCurrentActivePageId() }, '', location.href); } catch(err) {}
         return;
       }
     }
@@ -5151,20 +5154,17 @@ function initMobileBackButtonEngine() {
       if (typeof tutupImageViewer === 'function') tutupImageViewer();
       if (typeof closeExcelTemplateModal === 'function') closeExcelTemplateModal();
       
-      // JAGA AGAR TOMBOL ICON HEADER (LONCENG & BANTUAN) TETAP TERSEDIA DI DASHBOARD
       const activePage = getCurrentActivePageId();
       if (typeof aturTampilanLonceng === 'function') {
         aturTampilanLonceng(activePage);
       }
-
-      try { history.pushState({ page: activePage }, '', location.href); } catch(err) {}
       return;
     }
 
     const currentActivePage = getCurrentActivePageId();
 
     if (currentActivePage === 'inputPage' && isFormDirtyOrFilled()) {
-      try { history.pushState({ page: 'inputPage' }, '', location.href); } catch(err) {}
+      seedDashboardHistoryState();
       
       const confirmMsg = modeEdit ? 'KELUAR DARI MENU EDIT?' : 'KELUAR DARI FORM PERMINTAAN? (DATA YANG DIISI AKAN HILANG)';
       showConfirm(confirmMsg, () => {
@@ -5177,7 +5177,7 @@ function initMobileBackButtonEngine() {
 
     if (currentActivePage !== 'dashboardPage' && currentActivePage !== 'loginPage') {
       pindahHalaman('dashboardPage', false);
-      try { history.pushState({ page: 'dashboardPage' }, '', location.href); } catch(err) {}
+      seedDashboardHistoryState();
       backClickTimestamps = [];
       return;
     }
@@ -5190,7 +5190,7 @@ function initMobileBackButtonEngine() {
 
       if (backClickTimestamps.length >= 3) {
         // 3X KLIK BACK DALAM DURASI < 1 DETIK: KELUAR APLIKASI WEB TANPA POPUP APAPUN
-        console.log('[APP EXIT] 3x Rapid back press <1s detected. Exiting Web App...');
+        console.log('[APP EXIT] 3x Rapid back press <1s detected on Dashboard. Exiting Web App...');
         backClickTimestamps = [];
         try {
           if (window.navigator && window.navigator.app && typeof window.navigator.app.exitApp === 'function') {
@@ -5200,7 +5200,7 @@ function initMobileBackButtonEngine() {
         // Tanpa pushState agar browser secara alami keluar dari aplikasi web
       } else {
         // Kurang dari 3x klik dalam 1 detik: Tetap di Dashboard
-        try { history.pushState({ page: 'dashboardPage' }, '', location.href); } catch(err) {}
+        seedDashboardHistoryState();
       }
     }
   });
@@ -14499,10 +14499,14 @@ function aturGeminiApiKey() {
   };
   if (typeof pushPopupHistoryState === 'function') pushPopupHistoryState();
 
-  modal.style.cssText = 'display: flex !important; position: fixed !important; top: 0px !important; left: 0px !important; right: 0px !important; bottom: 0px !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.85) !important; z-index: 1000000000 !important; justify-content: center !important; align-items: center !important; padding: 12px !important; box-sizing: border-box !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; backdrop-filter: blur(4px) !important; -webkit-backdrop-filter: blur(4px) !important;';
+  const isDesktop = window.innerWidth > 768;
+  const alignStyle = isDesktop ? 'align-items: center !important; padding: 12px !important;' : 'align-items: flex-start !important; padding-top: 1mm !important; padding-bottom: 2mm !important; padding-left: 2mm !important; padding-right: 2mm !important;';
+  const marginStyle = isDesktop ? 'margin: auto !important;' : 'margin: 0 auto !important;';
+
+  modal.style.cssText = `display: flex !important; position: fixed !important; top: 0px !important; left: 0px !important; right: 0px !important; bottom: 0px !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.85) !important; z-index: 1000000000 !important; justify-content: center !important; ${alignStyle} box-sizing: border-box !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; backdrop-filter: blur(4px) !important; -webkit-backdrop-filter: blur(4px) !important;`;
 
   modal.innerHTML = `
-    <div onclick="event.stopPropagation()" style="background: #ffffff !important; color: #0f172a !important; border-radius: 4px !important; width: 100% !important; max-width: 480px !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important; border: 2.5px solid #f59e0b !important; overflow: hidden !important; box-sizing: border-box !important; margin: auto !important; font-family: system-ui, -apple-system, sans-serif !important;">
+    <div onclick="event.stopPropagation()" style="background: #ffffff !important; color: #0f172a !important; border-radius: 4px !important; width: 100% !important; max-width: 480px !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important; border: 2.5px solid #f59e0b !important; overflow: hidden !important; box-sizing: border-box !important; ${marginStyle} font-family: system-ui, -apple-system, sans-serif !important;">
       <div style="background: linear-gradient(135deg, #f59e0b, #d97706) !important; padding: 14px 18px !important; color: #ffffff !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div style="display: flex !important; align-items: center !important; gap: 8px !important; font-weight: 800 !important; font-size: 14px !important; letter-spacing: 0.5px !important;">
           <span class="material-symbols-rounded" style="font-size: 22px !important; color: #ffffff !important;">key</span>

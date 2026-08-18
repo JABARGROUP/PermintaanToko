@@ -7902,10 +7902,19 @@ html body #rejectOverlay .rejectHeaderPopup .popupClose,
 }
 
 @media (max-width: 768px) {
+  html body #modalGeminiApiKey,
   #modalGeminiApiKey {
-    padding: 2mm !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding-top: 1mm !important;
+    padding-bottom: 2mm !important;
+    padding-left: 2mm !important;
+    padding-right: 2mm !important;
   }
+  html body #modalGeminiApiKey .modalKeyBox,
   #modalGeminiApiKey .modalKeyBox {
+    margin-top: 0 !important;
+    margin-bottom: auto !important;
     width: calc(100vw - 4mm) !important;
     max-width: calc(100vw - 4mm) !important;
     border-radius: 12px !important;
@@ -8083,7 +8092,12 @@ html body #rejectOverlay .rejectHeaderPopup .popupClose,
    MODAL POPUP GEMINI API KEY - RESPONSIVE HP DENGAN JARAK 2MM KE LAYAR
    ============================================================================= */
 #modalGeminiApiKey {
-  padding: 2mm !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding-top: 1mm !important;
+  padding-bottom: 2mm !important;
+  padding-left: 2mm !important;
+  padding-right: 2mm !important;
   box-sizing: border-box !important;
 }
 
@@ -8095,10 +8109,19 @@ html body #rejectOverlay .rejectHeaderPopup .popupClose,
 }
 
 @media (max-width: 768px) {
+  html body #modalGeminiApiKey,
   #modalGeminiApiKey {
-    padding: 2mm !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding-top: 1mm !important;
+    padding-bottom: 2mm !important;
+    padding-left: 2mm !important;
+    padding-right: 2mm !important;
   }
+  html body #modalGeminiApiKey .modalKeyBox,
   #modalGeminiApiKey .modalKeyBox {
+    margin-top: 0 !important;
+    margin-bottom: auto !important;
     width: calc(100vw - 4mm) !important;
     max-width: calc(100vw - 4mm) !important;
     border-radius: 12px !important;
@@ -8277,7 +8300,12 @@ html body #rejectOverlay .rejectHeaderPopup .popupClose,
    ============================================================================= */
 #modalGeminiApiKey {
   z-index: 100000000 !important;
-  padding: 2mm !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding-top: 1mm !important;
+  padding-bottom: 2mm !important;
+  padding-left: 2mm !important;
+  padding-right: 2mm !important;
   box-sizing: border-box !important;
 }
 
@@ -8289,10 +8317,19 @@ html body #rejectOverlay .rejectHeaderPopup .popupClose,
 }
 
 @media (max-width: 768px) {
+  html body #modalGeminiApiKey,
   #modalGeminiApiKey {
-    padding: 2mm !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding-top: 1mm !important;
+    padding-bottom: 2mm !important;
+    padding-left: 2mm !important;
+    padding-right: 2mm !important;
   }
+  html body #modalGeminiApiKey .modalKeyBox,
   #modalGeminiApiKey .modalKeyBox {
+    margin-top: 0 !important;
+    margin-bottom: auto !important;
     width: calc(100vw - 4mm) !important;
     max-width: calc(100vw - 4mm) !important;
     border-radius: 12px !important;
@@ -9187,4 +9224,83 @@ html body #popupTTD.popupTTD,
 html body #popupTTD.popupOverlay,
 #popupTTD {
   z-index: 100000005 !important;
+}
+
+/* =============================================================================
+   DESKTOP / LAPTOP VIEW ONLY (MIN-WIDTH: 769PX):
+   POSISIKAN 4 POPUP (popupAkun, modalGeminiApiKey, popupBantuan, popupNotifList)
+   TEPAT DI TENGAH-TENGAH LAYAR (SIMETRIS) TANPA MENGUBAH TINGGI MAUPUN LEBARNYA.
+   ============================================================================= */
+@media (min-width: 769px) {
+  html body #popupAkun.popupAkun,
+  html body #popupAkun.popupOverlay,
+  html body #popupAkun,
+  html body #modalGeminiApiKey.modalBackdrop,
+  html body #modalGeminiApiKey,
+  html body #popupBantuan.popupOverlay,
+  html body #popupBantuan.popupBantuan,
+  html body #popupBantuan,
+  html body #popupNotifList.popupOverlay,
+  html body #popupNotifList,
+  #popupAkun,
+  #modalGeminiApiKey,
+  #popupBantuan,
+  #popupNotifList {
+    align-items: center !important;
+    justify-content: center !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  html body #popupAkun .akunBox,
+  html body #modalGeminiApiKey .modalKeyBox,
+  html body #popupBantuan .chatBox,
+  html body #popupNotifList .popupNotifCard,
+  #popupAkun .akunBox,
+  #modalGeminiApiKey .modalKeyBox,
+  #popupBantuan .chatBox,
+  #popupNotifList .popupNotifCard {
+    margin: auto !important;
+    margin-top: auto !important;
+    margin-bottom: auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* =============================================================================
+   HP / MOBILE VIEW ONLY (MAX-WIDTH: 768PX) - PERSIS SAMA (TIDAK DIRUBAH)
+   ============================================================================= */
+@media (max-width: 768px) {
+  html body #popupAkun.popupAkun,
+  html body #popupAkun.popupOverlay,
+  html body #popupAkun {
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding-top: 1mm !important;
+    padding-bottom: 2mm !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+  html body #popupAkun .akunBox {
+    margin-top: 0 !important;
+    margin-bottom: auto !important;
+  }
+
+  html body #modalGeminiApiKey.modalBackdrop,
+  html body #modalGeminiApiKey {
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding-top: 1mm !important;
+    padding-bottom: 2mm !important;
+    padding-left: 2mm !important;
+    padding-right: 2mm !important;
+  }
+  html body #modalGeminiApiKey .modalKeyBox {
+    margin-top: 0 !important;
+    margin-bottom: auto !important;
+  }
 }

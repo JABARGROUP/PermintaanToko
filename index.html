@@ -45,7 +45,6 @@
           btn.style.setProperty('background', 'linear-gradient(135deg, #10b981, #059669)', 'important');
           btn.title = 'Gemini AI API Key Aktif (Klik untuk ubah/hapus)';
         } else {
-          btn.style.setProperty('background', 'linear-gradient(135deg, #f59e0b, #d97706)', 'important');
           btn.title = 'Masukkan Google Gemini AI API Key (Hanya Diisi Sekali Saja)';
         }
       }
@@ -55,6 +54,7 @@
       var modal = document.getElementById('modalGeminiApiKey');
       if (modal) {
         modal.style.setProperty('display', 'none', 'important');
+        modal.classList.remove('show');
       }
     }
 
@@ -96,15 +96,20 @@
 
       var currentKey = getGeminiApiKey();
 
-      modal.className = 'modalBackdrop';
+      modal.className = 'modalBackdrop show';
       modal.onclick = function(e) {
         if (e.target === modal) tutupModalGeminiApiKey();
       };
+      if (typeof pushPopupHistoryState === 'function') pushPopupHistoryState();
 
-      modal.style.cssText = 'display: flex !important; position: fixed !important; top: 0px !important; left: 0px !important; right: 0px !important; bottom: 0px !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.85) !important; z-index: 1000000000 !important; justify-content: center !important; align-items: center !important; padding: 12px !important; box-sizing: border-box !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; backdrop-filter: blur(4px) !important; -webkit-backdrop-filter: blur(4px) !important;';
+      var isDesktop = window.innerWidth > 768;
+      var alignStyle = isDesktop ? 'align-items: center !important; padding: 12px !important;' : 'align-items: flex-start !important; padding-top: 1mm !important; padding-bottom: 2mm !important; padding-left: 2mm !important; padding-right: 2mm !important;';
+      var marginStyle = isDesktop ? 'margin: auto !important;' : 'margin: 0 auto !important;';
+
+      modal.style.cssText = 'display: flex !important; position: fixed !important; top: 0px !important; left: 0px !important; right: 0px !important; bottom: 0px !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.85) !important; z-index: 1000000000 !important; justify-content: center !important; ' + alignStyle + ' box-sizing: border-box !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; backdrop-filter: blur(4px) !important; -webkit-backdrop-filter: blur(4px) !important;';
 
       modal.innerHTML = `
-        <div onclick="event.stopPropagation()" style="background: #ffffff !important; color: #0f172a !important; border-radius: 4px !important; width: 100% !important; max-width: 480px !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important; border: 2.5px solid #f59e0b !important; overflow: hidden !important; box-sizing: border-box !important; margin: auto !important; font-family: system-ui, -apple-system, sans-serif !important;">
+        <div onclick="event.stopPropagation()" style="background: #ffffff !important; color: #0f172a !important; border-radius: 4px !important; width: 100% !important; max-width: 480px !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important; border: 2.5px solid #f59e0b !important; overflow: hidden !important; box-sizing: border-box !important; ` + marginStyle + ` font-family: system-ui, -apple-system, sans-serif !important;">
           <div style="background: linear-gradient(135deg, #f59e0b, #d97706) !important; padding: 14px 18px !important; color: #ffffff !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div style="display: flex !important; align-items: center !important; gap: 8px !important; font-weight: 800 !important; font-size: 14px !important; letter-spacing: 0.5px !important;">
               <span class="material-symbols-rounded" style="font-size: 22px !important; color: #ffffff !important;">key</span>
@@ -202,7 +207,7 @@
     </button>
   </div>
   <!-- POPUP DAFTAR NOTIFIKASI SISTEM (STANDAR SAMA DENGAN POPUP NOTIFCARD) -->
-  <div id="popupNotifList" class="popupOverlay" style="align-items: center !important; justify-content: center !important; padding-top: 1mm !important; padding-bottom: 2cm !important; padding-left: 4px !important; padding-right: 4px !important; box-sizing: border-box !important;">
+  <div id="popupNotifList" class="popupOverlay" style="display: none; box-sizing: border-box !important;">
     <div class="popupNotifCard" style="width: 1000px !important; max-width: 98vw !important; height: calc(100vh - 2cm) !important; max-height: calc(100vh - 2cm) !important; padding: 10px; border-radius: 5px; text-align: left !important; margin: auto !important; display: flex !important; flex-direction: column !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
       <div style="background: linear-gradient(135deg, #0284c7, #0369a1); margin: -10px -10px 8px -10px; padding: 10px 14px; border-radius: 5px 5px 0 0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
         <span style="display: flex; align-items: center; gap: 8px; font-weight: 800; color: #fff; font-size: 14px; text-transform: uppercase;">
@@ -231,7 +236,7 @@
   </div>
 
   <!-- CHAT WIDGET POPUP (FULL POPUP OVERLAY WITH BACKDROP BLUR) -->
-  <div id="popupBantuan" class="popupOverlay popupBantuan" onclick="if(event.target === this) tutupBantuan()" style="align-items: center !important; justify-content: center !important; padding-top: 1mm !important; padding-bottom: 2cm !important; padding-left: 4px !important; padding-right: 4px !important; box-sizing: border-box !important;">
+  <div id="popupBantuan" class="popupOverlay popupBantuan" onclick="if(event.target === this) tutupBantuan()" style="display: none; box-sizing: border-box !important;">
     <div class="chatBox" style="height: calc(100vh - 2cm) !important; max-height: calc(100vh - 2cm) !important; margin: auto !important; border-radius: 5px !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
       <div class="chatHeader">
         <div class="chatInfo">
@@ -827,7 +832,7 @@
        ========================================================================== -->
 
   <!-- 1. POPUP AKUN & PROFILE MODAL (ULTRA COMPACT & ZERO SCROLLING) -->
-  <div id="popupAkun" class="popupAkun" onclick="if(event.target === this || event.target.id === 'popupAkun') tutupAkun();" style="display: none; align-items: flex-start !important; justify-content: center !important; padding-top: 1mm !important; padding-bottom: 2mm !important; padding-left: 4px !important; padding-right: 4px !important; box-sizing: border-box !important;">
+  <div id="popupAkun" class="popupAkun" onclick="if(event.target === this || event.target.id === 'popupAkun') tutupAkun();" style="display: none; box-sizing: border-box !important;">
     <div class="akunBox" style="position: relative; width: 440px !important; max-width: 94vw !important; height: auto !important; max-height: calc(100vh - 2mm) !important; max-height: calc(100dvh - 2mm) !important; margin: 0 auto !important; overflow-y: auto !important; border-radius: 5px !important; padding: 8px 12px 2mm 12px !important; -webkit-clip-path: inset(0 round 5px) !important; clip-path: inset(0 round 5px) !important;">
       <button type="button" class="popupClose" onclick="tutupAkun()" style="position: absolute !important; top: 8px !important; right: 10px !important; font-size: 24px !important; font-weight: 900 !important; color: var(--primary) !important; background: transparent !important; border: none !important; border-radius: 0 !important; width: auto !important; height: auto !important; padding: 0 4px !important; cursor: pointer !important; z-index: 10 !important;" title="TUTUP PROFIL AKUN">&times;</button>
       <h2 style="margin-top: 0; margin-bottom: 4px; font-size: 14px; font-weight: 900; text-align: center; color: var(--primary);">PROFIL AKUN</h2>
