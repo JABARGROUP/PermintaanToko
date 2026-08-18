@@ -14071,12 +14071,7 @@ window.prosesExcelAutoFill = prosesExcelAutoFill;
 const GEMINI_API_KEY_STORAGE_KEY = 'gemini_api_key';
 const DEFAULT_GEMINI_API_KEY = 'AQ.Ab8RN6I_PX3A-3xuSh3HRHyruF9by7kveKGcoKNbVSBgSCGsZg';
 
-// Clean up any stale old key stored in browser local storage
-try {
-  localStorage.removeItem(GEMINI_API_KEY_STORAGE_KEY);
-  localStorage.removeItem('GEMINI_API_KEY');
-  appStorage.removeItem(GEMINI_API_KEY_STORAGE_KEY);
-} catch(e) {}
+// Gemini API Key initialized and persisted in LocalStorage & AppStorage
 
 // =============================================================================
 // =============================================================================
@@ -14448,7 +14443,7 @@ window.parseExtractedTextToPermintaanForm = parseExtractedTextToPermintaanForm;
 // =============================================================================
 
 function getGeminiApiKey() {
-  let key = localStorage.getItem('gemini_api_key') || localStorage.getItem('GEMINI_API_KEY') || '';
+  let key = localStorage.getItem('gemini_api_key') || localStorage.getItem('GEMINI_API_KEY') || appStorage.getItem('gemini_api_key') || appStorage.getItem('GEMINI_API_KEY') || '';
   key = String(key).trim();
   if (key === 'null' || key === 'undefined') key = '';
   return key;
@@ -14591,6 +14586,8 @@ window.simpanGeminiApiKeyDariModal = simpanGeminiApiKeyDariModal;
 function hapusGeminiApiKeyPermanen() {
   localStorage.removeItem('gemini_api_key');
   localStorage.removeItem('GEMINI_API_KEY');
+  appStorage.removeItem('gemini_api_key');
+  appStorage.removeItem('GEMINI_API_KEY');
   const input = document.getElementById('inputGeminiApiKeyVal');
   if (input) input.value = '';
   updateAiKeyBadgeStatus();
