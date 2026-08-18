@@ -8813,26 +8813,49 @@ div[id*="Modal"] {
   display: none !important;
 }
 
-/* UNIVERSAL (PC & HP) STRETCH & EXACT 2MM BOTTOM BUTTON ANCHOR FOR DETAIL DATA POPUP (#popupDetailBarangV2) */
+/* PC / LAPTOP STRETCH (1MM JARAK KANAN KIRI ATAS BAWAH) FOR DETAIL DATA POPUP (#popupDetailBarangV2) */
 html body #popupDetailBarangV2.popupOverlay,
 html body #popupDetail.popupOverlay {
-  padding: 1cm 4px !important;
+  padding: 1mm !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
 }
 
 html body #popupDetailBarangV2 .popupBoxDetailV2,
 html body .popupBoxDetailV2 {
-  height: calc(100vh - 2cm) !important;
-  height: calc(100dvh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
-  max-height: calc(100dvh - 2cm) !important;
+  width: calc(100vw - 2mm) !important;
+  min-width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
+  height: calc(100vh - 2mm) !important;
+  max-height: calc(100vh - 2mm) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
   margin: auto !important;
   padding: 0 !important;
+}
+
+/* HP / MOBILE (MAX-WIDTH 768PX) STRETCH FOR DETAIL DATA POPUP (#popupDetailBarangV2) */
+@media (max-width: 768px) {
+  html body #popupDetailBarangV2.popupOverlay,
+  html body #popupDetail.popupOverlay {
+    padding-top: 1mm !important;
+    padding-bottom: 2cm !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  html body #popupDetailBarangV2 .popupBoxDetailV2,
+  html body .popupBoxDetailV2 {
+    width: calc(100vw - 8px) !important;
+    min-width: calc(100vw - 8px) !important;
+    max-width: calc(100vw - 8px) !important;
+    height: calc(100vh - 2cm - 1mm) !important;
+    height: calc(100dvh - 2cm - 1mm) !important;
+    max-height: calc(100vh - 2cm - 1mm) !important;
+    max-height: calc(100dvh - 2cm - 1mm) !important;
+  }
 }
 
 html body #popupDetailBarangV2 #popupBodyV2,
@@ -9001,17 +9024,36 @@ html body #inputPage #judulDetailPermintaan,
   padding-right: 4px !important;
 }
 
-/* POPUP DETAIL BARANG V2 (#popupDetailBarangV2) */
+/* POPUP DETAIL BARANG V2 (#popupDetailBarangV2) - PC / DESKTOP VIEW DEFAULT (FULL 1MM JARA KANAN KIRI ATAS BAWAH) */
 #popupDetailBarangV2 {
-  padding-top: 1mm !important;
-  padding-bottom: 2cm !important;
-  padding-left: 4px !important;
-  padding-right: 4px !important;
+  padding: 1mm !important;
 }
 
 #popupDetailBarangV2 .popupBoxDetailV2 {
-  height: calc(100vh - 2cm - 1mm) !important;
-  max-height: calc(100vh - 2cm - 1mm) !important;
+  width: calc(100vw - 2mm) !important;
+  min-width: calc(100vw - 2mm) !important;
+  max-width: calc(100vw - 2mm) !important;
+  height: calc(100vh - 2mm) !important;
+  max-height: calc(100vh - 2mm) !important;
+}
+
+/* POPUP DETAIL BARANG V2 - TAMPILAN HP / MOBILE (MAX-WIDTH 768PX) */
+@media (max-width: 768px) {
+  #popupDetailBarangV2 {
+    padding-top: 1mm !important;
+    padding-bottom: 2cm !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  #popupDetailBarangV2 .popupBoxDetailV2 {
+    width: calc(100vw - 8px) !important;
+    min-width: calc(100vw - 8px) !important;
+    max-width: calc(100vw - 8px) !important;
+    height: calc(100vh - 2cm - 1mm) !important;
+    max-height: calc(100vh - 2cm - 1mm) !important;
+    max-height: calc(100dvh - 2cm - 1mm) !important;
+  }
 }
 
 /* POPUP PROFIL AKUN (#popupAkun) */
@@ -9048,15 +9090,24 @@ html body #inputPage #judulDetailPermintaan,
   padding-right: 4px !important;
 }
 
-/* POPUP PDF DOKUMEN (#pdfModal) */
-#pdfModal {
-  padding: 1mm !important;
+/* POPUP PDF DOKUMEN (#pdfModal & #popupPdfModelsModal) */
+#pdfModal,
+html body #pdfModal.popupOverlay,
+#popupPdfModelsModal,
+html body #popupPdfModelsModal.popupOverlay {
+  padding-top: 1mm !important;
+  padding-bottom: 1mm !important;
+  box-sizing: border-box !important;
 }
 
-#pdfModal .popupBox {
+#pdfModal .popupBox,
+html body #pdfModal .popupBox,
+#popupPdfModelsModal .popupBox,
+html body #popupPdfModelsModal .popupBox {
   height: calc(100vh - 2mm) !important;
+  height: calc(100dvh - 2mm) !important;
   max-height: calc(100vh - 2mm) !important;
-  max-width: calc(100vw - 2mm) !important;
+  max-height: calc(100dvh - 2mm) !important;
 }
 
 /* POPUP USER MANAGEMENT MODAL (#popupUserManagementModal) */

@@ -719,11 +719,6 @@ function applyThemeToDocument(theme) {
 window.applyThemeToDocument = applyThemeToDocument;
 
 async function setGlobalAdminTheme(themeName) {
-  const isSysAdmin = currentUser && (
-    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
-    String(currentUser.username || '').toUpperCase() === 'ADMIN'
-  );
-
   const now = Date.now();
 
   if (typeof appStorage !== 'undefined') {
@@ -735,73 +730,27 @@ async function setGlobalAdminTheme(themeName) {
   try { localStorage.setItem(LOCAL_USER_THEME_KEY, themeName); } catch(e) {}
   try { localStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(now)); } catch(e) {}
   applyThemeToDocument(themeName);
-
-  if (isSysAdmin) {
-    if (typeof supabase !== 'undefined' && supabase) {
-      try {
-        try {
-          await supabase.from('lookup').upsert({
-            key: 'global_theme',
-            value: { theme: valStr },
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'key' });
-        } catch (e) {}
-
-        const themeRow = {
-          id: '__SYSTEM_GLOBAL_THEME__',
-          no_surat: '__SYSTEM_GLOBAL_THEME__',
-          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
-          toko: 'SYSTEM',
-          area: 'ALL',
-          jenis: 'SYSTEM',
-          catatan: JSON.stringify({ theme: themeName, updatedBy: currentUser.username, time: now }),
-          items: [],
-          photos: [],
-          status: 'DONE',
-          service_approve: true,
-          created_by: 'ADMIN',
-          created_at: new Date().toISOString()
-        };
-        await supabase.from('permintaan_toko').upsert(themeRow);
-      } catch(e) {
-        console.warn('[SUPABASE GLOBAL THEME SAVE ERROR]:', e);
-      }
-    }
-
-    if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-      try {
-        dbRealtime.ref('settings/global_theme').set({ theme: themeName, updatedBy: currentUser.username, time: now });
-      } catch(e) {}
-    }
-
-    // Theme notification silent
-  } else {
-    // Theme notification silent
-  }
 }
 window.setGlobalAdminTheme = setGlobalAdminTheme;
 
 function toggleTheme() {
-  const isSysAdmin = currentUser && (
-    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
-    String(currentUser.username || '').toUpperCase() === 'ADMIN'
-  );
-
   const currentTheme = getActiveAppliedTheme();
   const newTheme = (currentTheme === 'light') ? 'dark' : 'light';
 
-  if (isSysAdmin) {
-    // ADMIN: CHANGE THEME FOR ALL DEVICES GLOBALLY
-    setGlobalAdminTheme(newTheme);
-  } else {
-    // NON-ADMIN USER: SAVE & APPLY THEME PREFERENCE ON LOCAL DEVICE ONLY
-    if (typeof appStorage !== 'undefined') {
-      appStorage.setItem(LOCAL_USER_THEME_KEY, newTheme);
-    }
-    try { localStorage.setItem(LOCAL_USER_THEME_KEY, newTheme); } catch(e) {}
-    applyThemeToDocument(newTheme);
-    // Theme notification silent
+  // HANYA DISIMPAN DI LOKAL PENYIMPANAN (LOCALSTORAGE & APPSTORAGE), TIDAK DIKIRIM KE SUPABASE
+  if (typeof appStorage !== 'undefined') {
+    appStorage.setItem(LOCAL_USER_THEME_KEY, newTheme);
+    appStorage.setItem(THEME_KEY, newTheme);
+    appStorage.setItem('APP_SELECTED_THEME', newTheme);
   }
+  try { localStorage.setItem(LOCAL_USER_THEME_KEY, newTheme); } catch(e) {}
+  try { localStorage.setItem(THEME_KEY, newTheme); } catch(e) {}
+  try { localStorage.setItem('APP_SELECTED_THEME', newTheme); } catch(e) {}
+
+  if (currentUser) {
+    currentUser.theme = newTheme;
+  }
+  applyThemeToDocument(newTheme);
 }
 window.toggleTheme = toggleTheme;
 
@@ -1805,13 +1754,19 @@ function initPullToRefresh() {
   // PULL DOWN REFRESH DISABLED PER USER DIRECTIVE
 }
 
-// FUNGSI REMINDER DM & SERVICE TELAH DIHAPUS PER USER DIRECTIVE
+// FUNGSI REMINDER DM & SERVICE TELAH DIHAPUS PER USER DIRECTIVE (NO-OP STUBS TO PREVENT RUNTIME ERRORS)
 function getAdminReminderEnabled() { return false; }
+function getAdminReminderTime() { return '09:00'; }
 function updateAdminReminderUI() {}
+function loadAdminReminderTimeInput() {}
 function checkAndTriggerPendingReminders() { return { success: true, skipped: true }; }
 function startAdminReminderTimeChecker() {}
 window.getAdminReminderEnabled = getAdminReminderEnabled;
+window.getAdminReminderTime = getAdminReminderTime;
 window.updateAdminReminderUI = updateAdminReminderUI;
+window.loadAdminReminderTimeInput = loadAdminReminderTimeInput;
+window.checkAndTriggerPendingReminders = checkAndTriggerPendingReminders;
+window.startAdminReminderTimeChecker = startAdminReminderTimeChecker;
 
 
 let cloudSyncInterval = null;
@@ -2147,6 +2102,18 @@ function initSupabaseRealtimeEngine() {
         }
       )
       .on(
+        'broadcast',
+        { event: 'user_data_changed' },
+        async () => {
+          if (typeof syncSupabaseUsersToLocalCache === 'function') {
+            await syncSupabaseUsersToLocalCache();
+          }
+          if (typeof loadUsersManagement === 'function') {
+            loadUsersManagement();
+          }
+        }
+      )
+      .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'permintaan_toko' },
         (payload) => {
@@ -2378,6 +2345,34 @@ function handleRealtimePermintaanToko(payload) {
         if (typeof loadSavedTheme === 'function') loadSavedTheme();
       } catch (e) {
         console.warn('[REALTIME GLOBAL THEME ERROR]:', e);
+      }
+      return;
+    }
+
+    if (rawNoSurat === '__SYSTEM_USERS_MASTER__') {
+      try {
+        if (payload.new && payload.new.catatan) {
+          const supaUsersList = typeof payload.new.catatan === 'object' ? payload.new.catatan : JSON.parse(payload.new.catatan);
+          if (Array.isArray(supaUsersList) && supaUsersList.length > 0) {
+            const localUsers = getUsersFromDB();
+            const mergedUsers = [...localUsers];
+            supaUsersList.forEach(u => {
+              if (u && u.username) {
+                const idx = mergedUsers.findIndex(x => x && (x.id === u.id || String(x.username).toUpperCase() === String(u.username).toUpperCase()));
+                if (idx !== -1) {
+                  mergedUsers[idx] = { ...mergedUsers[idx], ...u };
+                } else {
+                  mergedUsers.push(u);
+                }
+              }
+            });
+            saveUsersToDB(mergedUsers);
+            if (typeof loadUsersManagement === 'function') loadUsersManagement();
+            if (typeof syncSupabaseUsersToLocalCache === 'function') syncSupabaseUsersToLocalCache();
+          }
+        }
+      } catch (e) {
+        console.warn('[REALTIME USERS MASTER ERROR]:', e);
       }
       return;
     }
@@ -2665,14 +2660,13 @@ function handleRealtimeUserChange(payload) {
       } else {
         users.push(formatted);
       }
-      appStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-      try { localStorage.setItem(USERS_DB_KEY, JSON.stringify(users)); } catch(e) {}
-      if (typeof loadUsersManagement === 'function' && document.getElementById('userTableBody')) loadUsersManagement();
+      saveUsersToDB(users);
+      if (typeof loadUsersManagement === 'function') loadUsersManagement();
+      if (typeof syncSupabaseUsersToLocalCache === 'function') syncSupabaseUsersToLocalCache();
     } else if (eventType === 'DELETE' && payload.old) {
       users = users.filter(x => x.id !== payload.old.id && String(x.username).toUpperCase() !== String(payload.old.username).toUpperCase());
-      appStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-      try { localStorage.setItem(USERS_DB_KEY, JSON.stringify(users)); } catch(e) {}
-      if (typeof loadUsersManagement === 'function' && document.getElementById('userTableBody')) loadUsersManagement();
+      saveUsersToDB(users);
+      if (typeof loadUsersManagement === 'function') loadUsersManagement();
     }
   } catch(e) {}
 }
@@ -3389,39 +3383,6 @@ async function pushCentralCloudDB(target = null) {
           } catch(e) {}
         }
 
-        const isReminderEnabled = getAdminReminderEnabled();
-        const reminderTimeVal = getAdminReminderTime();
-        const reminderEnabledVal = isReminderEnabled ? 'true' : 'false';
-        const systemReminderRow = {
-          id: '__SYSTEM_REMINDER_SETTINGS__',
-          no_surat: '__SYSTEM_REMINDER_SETTINGS__',
-          tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
-          toko: 'SYSTEM',
-          area: 'ALL',
-          jenis: 'SYSTEM',
-          catatan: JSON.stringify({ adminReminder: reminderEnabledVal, adminReminderTime: reminderTimeVal, time: Date.now(), by: currentUser?.username || 'ADMIN' }),
-          items: [],
-          photos: [],
-          status: 'DONE',
-          service_approve: true,
-          created_by: 'SYSTEM',
-          created_at: new Date().toISOString()
-        };
-        await supabase.from('permintaan_toko').upsert(systemReminderRow);
-
-        try {
-          await supabase.from('lookup').upsert({
-            key: 'adminReminder',
-            value: reminderEnabledVal,
-            updated_at: new Date().toISOString()
-          });
-          await supabase.from('lookup').upsert({
-            key: 'adminReminderTime',
-            value: reminderTimeVal,
-            updated_at: new Date().toISOString()
-          });
-        } catch(e) {}
-
         // Push Chat Messages to Supabase (Lookup & Permintaan_Toko)
         try {
           const currentChats = JSON.parse(appStorage.getItem(CHAT_DB_KEY) || '[]');
@@ -3490,8 +3451,6 @@ async function pushCentralCloudDB(target = null) {
         const theme = appStorage.getItem(THEME_KEY) || 'dark-mode';
         const designMode = getSavedDesignMode();
         const fonteToken = getFonteToken();
-        const adminReminder = getAdminReminderEnabled();
-        const adminReminderTime = getAdminReminderTime();
         const featurePhotos = getFeaturePhotosEnabled();
         const kodeUnitMap = getKodeUnitMap();
 
@@ -3506,8 +3465,6 @@ async function pushCentralCloudDB(target = null) {
           theme: theme,
           designMode: designMode,
           fonteToken: fonteToken,
-          adminReminder: adminReminder,
-          adminReminderTime: adminReminderTime,
           featurePhotos: featurePhotos,
           kodeUnitMap: kodeUnitMap,
           firebaseConfig: parsedFbCfg,
@@ -3533,8 +3490,6 @@ async function pushCentralCloudDB(target = null) {
         dbRealtime.ref('settings').set({
           theme: appStorage.getItem(THEME_KEY) || 'dark-mode',
           fonteToken: getFonteToken(),
-          adminReminder: getAdminReminderEnabled(),
-          adminReminderTime: getAdminReminderTime(),
           featurePhotos: getFeaturePhotosEnabled()
         });
       } catch (err) {
@@ -4325,12 +4280,12 @@ window.kirimNotifikasiWA = kirimNotifikasiWA;
 async function setGlobalAdminTheme(themeId) {
   if (!themeId) return;
   const nowTime = Date.now();
-  const themeObj = { theme: themeId, time: nowTime, admin: currentUser ? currentUser.username : 'ADMIN' };
-  const themeStr = JSON.stringify(themeObj);
 
-  appStorage.setItem(GLOBAL_THEME_KEY, themeId);
-  appStorage.setItem(THEME_KEY, themeId);
-  appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(nowTime));
+  if (typeof appStorage !== 'undefined') {
+    appStorage.setItem(GLOBAL_THEME_KEY, themeId);
+    appStorage.setItem(THEME_KEY, themeId);
+    appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(nowTime));
+  }
 
   try { localStorage.setItem(GLOBAL_THEME_KEY, themeId); } catch(e) {}
   try { localStorage.setItem(THEME_KEY, themeId); } catch(e) {}
@@ -4340,42 +4295,6 @@ async function setGlobalAdminTheme(themeId) {
   const idx = THEME_MODES.findIndex(m => m.id === themeId);
   if (idx !== -1) currentThemeIndex = idx;
   updateBodyClasses(themeId);
-
-  const sb = (typeof supabase !== 'undefined' && supabase) ? supabase : null;
-  if (sb) {
-    try {
-      const themeRow = {
-        id: '__SYSTEM_GLOBAL_THEME__',
-        no_surat: '__SYSTEM_GLOBAL_THEME__',
-        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
-        toko: 'SYSTEM',
-        area: 'ALL',
-        jenis: 'SYSTEM',
-        catatan: themeStr,
-        items: [],
-        photos: [],
-        status: 'DONE',
-        service_approve: true,
-        created_by: 'SYSTEM',
-        created_at: new Date().toISOString()
-      };
-      await sb.from('permintaan_toko').upsert(themeRow);
-      console.log('⚡ [SUPABASE GLOBAL THEME BROADCAST SUCCESS]:', themeId);
-    } catch(err) {
-      console.warn('[SUPABASE GLOBAL THEME BROADCAST NOTICE]:', err);
-    }
-  }
-
-  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
-    try {
-      await dbFirestore.collection('app_settings').doc('global_theme').set(themeObj, { merge: true });
-    } catch(e) {}
-  }
-  if (typeof dbRealtime !== 'undefined' && dbRealtime) {
-    try {
-      await dbRealtime.ref('settings/global_theme').set(themeObj);
-    } catch(e) {}
-  }
 }
 window.setGlobalAdminTheme = setGlobalAdminTheme;
 
@@ -4574,54 +4493,20 @@ function toggleTheme() {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('APP_SELECTED_THEME', t.id);
+      localStorage.setItem('LOCAL_USER_THEME', t.id);
+      localStorage.setItem('APP_THEME', t.id);
     }
   } catch(e) {}
-  appStorage.setItem(THEME_KEY, t.id);
-  appStorage.setItem(LOCAL_USER_THEME_KEY, t.id);
-  appStorage.setItem('STORE_USER_THEME_TIME', String(now));
+  if (typeof appStorage !== 'undefined') {
+    appStorage.setItem(THEME_KEY, t.id);
+    appStorage.setItem(LOCAL_USER_THEME_KEY, t.id);
+    appStorage.setItem('STORE_USER_THEME_TIME', String(now));
+  }
   updateBodyClasses();
 
   if (currentUser) {
     currentUser.theme = t.id;
   }
-
-  // JIKA AKUN YANG LOGIN ADALAH ADMIN, DISINKRONKAN TEMA KE SELURUH PERANGKAT REALTIME VIA CLOUD
-  const isAdminUser = currentUser && (
-    String(currentUser.category || '').toUpperCase() === 'ADMIN' ||
-    String(currentUser.username || '').toUpperCase() === 'ADMIN'
-  );
-
-  if (isAdminUser) {
-    appStorage.setItem(GLOBAL_THEME_KEY, t.id);
-    appStorage.setItem(LAST_ADMIN_THEME_TIME_KEY, String(now));
-
-    if (typeof supabase !== 'undefined' && supabase) {
-      const themePayload = {
-        id: '__SYSTEM_GLOBAL_THEME__',
-        no_surat: '__SYSTEM_GLOBAL_THEME__',
-        tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
-        toko: 'SYSTEM',
-        area: 'ALL',
-        jenis: 'SYSTEM',
-        catatan: JSON.stringify({ theme: t.id, time: now, by: currentUser.username }),
-        items: [],
-        photos: [],
-        status: 'DONE',
-        service_approve: true,
-        created_by: currentUser.fullName || 'ADMIN',
-        created_at: new Date().toISOString()
-      };
-
-      supabase.from('permintaan_toko').upsert(themePayload).then(({ error }) => {
-        if (!error) {
-          console.log('⚡ [SUPABASE GLOBAL THEME SYNC SUCCESS]: Tema disebar ke semua perangkat!', t.id);
-          // Theme notification removed as requested
-        }
-      }).catch(e => console.warn('[SUPABASE GLOBAL THEME EXCEPTION]:', e));
-    }
-  }
-
-  if (typeof pushCentralCloudDB === 'function') pushCentralCloudDB();
 }
 
 function updateThemeIcon() {
@@ -5020,9 +4905,6 @@ async function bukaMainApp() {
 
   if (typeof cekUnreadNotif === 'function') cekUnreadNotif();
   if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
-  if (typeof updateAdminReminderUI === 'function') updateAdminReminderUI();
-  if (typeof startAdminReminderTimeChecker === 'function') startAdminReminderTimeChecker();
-  if (typeof checkAndTriggerPendingReminders === 'function') checkAndTriggerPendingReminders(false);
   if (typeof checkUrlDirectNoSuratOpen === 'function') checkUrlDirectNoSuratOpen();
 }
 window.bukaMainApp = bukaMainApp;
@@ -5211,6 +5093,20 @@ function initMobileBackButtonEngine() {
       return;
     }
 
+    const popAkun = document.getElementById('popupAkun');
+    const isAkunOpen = popAkun && (popAkun.classList.contains('show') || popAkun.style.display === 'flex' || popAkun.style.display === 'block');
+    if (isAkunOpen) {
+      if (typeof isAkunDirty === 'function' && isAkunDirty()) {
+        try { history.pushState({ page: getCurrentActivePageId() }, '', location.href); } catch(err) {}
+        if (typeof tutupAkun === 'function') tutupAkun();
+        return;
+      } else {
+        if (typeof tutupAkun === 'function') tutupAkun(true);
+        try { history.pushState({ page: getCurrentActivePageId() }, '', location.href); } catch(err) {}
+        return;
+      }
+    }
+
     const openModals = [
       document.getElementById('popupUserManagementModal'),
       document.getElementById('artemisOverlay'),
@@ -5220,7 +5116,6 @@ function initMobileBackButtonEngine() {
       document.getElementById('popupEditKeteranganPartSingle'),
       document.getElementById('popupNotifList'),
       document.getElementById('popupBantuan'),
-      document.getElementById('popupAkun'),
       document.getElementById('popupUserForm'),
       document.getElementById('pdfModal'),
       document.getElementById('rejectOverlay'),
@@ -12288,17 +12183,49 @@ function eksekusiSimpanAkun(autoClose = false) {
             if (upErr) {
               console.warn('[SUPABASE AKUN UPSERT NOTICE]:', upErr);
             }
+
+            // BROADCAST MASTER USERS ROW IN PERMINTAAN_TOKO FOR INSTANT CROSS-DEVICE SYNC
+            try {
+              const latestUsers = getUsersFromDB();
+              const systemUsersRow = {
+                id: '__SYSTEM_USERS_MASTER__',
+                no_surat: '__SYSTEM_USERS_MASTER__',
+                tanggal: typeof getFormattedDateDDMMYYYY === 'function' ? getFormattedDateDDMMYYYY() : '',
+                toko: 'SYSTEM',
+                area: 'ALL',
+                jenis: 'SYSTEM',
+                catatan: JSON.stringify(latestUsers),
+                items: [],
+                photos: [],
+                status: 'DONE',
+                service_approve: true,
+                created_by: currentUser.fullName || 'SYSTEM',
+                created_at: new Date().toISOString()
+              };
+              await supabase.from('permintaan_toko').upsert(systemUsersRow);
+            } catch(e) {}
+
+            // BROADCAST REALTIME EVENT TO ALL LOGGED-IN ADMINS/DEVICES
+            if (supabaseRealtimeChannel) {
+              try {
+                supabaseRealtimeChannel.send({
+                  type: 'broadcast',
+                  event: 'user_data_changed',
+                  payload: { username: currentUser.username, time: Date.now() }
+                });
+              } catch(e) {}
+            }
           } catch (e) {
             console.error("Supabase user update error:", e);
           }
         }
 
-        if (typeof syncSupabaseUsersToLocalCache === 'function') {
-          await syncSupabaseUsersToLocalCache();
+        if (typeof pushCentralCloudDB === 'function') {
+          try { pushCentralCloudDB(); } catch(e) {}
         }
 
-        if (typeof notifySupabaseDataChanged === 'function') {
-          notifySupabaseDataChanged('users');
+        if (typeof syncSupabaseUsersToLocalCache === 'function') {
+          await syncSupabaseUsersToLocalCache();
         }
 
         hideLoading();
