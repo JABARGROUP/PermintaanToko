@@ -8841,7 +8841,7 @@ html body .popupBoxDetailV2 {
   html body #popupDetailBarangV2.popupOverlay,
   html body #popupDetail.popupOverlay {
     padding-top: 1mm !important;
-    padding-bottom: 2cm !important;
+    padding-bottom: 1cm !important;
     padding-left: 4px !important;
     padding-right: 4px !important;
   }
@@ -8851,10 +8851,10 @@ html body .popupBoxDetailV2 {
     width: calc(100vw - 8px) !important;
     min-width: calc(100vw - 8px) !important;
     max-width: calc(100vw - 8px) !important;
-    height: calc(100vh - 2cm - 1mm) !important;
-    height: calc(100dvh - 2cm - 1mm) !important;
-    max-height: calc(100vh - 2cm - 1mm) !important;
-    max-height: calc(100dvh - 2cm - 1mm) !important;
+    height: calc(100vh - 1cm - 1mm) !important;
+    height: calc(100dvh - 1cm - 1mm) !important;
+    max-height: calc(100vh - 1cm - 1mm) !important;
+    max-height: calc(100dvh - 1cm - 1mm) !important;
   }
 }
 
@@ -9041,7 +9041,7 @@ html body #inputPage #judulDetailPermintaan,
 @media (max-width: 768px) {
   #popupDetailBarangV2 {
     padding-top: 1mm !important;
-    padding-bottom: 2cm !important;
+    padding-bottom: 1cm !important;
     padding-left: 4px !important;
     padding-right: 4px !important;
   }
@@ -9050,9 +9050,9 @@ html body #inputPage #judulDetailPermintaan,
     width: calc(100vw - 8px) !important;
     min-width: calc(100vw - 8px) !important;
     max-width: calc(100vw - 8px) !important;
-    height: calc(100vh - 2cm - 1mm) !important;
-    max-height: calc(100vh - 2cm - 1mm) !important;
-    max-height: calc(100dvh - 2cm - 1mm) !important;
+    height: calc(100vh - 1cm - 1mm) !important;
+    max-height: calc(100vh - 1cm - 1mm) !important;
+    max-height: calc(100dvh - 1cm - 1mm) !important;
   }
 }
 
