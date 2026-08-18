@@ -4557,6 +4557,8 @@ async function clearLocalStorageKeepThemeAndTTD() {
     const fonteToken = typeof getFonteToken === 'function' ? getFonteToken() : '';
     const secretKey = typeof getSavedAdminSecretKey === 'function' ? getSavedAdminSecretKey() : '';
     const fbConfig = appStorage.getItem(FIREBASE_USER_CONFIG_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(FIREBASE_USER_CONFIG_KEY) : null);
+    const geminiKey = appStorage.getItem('gemini_api_key') || (typeof localStorage !== 'undefined' ? localStorage.getItem('gemini_api_key') : null);
+    const geminiKeyUpper = appStorage.getItem('GEMINI_API_KEY') || (typeof localStorage !== 'undefined' ? localStorage.getItem('GEMINI_API_KEY') : null);
 
     // 4. CLEAR STORAGE & BROWSER CACHES
     if (typeof appStorage !== 'undefined' && appStorage.clear) {
@@ -4625,6 +4627,14 @@ async function clearLocalStorageKeepThemeAndTTD() {
       appStorage.setItem(FIREBASE_USER_CONFIG_KEY, fbConfig);
       try { localStorage.setItem(FIREBASE_USER_CONFIG_KEY, fbConfig); } catch(e) {}
     }
+    if (geminiKey) {
+      appStorage.setItem('gemini_api_key', geminiKey);
+      try { localStorage.setItem('gemini_api_key', geminiKey); } catch(e) {}
+    }
+    if (geminiKeyUpper) {
+      appStorage.setItem('GEMINI_API_KEY', geminiKeyUpper);
+      try { localStorage.setItem('GEMINI_API_KEY', geminiKeyUpper); } catch(e) {}
+    }
 
     // 8. RE-APPLY THEME IMMEDIATELY
     if (typeof applyThemeToDocument === 'function') {
@@ -4644,10 +4654,6 @@ function loadRememberedCredentials() {
       savedCredsStr = localStorage.getItem(STORE_REMEMBER_LOGIN_CREDS_KEY);
     }
   } catch(e) {}
-
-  const uEl = document.getElementById('username');
-  const pEl = document.getElementById('password');
-  const remEl = document.getElementById('rememberMe');
 
   if (savedCredsStr) {
     try {
@@ -4815,6 +4821,11 @@ function logout() {
 
     currentUser = null;
     appStorage.removeItem(SESSION_KEY);
+
+    // BERSIHKAN PENYIMPANAN LOKAL PERANGKAT (KECUALI TTD, TEMA & KEY GEMINI)
+    if (typeof clearLocalStorageKeepThemeAndTTD === 'function') {
+      await clearLocalStorageKeepThemeAndTTD();
+    }
 
     if (rememberedCreds) {
       try {
@@ -11303,6 +11314,7 @@ async function simpanUserData(btnElement = null) {
               phone: users[idx].phone,
               category: users[idx].category,
               area: users[idx].area,
+              ttd: users[idx].ttd || '',
               created_at: users[idx].createdAt
             });
           }
@@ -11434,6 +11446,7 @@ async function simpanUserData(btnElement = null) {
           phone: newUser.phone,
           category: newUser.category,
           area: newUser.area,
+          ttd: newUser.ttd || '',
           created_at: newUser.createdAt
         });
 
@@ -12198,6 +12211,7 @@ function eksekusiSimpanAkun(autoClose = false) {
               phone: currentUser.phone || '-',
               category: currentUser.category,
               area: currentUser.area,
+              ttd: currentUser.ttd || '',
               created_at: currentUser.createdAt || getFormattedDateDDMMYYYY()
             };
 
@@ -12556,6 +12570,7 @@ function simpanTokoBaru(btnElement = null) {
                 phone: userObj.phone || '-',
                 category: userObj.category || 'TOKO',
                 area: targetArea,
+                ttd: userObj.ttd || '',
                 created_at: userObj.createdAt || getFormattedDateDDMMYYYY()
               });
             } catch (e) {}
@@ -12656,6 +12671,7 @@ function simpanTokoBaru(btnElement = null) {
                 phone: newUserAcc.phone,
                 category: newUserAcc.category,
                 area: newUserAcc.area,
+                ttd: newUserAcc.ttd || '',
                 created_at: newUserAcc.createdAt
               });
             }
@@ -12957,6 +12973,7 @@ async function prosesUploadExcelToko(event) {
               phone: u.phone,
               category: u.category,
               area: u.area,
+              ttd: u.ttd || '',
               created_at: u.createdAt
             }));
             await supabase.from('users').upsert(supaUsersPayload);
