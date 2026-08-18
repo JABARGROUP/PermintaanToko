@@ -2854,12 +2854,22 @@ async function syncSupabaseRequestsToLocalCache() {
       if (cat === 'TOKO') {
         query = query.or(`user_id.eq.${currentUser.id},toko.ilike.%${currentUser.fullName}%`);
       } else if (cat === 'SERVICE') {
-        if (userArea !== 'ALL' && userArea !== 'TSM') {
-          query = query.eq('area', userArea);
+        const areaList = typeof getUserAreaList === 'function' ? getUserAreaList(userArea) : [];
+        if (!areaList.includes('ALL') && areaList.length > 0 && !areaList.includes('TSM')) {
+          if (areaList.length === 1) {
+            query = query.eq('area', areaList[0]);
+          } else {
+            query = query.in('area', areaList);
+          }
         }
       } else if (cat === 'DM') {
-        if (userArea !== 'ALL') {
-          query = query.eq('area', userArea);
+        const areaList = typeof getUserAreaList === 'function' ? getUserAreaList(userArea) : [];
+        if (!areaList.includes('ALL') && areaList.length > 0) {
+          if (areaList.length === 1) {
+            query = query.eq('area', areaList[0]);
+          } else {
+            query = query.in('area', areaList);
+          }
         }
       }
     }
