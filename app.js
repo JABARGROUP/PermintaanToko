@@ -12273,7 +12273,6 @@ function bukaModalTambahToko(btnElement = null) {
   const btn = (btnElement && btnElement instanceof HTMLElement) ? btnElement : (typeof event !== 'undefined' && event ? event.currentTarget : null);
   setBtnLoading(btn, true, 'MEMUAT...');
   showPopupInnerLoading('popupTambahToko', 'MEMBUKA DAFTAR TOKO...');
-  showLoading('MEMBUKA DAFTAR TOKO...');
 
   if (typeof tutupAkun === 'function') {
     tutupAkun(true);
@@ -12483,7 +12482,6 @@ function simpanTokoBaru(btnElement = null) {
   }
 
   setBtnLoading(btnSimpan, true, editStoreId ? 'MEMPERBARUI...' : 'MENYIMPAN...');
-  showPopupInnerLoading('popupTambahToko', editStoreId ? 'MEMPERBARUI DATA TOKO...' : 'MENYIMPAN TOKO BARU...');
   showLoading(editStoreId ? 'MEMPERBARUI DATA TOKO...' : 'MENYIMPAN TOKO BARU...');
 
   const themeBeforeSave = getSavedLocalTheme();
@@ -12694,7 +12692,6 @@ function hapusTokoCustom(id, btnElement = null) {
   showConfirm(`HAPUS TOKO '${name}' DARI DAFTAR?`, () => {
     const btn = (btnElement && btnElement instanceof HTMLElement) ? btnElement : (typeof event !== 'undefined' && event ? event.currentTarget : null);
     setBtnLoading(btn, true, 'HAPUS...');
-    showPopupInnerLoading('popupTambahToko', 'MENGHAPUS TOKO...');
     showLoading('MENGHAPUS TOKO...');
 
     const themeBeforeDelete = getSavedLocalTheme();
@@ -13189,8 +13186,12 @@ function showLoading(msg = '', allowCancel = false, onCancelCallback = null) {
     document.body.appendChild(modal);
   }
 
-  modal.style.cssText = 'display: flex !important; position: fixed !important; top: 0px !important; left: 0px !important; right: 0px !important; bottom: 0px !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.45) !important; z-index: 2147483647 !important; justify-content: center !important; align-items: center !important; backdrop-filter: blur(3px) !important; -webkit-backdrop-filter: blur(3px) !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box !important;';
+  modal.style.cssText = 'display: flex !important; position: fixed !important; top: 0px !important; left: 0px !important; right: 0px !important; bottom: 0px !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.6) !important; z-index: 2147483647 !important; justify-content: center !important; align-items: center !important; backdrop-filter: blur(4px) !important; -webkit-backdrop-filter: blur(4px) !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box !important;';
   modal.classList.add('show');
+
+  if (onCancelCallback) {
+    window._onCancelLoadingCallback = onCancelCallback;
+  }
 
   let spinnerBox = modal.querySelector('.spinnerBox');
   if (!spinnerBox) {
@@ -13198,16 +13199,27 @@ function showLoading(msg = '', allowCancel = false, onCancelCallback = null) {
     spinnerBox.className = 'spinnerBox';
     modal.appendChild(spinnerBox);
   }
-  spinnerBox.style.cssText = 'display: flex !important; align-items: center !important; justify-content: center !important; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; outline: none !important;';
-  spinnerBox.innerHTML = `
-    <div class="spinner" style="width: 52px !important; height: 52px !important; border: 4px solid rgba(255,255,255,0.15) !important; border-top-color: #38bdf8 !important; border-right-color: #818cf8 !important; border-radius: 50% !important; animation: spin 0.8s linear infinite !important; filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.9)) !important;"></div>
-    <div id="loadingText" class="loadingText" style="display: none !important;"></div>
-    <button type="button" id="btnBatalLoading" style="display: none !important;"></button>
-  `;
 
-  const textEl = document.getElementById('loadingText');
-  if (textEl) {
-    textEl.style.setProperty('display', 'none', 'important');
+  const isCancelable = allowCancel || !!onCancelCallback || (typeof window._cancelGeminiProcess === 'function') || (msg && msg.toUpperCase().includes('GEMINI'));
+
+  if (msg || isCancelable) {
+    spinnerBox.style.cssText = 'display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; background: rgba(15, 23, 42, 0.92) !important; border: 1px solid rgba(255, 255, 255, 0.18) !important; border-radius: 12px !important; padding: 22px 28px !important; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important; min-width: 260px !important; max-width: 90vw !important; box-sizing: border-box !important; text-align: center !important;';
+    spinnerBox.innerHTML = `
+      <div class="spinner" style="width: 48px !important; height: 48px !important; border: 4px solid rgba(255,255,255,0.15) !important; border-top-color: #38bdf8 !important; border-right-color: #818cf8 !important; border-radius: 50% !important; animation: spin 0.8s linear infinite !important; filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.9)) !important; margin-bottom: 12px !important;"></div>
+      ${msg ? `<div id="loadingText" class="loadingText" style="display: block !important; color: #f8fafc !important; font-weight: 700 !important; font-size: 13px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; margin-bottom: ${isCancelable ? '14px' : '0px'} !important; line-height: 1.4 !important;">${msg}</div>` : '<div id="loadingText" class="loadingText" style="display: none !important;"></div>'}
+      ${isCancelable ? `
+        <button type="button" id="btnBatalLoading" onclick="batalProsesLoading()" style="background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: #ffffff !important; border: none !important; border-radius: 6px !important; padding: 8px 22px !important; font-weight: 800 !important; font-size: 12px !important; cursor: pointer !important; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45) !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; letter-spacing: 0.5px !important; width: 100% !important; transition: transform 0.15s ease !important;">
+          BATAL
+        </button>
+      ` : '<button type="button" id="btnBatalLoading" style="display: none !important;"></button>'}
+    `;
+  } else {
+    spinnerBox.style.cssText = 'display: flex !important; align-items: center !important; justify-content: center !important; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; outline: none !important;';
+    spinnerBox.innerHTML = `
+      <div class="spinner" style="width: 52px !important; height: 52px !important; border: 4px solid rgba(255,255,255,0.15) !important; border-top-color: #38bdf8 !important; border-right-color: #818cf8 !important; border-radius: 50% !important; animation: spin 0.8s linear infinite !important; filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.9)) !important;"></div>
+      <div id="loadingText" class="loadingText" style="display: none !important;"></div>
+      <button type="button" id="btnBatalLoading" style="display: none !important;"></button>
+    `;
   }
 
   const miniModal = document.getElementById('miniCenterLoading');
@@ -13243,8 +13255,15 @@ function batalProsesLoading() {
     try { window._onCancelLoadingCallback(); } catch(e) {}
     window._onCancelLoadingCallback = null;
   }
+  const inputPdf = document.getElementById('inputPdfAutoFill');
+  if (inputPdf) inputPdf.value = '';
+  const inputImg = document.getElementById('inputGambarAutoFill');
+  if (inputImg) inputImg.value = '';
+  const inputExcel = document.getElementById('inputExcelAutoFill');
+  if (inputExcel) inputExcel.value = '';
+
   if (typeof showNotif === 'function') {
-    showNotif('PROSES DIBATALKAN OLEH PENGGUNA.', 'info');
+    showNotif('PROSES DI BATALKAN', 'info');
   }
 }
 window.batalProsesLoading = batalProsesLoading;
@@ -13976,7 +13995,7 @@ async function prosesExcelAutoFill(event) {
     return;
   }
 
-  if (typeof showLoading === 'function') showLoading('MEMBACA DOKUMEN...', true);
+  if (typeof showLoading === 'function') showLoading('Membaca Dokumen...', true);
 
   try {
     const data = await file.arrayBuffer();
@@ -14560,9 +14579,11 @@ function simpanGeminiApiKeyDariModal() {
   }
   localStorage.setItem('gemini_api_key', val);
   localStorage.setItem('GEMINI_API_KEY', val);
+  appStorage.setItem('gemini_api_key', val);
+  appStorage.setItem('GEMINI_API_KEY', val);
   updateAiKeyBadgeStatus();
   tutupModalGeminiApiKey();
-  if (typeof showNotif === 'function') showNotif('GEMINI API KEY BERHASIL DISIMPAN / DIUBAH!', 'success');
+  if (typeof showNotif === 'function') showNotif('GEMINI API KEY BERHASIL DISIMPAN DI PENYIMPANAN LOKAL!', 'success');
   else alert('GEMINI API KEY BERHASIL DISIMPAN!');
 }
 window.simpanGeminiApiKeyDariModal = simpanGeminiApiKeyDariModal;
@@ -14680,7 +14701,7 @@ async function prosesPdfAutoFillGemini(event) {
   if (!file) return;
 
   // LANGSUNG TAMPILKAN LOADING OVERLAY
-  if (typeof showLoading === 'function') showLoading('MEMBACA DOKUMEN DENGAN GOOGLE GEMINI AI...', true);
+  if (typeof showLoading === 'function') showLoading('Membaca Dokumen...', true);
 
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
@@ -14924,7 +14945,7 @@ async function prosesGambarAutoFillGemini(event) {
   if (!file) return;
 
   // LANGSUNG TAMPILKAN LOADING OVERLAY
-  if (typeof showLoading === 'function') showLoading('MEMBACA GAMBAR DENGAN GOOGLE GEMINI AI...', true);
+  if (typeof showLoading === 'function') showLoading('Membaca Dokumen...', true);
 
   const apiKey = getGeminiApiKey();
   if (!apiKey) {

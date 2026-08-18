@@ -8791,6 +8791,24 @@ div[id*="Modal"] {
   100% { transform: scale(1); opacity: 1; }
 }
 
+.popupInnerSpinner {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+  position: relative !important;
+  border-radius: 50% !important;
+  border: 4px solid rgba(255, 255, 255, 0.15) !important;
+  border-top-color: #38bdf8 !important;
+  border-right-color: #818cf8 !important;
+  animation: spinSmooth 0.75s linear infinite !important;
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.8)) !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
+
 .spinner::after,
 .miniSpinner::after,
 .popupInnerSpinner::after {
@@ -8841,7 +8859,7 @@ html body .popupBoxDetailV2 {
   html body #popupDetailBarangV2.popupOverlay,
   html body #popupDetail.popupOverlay {
     padding-top: 1mm !important;
-    padding-bottom: 1cm !important;
+    padding-bottom: 0.6cm !important;
     padding-left: 4px !important;
     padding-right: 4px !important;
   }
@@ -8851,10 +8869,10 @@ html body .popupBoxDetailV2 {
     width: calc(100vw - 8px) !important;
     min-width: calc(100vw - 8px) !important;
     max-width: calc(100vw - 8px) !important;
-    height: calc(100vh - 1cm - 1mm) !important;
-    height: calc(100dvh - 1cm - 1mm) !important;
-    max-height: calc(100vh - 1cm - 1mm) !important;
-    max-height: calc(100dvh - 1cm - 1mm) !important;
+    height: calc(100vh - 0.6cm - 1mm) !important;
+    height: calc(100dvh - 0.6cm - 1mm) !important;
+    max-height: calc(100vh - 0.6cm - 1mm) !important;
+    max-height: calc(100dvh - 0.6cm - 1mm) !important;
   }
 }
 
@@ -9041,7 +9059,7 @@ html body #inputPage #judulDetailPermintaan,
 @media (max-width: 768px) {
   #popupDetailBarangV2 {
     padding-top: 1mm !important;
-    padding-bottom: 1cm !important;
+    padding-bottom: 0.6cm !important;
     padding-left: 4px !important;
     padding-right: 4px !important;
   }
@@ -9050,9 +9068,9 @@ html body #inputPage #judulDetailPermintaan,
     width: calc(100vw - 8px) !important;
     min-width: calc(100vw - 8px) !important;
     max-width: calc(100vw - 8px) !important;
-    height: calc(100vh - 1cm - 1mm) !important;
-    max-height: calc(100vh - 1cm - 1mm) !important;
-    max-height: calc(100dvh - 1cm - 1mm) !important;
+    height: calc(100vh - 0.6cm - 1mm) !important;
+    max-height: calc(100vh - 0.6cm - 1mm) !important;
+    max-height: calc(100dvh - 0.6cm - 1mm) !important;
   }
 }
 
