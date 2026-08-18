@@ -9181,3 +9181,10 @@ html body #popupPdfModelsModal .popupBox {
   padding-left: 4px !important;
   padding-right: 4px !important;
 }
+
+/* POPUP TTD OVERLAY HIGHER Z-INDEX THAN POPUP AKUN */
+html body #popupTTD.popupTTD,
+html body #popupTTD.popupOverlay,
+#popupTTD {
+  z-index: 100000005 !important;
+}

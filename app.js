@@ -5093,6 +5093,13 @@ function initMobileBackButtonEngine() {
       return;
     }
 
+    const modalTTD = document.getElementById('popupTTD');
+    if (modalTTD && (modalTTD.classList.contains('show') || modalTTD.style.display === 'flex' || modalTTD.style.display === 'block')) {
+      if (typeof tutupTTD === 'function') tutupTTD();
+      try { history.pushState({ page: getCurrentActivePageId() }, '', location.href); } catch(err) {}
+      return;
+    }
+
     const popAkun = document.getElementById('popupAkun');
     const isAkunOpen = popAkun && (popAkun.classList.contains('show') || popAkun.style.display === 'flex' || popAkun.style.display === 'block');
     if (isAkunOpen) {
@@ -9211,7 +9218,6 @@ function bukaTTD() {
     showNotif('TANDA TANGAN DIGITAL KHUSUS UNTUK SERVICE, DM & GBJ!', 'warning');
     return;
   }
-  if (typeof tutupAkun === 'function') tutupAkun(true);
   const modal = document.getElementById('popupTTD');
   if (modal) {
     modal.classList.add('show');
@@ -13903,7 +13909,9 @@ window.triggerUploadExcelAutoFill = triggerUploadExcelAutoFill;
 function downloadTemplateExcelPermintaan() {
   const modal = document.getElementById('excelTemplateOverlay');
   if (modal) {
-    modal.style.display = 'flex';
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.classList.add('show');
+    if (typeof pushPopupHistoryState === 'function') pushPopupHistoryState();
   } else {
     unduhTemplateExcelProses('DEFAULT');
   }
@@ -13913,7 +13921,8 @@ window.downloadTemplateExcelPermintaan = downloadTemplateExcelPermintaan;
 function closeExcelTemplateModal() {
   const modal = document.getElementById('excelTemplateOverlay');
   if (modal) {
-    modal.style.display = 'none';
+    modal.style.setProperty('display', 'none', 'important');
+    modal.classList.remove('show');
   }
 }
 window.closeExcelTemplateModal = closeExcelTemplateModal;

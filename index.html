@@ -1055,8 +1055,8 @@
   <!-- ========================================== -->
   <!-- MODAL PILIH TEMPLATE EXCEL DUS / DEFAULT   -->
   <!-- ========================================== -->
-  <div id="excelTemplateOverlay" class="popupOverlay modalBackdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center; padding: 2mm; box-sizing: border-box;">
-    <div class="modalBox" style="width: 100%; max-width: 400px; background: var(--bg-box); border-radius: 4px !important; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); border: 1.5px solid #107c41; box-sizing: border-box; margin: 0 auto; animation: popIn 0.2s ease-out;">
+  <div id="excelTemplateOverlay" class="popupOverlay modalBackdrop" onclick="if(event.target === this) closeExcelTemplateModal();" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center; padding: 2mm; box-sizing: border-box;">
+    <div class="modalBox" onclick="event.stopPropagation()" style="width: 100%; max-width: 400px; background: var(--bg-box); border-radius: 4px !important; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); border: 1.5px solid #107c41; box-sizing: border-box; margin: 0 auto; animation: popIn 0.2s ease-out;">
       <!-- HEADER POPUP -->
       <div style="background: linear-gradient(135deg, #107c41, #0f7b40); color: #ffffff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;">
         <span style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13.5px; letter-spacing: 0.5px;">
@@ -1147,8 +1147,8 @@
   </div>
 
   <!-- 7. POPUP DIGITAL SIGNATURE (TTD) MODAL -->
-  <div id="popupTTD" class="popupTTD popupOverlay">
-    <div class="ttdBox" style="position: relative !important; padding: 4mm !important; box-sizing: border-box !important;">
+  <div id="popupTTD" class="popupTTD popupOverlay" onclick="if(event.target === this) tutupTTD();">
+    <div class="ttdBox" onclick="event.stopPropagation()" style="position: relative !important; padding: 4mm !important; box-sizing: border-box !important;">
       <button type="button" class="popupClose popupCloseTTD" onclick="tutupTTD()" title="TUTUP" style="position: absolute !important; top: 6px !important; right: 8px !important; background: transparent !important; border: none !important; color: var(--primary) !important; font-size: 26px !important; font-weight: 900 !important; line-height: 1 !important; cursor: pointer !important; padding: 0 6px !important; z-index: 20 !important;">&times;</button>
       <h3 style="color: var(--primary); margin-bottom: 4px; font-size: 15px; font-weight: 800; padding-right: 24px;">TANDA TANGAN DIGITAL (TTD)</h3>
       <div class="ttdInfo" style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px; padding-right: 24px;">GAMBAR TTD DI CANVAS ATAU AMBIL FOTO TTD KERTAS</div>
