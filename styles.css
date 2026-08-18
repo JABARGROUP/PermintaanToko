@@ -9003,15 +9003,15 @@ html body #inputPage #judulDetailPermintaan,
 
 /* POPUP DETAIL BARANG V2 (#popupDetailBarangV2) */
 #popupDetailBarangV2 {
-  padding-top: 1cm !important;
-  padding-bottom: 1cm !important;
+  padding-top: 1mm !important;
+  padding-bottom: 2cm !important;
   padding-left: 4px !important;
   padding-right: 4px !important;
 }
 
 #popupDetailBarangV2 .popupBoxDetailV2 {
-  height: calc(100vh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
+  height: calc(100vh - 2cm - 1mm) !important;
+  max-height: calc(100vh - 2cm - 1mm) !important;
 }
 
 /* POPUP PROFIL AKUN (#popupAkun) */
