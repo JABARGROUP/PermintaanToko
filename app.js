@@ -5068,6 +5068,7 @@ function aturTampilanLonceng(pageId) {
 
 let mobileBackspaceCount = 0;
 let mobileBackspaceTimer = null;
+let backClickTimestamps = [];
 
 function pushPopupHistoryState() {
   try {
@@ -5081,22 +5082,19 @@ function initMobileBackButtonEngine() {
   } catch(e) {}
 
   window.addEventListener('popstate', (e) => {
-    const popTTD = document.getElementById('popupTTD');
-    const isTtdOpen = popTTD && (popTTD.classList.contains('show') || popTTD.style.display === 'flex' || popTTD.style.display === 'block');
-
-    // JIKA POPUP TTD TERBUKA & DI-BACK DARI HP -> KEMBALI KE POPUP AKUN
-    if (isTtdOpen) {
-      if (typeof tutupTTD === 'function') tutupTTD();
-      if (typeof bukaAkun === 'function') bukaAkun();
-      try { history.pushState({ page: getCurrentActivePageId() }, '', location.href); } catch(err) {}
-      if (typeof aturTampilanLonceng === 'function') aturTampilanLonceng(getCurrentActivePageId());
+    const modalGemini = document.getElementById('modalGeminiApiKey');
+    const isGeminiOpen = modalGemini && (modalGemini.classList.contains('show') || modalGemini.style.display === 'flex' || modalGemini.style.display === 'block');
+    if (isGeminiOpen) {
+      if (typeof tutupModalGeminiApiKey === 'function') tutupModalGeminiApiKey();
       return;
     }
 
-    const modalTTD = document.getElementById('popupTTD');
-    if (modalTTD && (modalTTD.classList.contains('show') || modalTTD.style.display === 'flex' || modalTTD.style.display === 'block')) {
+    const popTTD = document.getElementById('popupTTD');
+    const isTtdOpen = popTTD && (popTTD.classList.contains('show') || popTTD.style.display === 'flex' || popTTD.style.display === 'block');
+
+    // JIKA POPUP TTD TERBUKA & DI-BACK DARI HP -> TUTUP POPUP TTD (POPUP AKUN DI BELAKANGNYA TETAP AKTIF UNTUK BACK SELANJUTNYA)
+    if (isTtdOpen) {
       if (typeof tutupTTD === 'function') tutupTTD();
-      try { history.pushState({ page: getCurrentActivePageId() }, '', location.href); } catch(err) {}
       return;
     }
 
@@ -5180,20 +5178,28 @@ function initMobileBackButtonEngine() {
     if (currentActivePage !== 'dashboardPage' && currentActivePage !== 'loginPage') {
       pindahHalaman('dashboardPage', false);
       try { history.pushState({ page: 'dashboardPage' }, '', location.href); } catch(err) {}
-      if (typeof mobileBackspaceCount !== 'undefined') mobileBackspaceCount = 0;
+      backClickTimestamps = [];
       return;
     }
 
     if (currentActivePage === 'dashboardPage') {
-      if (typeof mobileBackspaceCount === 'undefined') window.mobileBackspaceCount = 0;
-      mobileBackspaceCount++;
+      const now = Date.now();
+      // Filter klik back HP dalam durasi < 1 detik (1000ms)
+      backClickTimestamps = backClickTimestamps.filter(t => (now - t) <= 1000);
+      backClickTimestamps.push(now);
 
-      if (typeof mobileBackspaceTimer !== 'undefined' && mobileBackspaceTimer) clearTimeout(mobileBackspaceTimer);
-      window.mobileBackspaceTimer = setTimeout(() => {
-        mobileBackspaceCount = 0;
-      }, 3500);
-
-      if (mobileBackspaceCount < 5) {
+      if (backClickTimestamps.length >= 3) {
+        // 3X KLIK BACK DALAM DURASI < 1 DETIK: KELUAR APLIKASI WEB TANPA POPUP APAPUN
+        console.log('[APP EXIT] 3x Rapid back press <1s detected. Exiting Web App...');
+        backClickTimestamps = [];
+        try {
+          if (window.navigator && window.navigator.app && typeof window.navigator.app.exitApp === 'function') {
+            window.navigator.app.exitApp();
+          }
+        } catch(e) {}
+        // Tanpa pushState agar browser secara alami keluar dari aplikasi web
+      } else {
+        // Kurang dari 3x klik dalam 1 detik: Tetap di Dashboard
         try { history.pushState({ page: 'dashboardPage' }, '', location.href); } catch(err) {}
       }
     }
@@ -14487,10 +14493,11 @@ function aturGeminiApiKey() {
 
   const currentKey = getGeminiApiKey();
 
-  modal.className = 'modalBackdrop';
+  modal.className = 'modalBackdrop show';
   modal.onclick = function(e) {
     if (e.target === modal) tutupModalGeminiApiKey();
   };
+  if (typeof pushPopupHistoryState === 'function') pushPopupHistoryState();
 
   modal.style.cssText = 'display: flex !important; position: fixed !important; top: 0px !important; left: 0px !important; right: 0px !important; bottom: 0px !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.85) !important; z-index: 1000000000 !important; justify-content: center !important; align-items: center !important; padding: 12px !important; box-sizing: border-box !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; backdrop-filter: blur(4px) !important; -webkit-backdrop-filter: blur(4px) !important;';
 
@@ -14555,6 +14562,7 @@ function tutupModalGeminiApiKey() {
   const modal = document.getElementById('modalGeminiApiKey');
   if (modal) {
     modal.style.setProperty('display', 'none', 'important');
+    modal.classList.remove('show');
   }
 }
 window.tutupModalGeminiApiKey = tutupModalGeminiApiKey;
