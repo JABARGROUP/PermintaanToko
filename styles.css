@@ -296,6 +296,8 @@ body {
 
 /* 1. Scenic Landscape Image (Pemandangan Bulan, Gunung & Danau) */
 .aesthetic-bg-image {
+  transform: translateZ(0);
+  backface-visibility: hidden;
   position: absolute;
   inset: 0;
   width: 100%;
@@ -306,7 +308,7 @@ body {
   background-repeat: no-repeat;
   opacity: var(--bg-opacity-val, 0.48) !important;
   filter: saturate(1.15) contrast(1.05) blur(1px);
-  transition: opacity 0.3s ease, background-image 0.3s ease, filter 0.3s ease;
+  transition: background-image 0.3s ease, filter 0.3s ease;
   will-change: opacity, background-image;
 }
 
@@ -314,6 +316,8 @@ body.light-mode .aesthetic-bg-image,
 body.classic-mode .aesthetic-bg-image,
 body.forest-mode .aesthetic-bg-image,
 body.sunset-mode .aesthetic-bg-image {
+  transform: translateZ(0);
+  backface-visibility: hidden;
   opacity: var(--bg-opacity-val, 0.38) !important;
   filter: saturate(1.1) contrast(1.0) blur(1px);
 }
@@ -3043,8 +3047,6 @@ div[id*="Modal"] {
 }
 
 #readerScanner video,
-#readerScanner canvas,
-#readerScanner img,
 #readerScanner__scan_region video {
   width: 100% !important;
   height: 220px !important;
@@ -3060,6 +3062,9 @@ div[id*="Modal"] {
   background: #000 !important;
 }
 
+#readerScanner canvas,
+#readerScanner img,
+#readerScanner__scan_region canvas,
 #readerScanner #readerScanner__dashboard,
 #readerScanner #readerScanner__dashboard_section,
 #readerScanner #readerScanner__status_span,
@@ -3067,6 +3072,8 @@ div[id*="Modal"] {
 #readerScanner .qr-shaded-region,
 #readerScanner div[style*="position: absolute"] {
   display: none !important;
+  width: 0 !important;
+  height: 0 !important;
   opacity: 0 !important;
   visibility: hidden !important;
 }
@@ -3741,7 +3748,6 @@ html body #popupUserForm .popupBox {
   filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.8)) !important;
   box-sizing: border-box !important;
 }
-}
 
 /* INLINE BUTTON ROTATING SPINNER ANIMATION */
 .btn-spin-icon {
@@ -4080,21 +4086,6 @@ html body #popupUserForm .popupBox {
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
   z-index: 100000002 !important;
-}
-  bottom: 25px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 8px 20px;
-  border-radius: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  z-index: 1002;
 }
 
 #viewerCounter {
@@ -7991,8 +7982,6 @@ html body .detailTableV2 th:last-child,
 /* MASTER ENFORCED 1CM TOP & BOTTOM GAP FOR ALL DETAIL, TAMBAH TOKO, PDF, CHAT, NOTIFIKASI & AKUN POPUPS */
 html body #popupDetailBarangV2.popupOverlay,
 html body #popupDetail.popupOverlay,
-html body #pdfModal.popupOverlay,
-html body #popupPdfModelsModal.popupOverlay,
 html body #popupBantuan.popupOverlay,
 html body #popupBantuan.popupBantuan,
 html body .popupBantuan,
@@ -8012,8 +8001,6 @@ html body #popupDetailBarangV2 .popupBoxDetailV2,
 html body #popupDetail .popupBoxDetail,
 html body .popupBoxDetailV2,
 html body .popupBoxDetail,
-html body #pdfModal .popupBox,
-html body #popupPdfModelsModal .popupBox,
 html body #popupBantuan .chatBox,
 html body .popupBantuan .chatBox,
 html body .chatBox,
@@ -8198,8 +8185,6 @@ html body .detailTableV2 th:last-child,
 /* MASTER ENFORCED 1CM TOP & BOTTOM GAP FOR ALL DETAIL, TAMBAH TOKO, PDF, CHAT, NOTIFIKASI & AKUN POPUPS */
 html body #popupDetailBarangV2.popupOverlay,
 html body #popupDetail.popupOverlay,
-html body #pdfModal.popupOverlay,
-html body #popupPdfModelsModal.popupOverlay,
 html body #popupBantuan.popupOverlay,
 html body #popupBantuan.popupBantuan,
 html body .popupBantuan,
@@ -8219,8 +8204,6 @@ html body #popupDetailBarangV2 .popupBoxDetailV2,
 html body #popupDetail .popupBoxDetail,
 html body .popupBoxDetailV2,
 html body .popupBoxDetail,
-html body #pdfModal .popupBox,
-html body #popupPdfModelsModal .popupBox,
 html body #popupBantuan .chatBox,
 html body .popupBantuan .chatBox,
 html body .chatBox,
@@ -8406,8 +8389,6 @@ html body .detailTableV2 th:last-child,
 /* MASTER ENFORCED 1CM TOP & BOTTOM GAP FOR ALL DETAIL, TAMBAH TOKO, PDF, CHAT, NOTIFIKASI & AKUN POPUPS */
 html body #popupDetailBarangV2.popupOverlay,
 html body #popupDetail.popupOverlay,
-html body #pdfModal.popupOverlay,
-html body #popupPdfModelsModal.popupOverlay,
 html body #popupBantuan.popupOverlay,
 html body #popupBantuan.popupBantuan,
 html body .popupBantuan,
@@ -8427,8 +8408,6 @@ html body #popupDetailBarangV2 .popupBoxDetailV2,
 html body #popupDetail .popupBoxDetail,
 html body .popupBoxDetailV2,
 html body .popupBoxDetail,
-html body #pdfModal .popupBox,
-html body #popupPdfModelsModal .popupBox,
 html body #popupBantuan .chatBox,
 html body .popupBantuan .chatBox,
 html body .chatBox,
@@ -9179,24 +9158,40 @@ html body #popupTambahToko .popupBox,
   }
 }
 
-/* POPUP PDF DOKUMEN (#pdfModal & #popupPdfModelsModal) */
+/* POPUP PDF DOKUMEN (#pdfModal & #popupPdfModelsModal) - BATAS ATAS BAWAH 1MM */
 #pdfModal,
-html body #pdfModal.popupOverlay,
-#popupPdfModelsModal,
-html body #popupPdfModelsModal.popupOverlay {
+#popupPdfModelsModal {
   padding-top: 1mm !important;
   padding-bottom: 1mm !important;
+  padding-left: 1mm !important;
+  padding-right: 1mm !important;
   box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 #pdfModal .popupBox,
-html body #pdfModal .popupBox,
-#popupPdfModelsModal .popupBox,
-html body #popupPdfModelsModal .popupBox {
+#popupPdfModelsModal .popupBox {
+  margin: 1mm auto !important;
+  margin-top: 1mm !important;
+  margin-bottom: 1mm !important;
   height: calc(100vh - 2mm) !important;
   height: calc(100dvh - 2mm) !important;
   max-height: calc(100vh - 2mm) !important;
   max-height: calc(100dvh - 2mm) !important;
+  box-sizing: border-box !important;
+}
+
+#pdfDocumentContent,
+html body #pdfDocumentContent {
+  padding-top: 1mm !important;
+  padding-bottom: 1mm !important;
+}
+
+#pdfModal .pdf-paper,
+html body #pdfModal .pdf-paper {
+  padding-top: 1mm !important;
+  padding-bottom: 1mm !important;
 }
 
 /* POPUP USER MANAGEMENT MODAL (#popupUserManagementModal) */
@@ -9303,4 +9298,77 @@ html body #popupTTD.popupOverlay,
     margin-top: 0 !important;
     margin-bottom: auto !important;
   }
+}
+
+/* =============================================================================
+   MASTER EXCLUSIVE 1MM TOP & BOTTOM FULL SCREEN LAYOUT FOR PDF MODAL
+   ============================================================================= */
+#pdfModal,
+html body #pdfModal,
+html body #pdfModal.popupOverlay,
+#popupPdfModelsModal,
+html body #popupPdfModelsModal,
+html body #popupPdfModelsModal.popupOverlay {
+  display: none;
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  padding: 1mm !important;
+  padding-top: 1mm !important;
+  padding-bottom: 1mm !important;
+  padding-left: 1mm !important;
+  padding-right: 1mm !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  z-index: 100000000 !important;
+}
+
+#pdfModal .popupBox,
+html body #pdfModal .popupBox,
+#popupPdfModelsModal .popupBox,
+html body #popupPdfModelsModal .popupBox {
+  width: 780px !important;
+  max-width: calc(100vw - 2mm) !important;
+  height: calc(100vh - 2mm) !important;
+  height: calc(100dvh - 2mm) !important;
+  min-height: calc(100vh - 2mm) !important;
+  min-height: calc(100dvh - 2mm) !important;
+  max-height: calc(100vh - 2mm) !important;
+  max-height: calc(100dvh - 2mm) !important;
+  margin: 1mm auto !important;
+  margin-top: 1mm !important;
+  margin-bottom: 1mm !important;
+  border-radius: 0px !important;
+  -webkit-clip-path: none !important;
+  clip-path: none !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+#pdfDocumentContent,
+html body #pdfDocumentContent {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding: 1mm 10px !important;
+  background: #f8fafc !important;
+  box-sizing: border-box !important;
+}
+
+#pdfModal .pdf-paper,
+html body #pdfModal .pdf-paper {
+  padding: 1mm 20px !important;
+  box-sizing: border-box !important;
 }
