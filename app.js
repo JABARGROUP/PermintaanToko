@@ -16479,3 +16479,48 @@ window.hideLoading = hideLoading;
 if (typeof initFirebaseDB === 'function') {
   try { initFirebaseDB(); } catch(e) {}
 }
+
+async function hapusPenyimpananLokalAkun() {
+  showConfirm('BERSIHKAN SEMUA PENYIMPANAN LOKAL & LOGOUT DARI PERANGKAT INI?\n\n(Tanda Tangan & Setelan Tema Anda akan tetap aman).', function() {
+    var _asyncTask = async function() {
+      showLoading('MEMBERSIHKAN PENYIMPANAN LOKAL...');
+      try {
+        if (typeof clearLocalStorageKeepThemeAndTTD === 'function') {
+          await clearLocalStorageKeepThemeAndTTD();
+        }
+
+        // Hapus sesi login aktif
+        currentUser = null;
+        appStorage.removeItem(SESSION_KEY);
+        try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
+
+        // Tutup modal-modal aktif
+        if (typeof tutupAkun === 'function') tutupAkun(true);
+        if (typeof tutupNotificationModal === 'function') tutupNotificationModal();
+        const popupBantuan = document.getElementById('popupBantuan');
+        if (popupBantuan) popupBantuan.classList.remove('show');
+        const bottomMenu = document.getElementById('bottomMenu');
+        if (bottomMenu) bottomMenu.style.display = 'none';
+        const helpBtn = document.getElementById('helpButton');
+        if (helpBtn) helpBtn.style.display = 'none';
+
+        // Pindah otomatis ke halaman Login
+        if (typeof pindahHalaman === 'function') {
+          pindahHalaman('loginPage');
+        }
+        if (typeof loadRememberedCredentials === 'function') {
+          loadRememberedCredentials();
+        }
+        if (typeof updateNotifBellCounter === 'function') updateNotifBellCounter();
+
+        hideLoading();
+        showNotif('PENYIMPANAN LOKAL BERHASIL DIBERSIHKAN! SILAKAN LOGIN KEMBALI.', 'success');
+      } catch (err) {
+        hideLoading();
+        showNotif('GAGAL MEMBERSIHKAN: ' + (err.message || err), 'warning');
+      }
+    };
+    _asyncTask();
+  });
+}
+window.hapusPenyimpananLokalAkun = hapusPenyimpananLokalAkun;

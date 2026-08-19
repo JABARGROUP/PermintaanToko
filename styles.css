@@ -2705,20 +2705,13 @@ div[id*="Modal"] {
 .akunBox {
   width: 450px !important;
   max-width: 94vw !important;
-  min-width: 0 !important;
-  height: calc(100vh - 2cm) !important;
-  height: calc(100dvh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
-  max-height: calc(100dvh - 2cm) !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  margin: 0 auto !important;
-  transform: none !important;
-  -webkit-transform: none !important;
-  padding: 14px !important;
-  border-radius: 5px !important;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
   box-sizing: border-box !important;
+  margin: auto !important;
 }
 
 /* KHUSUS TAMPILAN HP / MOBILE: PADDING ISI DENGAN LEBAR POPUP AKUN (1CM SCREEN GAP TOP & BOTTOM) */
@@ -2735,22 +2728,16 @@ div[id*="Modal"] {
   #popupAkun .akunBox,
   .popupAkun .akunBox,
   .akunBox {
-    width: calc(100vw - 8px) !important;
-    max-width: calc(100vw - 8px) !important;
-    min-width: calc(100vw - 8px) !important;
-    height: calc(100vh - 2cm) !important;
-    height: calc(100dvh - 2cm) !important;
-    max-height: calc(100vh - 2cm) !important;
-    max-height: calc(100dvh - 2cm) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    transform: none !important;
-    -webkit-transform: none !important;
-    padding: 12px !important;
-    box-sizing: border-box !important;
-  }
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
 }
 
 #popupAkun .akunBox h2 {
@@ -2782,7 +2769,7 @@ div[id*="Modal"] {
 }
 
 /* ALL BUTTONS IN POPUP AKUN: UNIFORM EQUAL SHORT HEIGHT (35px), EQUAL FONT SIZE, EQUAL BORDER RADIUS */
-#popupAkun button:not(.popupClose),
+#popupAkun button:not(.popupClose):not(.btnSapuLokal),
 #popupAkun .btnTambahBarang,
 #popupAkun .refresh-icon-btn,
 #popupAkun .theme-icon-btn,
@@ -3357,13 +3344,13 @@ html body #popupUserForm .popupBox {
 
 /* COMPACT & PROPORTIONAL POPUP AKUN BOX */
 .akunBox {
-  width: 500px !important;
+  width: 450px !important;
   max-width: 94vw !important;
   height: auto !important;
-  max-height: 92vh !important;
+  max-height: 94vh !important;
   overflow: visible !important;
-  padding: 18px 2mm 2mm 2mm !important;
-  border-radius: 5px !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
   box-sizing: border-box !important;
   margin: auto !important;
 }
@@ -4259,22 +4246,31 @@ html body #popupUserForm .popupBox {
   }
 
   .popupBox, .confirmBox, .popupNotif, .akunBox {
-    width: 94vw !important;
-    max-width: 94vw !important;
-    max-height: 90vh !important;
-    padding: 14px !important;
-    box-sizing: border-box;
-    border-radius: 5px !important;
-  }
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
 
   /* POPUP AKUN & POPUP TAMBAH TOKO BARU: 2MM SIDE AND BOTTOM PADDING BETWEEN CONTENT CARDS AND POPUP BOX WALL */
   #popupAkun .akunBox,
   .popupAkun .akunBox,
   .akunBox {
-    padding-left: 2mm !important;
-    padding-right: 2mm !important;
-    padding-bottom: 2mm !important;
-  }
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
 
   #popupTambahToko {
     padding-top: 1mm !important;
@@ -4408,13 +4404,16 @@ html body #popupUserForm .popupBox {
   }
 
   .akunBox {
-    width: 94vw !important;
-    max-width: 94vw !important;
-    max-height: 90vh !important;
-    margin: auto !important;
-    transform: translateY(-20px) !important;
-    padding: 16px 14px !important;
-  }
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
 
   .akunGrid {
     display: grid !important;
@@ -6749,10 +6748,15 @@ body:has(#masterDbPage.active) {
 }
 
 #popupAkun .akunBox {
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
   margin: auto !important;
-  transform: none !important;
-  -webkit-transform: none !important;
-  transition: opacity 0.2s ease;
 }
 
 /* ==========================================================================
@@ -8008,21 +8012,15 @@ html body #popupNotifList .popupNotifCard,
 html body #popupAkun .akunBox,
 html body .popupAkun .akunBox,
 html body .akunBox {
-  height: calc(100vh - 2cm) !important;
-  height: calc(100dvh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
-  max-height: calc(100dvh - 2cm) !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  display: flex !important;
-  flex-direction: column !important;
-  position: relative !important;
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
   box-sizing: border-box !important;
-html body #popupTambahToko .popupBody > div:last-child,
-#popupTambahToko .popupBody > div:last-child {
-  margin-bottom: 0 !important;
+  margin: auto !important;
 }
 
 /* EXACT 2MM BOTTOM GAP FROM TABLE BOUNDARY TO POPUP BOTTOM WALL (#popupTambahToko) */
@@ -8211,21 +8209,15 @@ html body #popupNotifList .popupNotifCard,
 html body #popupAkun .akunBox,
 html body .popupAkun .akunBox,
 html body .akunBox {
-  height: calc(100vh - 2cm) !important;
-  height: calc(100dvh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
-  max-height: calc(100dvh - 2cm) !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  display: flex !important;
-  flex-direction: column !important;
-  position: relative !important;
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
   box-sizing: border-box !important;
-  overflow: hidden !important;
-  border-radius: 5px !important;
-margin-bottom: 0 !important;
+  margin: auto !important;
 }
 
 /* EXACT 2MM BOTTOM GAP FROM TABLE BOUNDARY TO POPUP BOTTOM WALL (#popupTambahToko) */
@@ -8415,29 +8407,29 @@ html body #popupNotifList .popupNotifCard,
 html body #popupAkun .akunBox,
 html body .popupAkun .akunBox,
 html body .akunBox {
-  height: calc(100vh - 2cm) !important;
-  height: calc(100dvh - 2cm) !important;
-  max-height: calc(100vh - 2cm) !important;
-  max-height: calc(100dvh - 2cm) !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  display: flex !important;
-  flex-direction: column !important;
-  position: relative !important;
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
   box-sizing: border-box !important;
-  overflow: hidden !important;
-  border-radius: 5px !important;
-  -webkit-clip-path: inset(0 round 5px) !important;
-  clip-path: inset(0 round 5px) !important;
+  margin: auto !important;
 }
 
 html body #popupAkun .akunBox,
 html body .popupAkun .akunBox,
 html body .akunBox {
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
 }
 
 html body #popupDetailBarangV2 #popupBodyV2,
@@ -9098,11 +9090,15 @@ html body #inputPage #judulDetailPermintaan,
 
 #popupAkun .akunBox,
 .popupAkun .akunBox {
+  width: 450px !important;
+  max-width: 94vw !important;
   height: auto !important;
-  max-height: calc(100vh - 2mm) !important;
-  max-height: calc(100dvh - 2mm) !important;
-  margin: 0 auto !important;
-  padding-bottom: 2mm !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
 }
 
 #popupAkun .btnLogout,
@@ -9281,9 +9277,16 @@ html body #popupTTD.popupOverlay,
     padding-right: 4px !important;
   }
   html body #popupAkun .akunBox {
-    margin-top: 0 !important;
-    margin-bottom: auto !important;
-  }
+  width: 450px !important;
+  max-width: 94vw !important;
+  height: auto !important;
+  max-height: 94vh !important;
+  overflow: visible !important;
+  padding: 16px 16px 14px 16px !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
 
   html body #modalGeminiApiKey.modalBackdrop,
   html body #modalGeminiApiKey {
