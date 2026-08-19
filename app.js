@@ -10316,15 +10316,28 @@ function hapusTTD() {
   if (ctxTTD && canvasTTD) ctxTTD.clearRect(0, 0, canvasTTD.width, canvasTTD.height);
 }
 
+let _currentLoadedTtdOriginal = '';
+
 function cropAndCenterCanvasSignature(srcCanvas) {
   if (!srcCanvas) return '';
   try {
     const ctx = srcCanvas.getContext('2d');
     const w = srcCanvas.width;
     const h = srcCanvas.height;
-    const imgData = ctx.getImageData(0, 0, w, h);
-    const data = imgData.data;
+    
+    let imgData;
+    try {
+      imgData = ctx.getImageData(0, 0, w, h);
+    } catch (taintErr) {
+      console.warn('[CANVAS TAINTED - SAFE FALLBACK]:', taintErr);
+      try {
+        return srcCanvas.toDataURL('image/png');
+      } catch (toDataUrlErr) {
+        return _currentLoadedTtdOriginal || '';
+      }
+    }
 
+    const data = imgData.data;
     let minX = w, minY = h, maxX = -1, maxY = -1;
 
     for (let y = 0; y < h; y++) {
@@ -10341,7 +10354,11 @@ function cropAndCenterCanvasSignature(srcCanvas) {
     }
 
     if (maxX < minX || maxY < minY) {
-      return srcCanvas.toDataURL('image/png');
+      try {
+        return srcCanvas.toDataURL('image/png');
+      } catch(e) {
+        return _currentLoadedTtdOriginal || '';
+      }
     }
 
     const strokeW = maxX - minX + 1;
@@ -10367,7 +10384,11 @@ function cropAndCenterCanvasSignature(srcCanvas) {
     return targetCanvas.toDataURL('image/png');
   } catch (e) {
     console.warn('Error cropping signature:', e);
-    return srcCanvas.toDataURL('image/png');
+    try {
+      return srcCanvas.toDataURL('image/png');
+    } catch(err2) {
+      return _currentLoadedTtdOriginal || '';
+    }
   }
 }
 window.cropAndCenterCanvasSignature = cropAndCenterCanvasSignature;
@@ -10466,7 +10487,7 @@ function simpanTTD() {
   });
 }
 
-function loadTTD() {
+async function loadTTD() {
   let localTTD = null;
   try {
     if (typeof localStorage !== 'undefined' && currentUser) {
@@ -10487,13 +10508,43 @@ function loadTTD() {
   }
 
   const data = localTTD || (currentUser ? (appStorage.getItem(`LOCAL_TTD_${currentUser.id}`) || appStorage.getItem(`LOCAL_TTD_${currentUser.username}`) || ttdMap[currentUser.id] || ttdMap[currentUser.username] || ttdMap[currentUser.fullName]) : null);
+  
+  if (data) {
+    _currentLoadedTtdOriginal = data;
+  }
+
   if (data && ctxTTD && canvasTTD) {
-    const img = new Image();
-    img.onload = () => {
-      ctxTTD.clearRect(0, 0, canvasTTD.width, canvasTTD.height);
-      ctxTTD.drawImage(img, 0, 0, canvasTTD.width, canvasTTD.height);
-    };
-    img.src = data;
+    try {
+      let finalSrc = data;
+      // Jika data adalah URL eksternal (http/https), konversi ke base64 DataURL via fetch + blob agar canvas TIDAK TAINTED
+      if (typeof data === 'string' && (data.startsWith('http://') || data.startsWith('https://'))) {
+        try {
+          const res = await fetch(data, { mode: 'cors' });
+          if (res.ok) {
+            const blob = await res.blob();
+            finalSrc = await new Promise((resolve) => {
+              const r = new FileReader();
+              r.onloadend = () => resolve(r.result);
+              r.readAsDataURL(blob);
+            });
+          }
+        } catch(fetchErr) {
+          console.warn('[LOAD TTD FETCH CORS FALLBACK]:', fetchErr);
+        }
+      }
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        if (ctxTTD && canvasTTD) {
+          ctxTTD.clearRect(0, 0, canvasTTD.width, canvasTTD.height);
+          ctxTTD.drawImage(img, 0, 0, canvasTTD.width, canvasTTD.height);
+        }
+      };
+      img.src = finalSrc;
+    } catch(err) {
+      console.warn('[LOAD TTD ERROR]:', err);
+    }
   }
 }
 
