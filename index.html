@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Meta Tag Anti-Cache untuk Mencegah Browser Menggunakan Pengalihan Lama -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <title>Permintaan Toko - SSO Redirector</title>
     <style>
         html, body {
@@ -62,8 +68,8 @@
             text-decoration: underline;
         }
     </style>
-    <!-- Master Redirector Script dengan Supabase SSO JWT Parser -->
-    <script src="app.js"></script>
+    <!-- Master Redirector Script dengan Supabase SSO JWT Parser & Cache Buster -->
+    <script src="app.js?v=20260910_NO_CACHE_REDIRECT"></script>
 </head>
 <body>
     <div class="redirect-card">
