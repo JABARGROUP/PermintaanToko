@@ -2,7 +2,7 @@
     'use strict';
     
     // URL Target Aplikasi
-    var URL_HP = 'https://polytasik-pixel.github.io/permintaanTokooo/';
+    var URL_HP = 'https://polytasik-pixel.github.io/permintaanToko/';
     var URL_PC = 'https://polytasik-pixel.github.io/permintaanTokoo/';
 
     /**
